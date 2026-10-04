@@ -2,6 +2,7 @@ CREATE DATABASE IF NOT EXISTS leren CHARACTER SET utf8mb4 COLLATE utf8mb4_unicod
 USE leren;
 SET FOREIGN_KEY_CHECKS=0;
 DROP TABLE IF EXISTS attempt_answers;
+DROP TABLE IF EXISTS open_question_answers;
 DROP TABLE IF EXISTS attempts;
 DROP TABLE IF EXISTS question_options;
 DROP TABLE IF EXISTS questions;
@@ -51,10 +52,12 @@ CREATE TABLE questions (
  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
  test_id INT UNSIGNED NOT NULL,
  question_text TEXT NOT NULL,
+ question_type ENUM('multiple_choice','open') NOT NULL DEFAULT 'multiple_choice',
  explanation TEXT NULL,
  sort_order INT UNSIGNED NOT NULL DEFAULT 0,
  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
  KEY idx_questions_test_order(test_id,sort_order),
+ KEY idx_questions_type(question_type),
  CONSTRAINT fk_questions_test FOREIGN KEY(test_id) REFERENCES tests(id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -66,6 +69,15 @@ CREATE TABLE question_options (
  sort_order INT UNSIGNED NOT NULL DEFAULT 0,
  KEY idx_options_question_order(question_id,sort_order),
  CONSTRAINT fk_options_question FOREIGN KEY(question_id) REFERENCES questions(id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE open_question_answers (
+ id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ question_id INT UNSIGNED NOT NULL,
+ answer_text VARCHAR(1000) NOT NULL,
+ sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+ KEY idx_open_answers_question(question_id),
+ CONSTRAINT fk_open_answers_question FOREIGN KEY(question_id) REFERENCES questions(id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE attempts (
@@ -86,6 +98,7 @@ CREATE TABLE attempt_answers (
  attempt_id BIGINT UNSIGNED NOT NULL,
  question_id INT UNSIGNED NOT NULL,
  selected_option_id INT UNSIGNED NULL,
+ answer_text TEXT NULL,
  is_correct TINYINT(1) NULL,
  answered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
  UNIQUE KEY uq_attempt_question(attempt_id,question_id),
@@ -99,7 +112,7 @@ CREATE TABLE attempt_answers (
 INSERT INTO subjects(name,description) VALUES ('Geschiedenis','Voorbeeldvak');
 INSERT INTO topics(subject_id,name) SELECT id,'Oefenen' FROM subjects WHERE name='Geschiedenis' LIMIT 1;
 INSERT INTO tests(topic_id,title,description) SELECT id,'Voorbeeldtoets','Eerste test om de installatie te controleren.' FROM topics WHERE name='Oefenen' LIMIT 1;
-INSERT INTO questions(test_id,question_text,sort_order) SELECT id,'Welke kleur heeft gras meestal?',1 FROM tests WHERE title='Voorbeeldtoets' LIMIT 1;
+INSERT INTO questions(test_id,question_text,question_type,sort_order) SELECT id,'Welke kleur heeft gras meestal?','multiple_choice',1 FROM tests WHERE title='Voorbeeldtoets' LIMIT 1;
 INSERT INTO question_options(question_id,option_text,is_correct,sort_order) SELECT id,'Groen',1,1 FROM questions WHERE question_text='Welke kleur heeft gras meestal?' LIMIT 1;
 INSERT INTO question_options(question_id,option_text,is_correct,sort_order) SELECT id,'Paars',0,2 FROM questions WHERE question_text='Welke kleur heeft gras meestal?' LIMIT 1;
 INSERT INTO question_options(question_id,option_text,is_correct,sort_order) SELECT id,'Zwart',0,3 FROM questions WHERE question_text='Welke kleur heeft gras meestal?' LIMIT 1;
