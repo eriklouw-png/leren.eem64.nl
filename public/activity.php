@@ -11,8 +11,9 @@ if($action==='start'){
     $_SESSION['study_session_token']=$token;
     $testId=filter_var($_POST['test_id']??null,FILTER_VALIDATE_INT);
     if(!$testId){http_response_code(400);echo json_encode(['ok'=>false,'error'=>'missing_test']);exit;}
-    $s=$pdo->prepare("INSERT INTO study_sessions(session_token,test_id) VALUES(?,?)");
-    $s->execute([$token,$testId]);
+    $attemptId=filter_var($_POST['attempt_id']??null,FILTER_VALIDATE_INT)?:null;
+    $s=$pdo->prepare("INSERT INTO study_sessions(session_token,test_id,attempt_id) VALUES(?,?,?)");
+    $s->execute([$token,$testId,$attemptId]);
     echo json_encode(['ok'=>true]);
     exit;
 }
