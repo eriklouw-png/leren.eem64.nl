@@ -32,10 +32,19 @@ if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='save_answer'
         if($answerText===''){echo json_encode(['ok'=>true,'answered'=>false]);exit;}
         $x=$pdo->prepare("SELECT answer_text FROM open_question_answers WHERE question_id=? ORDER BY sort_order,id");
         $x->execute([$questionId]);$correctAnswers=$x->fetchAll(PDO::FETCH_COLUMN);
-        $ok=open_answer_matches($answerText,$correctAnswers)?1:0;
+        $exact=open_answer_matches($answerText,$correctAnswers);
+        if($exact){
+            $ok=1;
+            $aiReason='';
+        }else{
+            $ai=ai_grade_open_answer($question['question_text']??'',implode(' | ',$correctAnswers),$answerText);
+            $ok=$ai['correct']?1:0;
+            $aiReason=$ai['reason'];
+        }
         $feedback=[
             'correct_answers'=>$correctAnswers,
-            'explanation'=>$question['explanation']??''
+            'explanation'=>$question['explanation']??'',
+            'ai_reason'=>$aiReason
         ];
     }else{
         $selected=filter_var($raw,FILTER_VALIDATE_INT);
@@ -176,6 +185,7 @@ foreach($questions as &$q){$q['options']=[];if($q['question_type']==='multiple_c
    });
  });
  activity({action:'start',test_id:testId,attempt_id:attemptId});
+ fetch('ai_warmup.php',{method:'POST',keepalive:true}).catch(()=>{});
  let activeUntil=Date.now()+60000;const touch=()=>{activeUntil=Date.now()+60000;};
  ['mousemove','mousedown','keydown','touchstart','scroll'].forEach(e=>window.addEventListener(e,touch,{passive:true}));
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')touch();});
