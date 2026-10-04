@@ -11,6 +11,10 @@ services:
       - "30182:80"
     volumes:
       - /mnt/POOL/WEBSITES/leren.eem64.nl:/var/www/html
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      OLLAMA_URL: "http://host.docker.internal:30068"
 
 networks:
   websites:
