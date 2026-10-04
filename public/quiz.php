@@ -129,19 +129,52 @@ $x->execute([$attemptId]);$questions=$x->fetchAll();
 $o=$pdo->prepare("SELECT id,option_text FROM question_options WHERE question_id=? ORDER BY sort_order,id");
 foreach($questions as &$q){$q['options']=[];if($q['question_type']==='multiple_choice'){$o->execute([$q['id']]);$q['options']=$o->fetchAll();}}unset($q);
 ?>
-<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($test['title'])?></title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><main class="container py-4" style="max-width:850px"><a href="subject.php?id=<?=$test['subject_id']?>">&larr; Terug</a><h1 class="mt-3"><?=e($test['title'])?></h1><?php if($mode==='mistakes'):?><div class="alert alert-warning">Je oefent nu alleen de vragen die je eerder fout had.</div><?php else:?><div class="alert alert-info">Je antwoorden worden automatisch opgeslagen. Je kunt later verdergaan.</div><?php endif;?><form method="post" id="quizForm"><input type="hidden" name="action" value="finish"><?php foreach($questions as $n=>$q):?><div class="card shadow-sm mb-4"><div class="card-body"><h2 class="h5"><?=$n+1?>. <?=e($q['question_text'])?></h2><?php if($q['question_type']==='open'):?><label class="form-label text-secondary">Typ je antwoord:</label><textarea class="form-control autosave" data-question="<?=$q['id']?>" name="question_<?=$q['id']?>" rows="3"><?=e($q['answer_text']??'')?></textarea><?php else:foreach($q['options'] as $opt):?><div class="form-check my-2"><input class="form-check-input autosave" data-question="<?=$q['id']?>" type="radio" name="question_<?=$q['id']?>" value="<?=$opt['id']?>" <?=((int)($q['selected_option_id']??0)===(int)$opt['id'])?'checked':''?>><label class="form-check-label"><?=e($opt['option_text'])?></label></div><?php endforeach;endif;?></div></div><?php endforeach;?><button class="btn btn-primary btn-lg" type="submit">Toets nakijken</button></form></main><script>
+<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($test['title'])?></title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><main class="container py-4" style="max-width:850px"><a href="subject.php?id=<?=$test['subject_id']?>">&larr; Terug</a><h1 class="mt-3"><?=e($test['title'])?></h1><?php if($mode==='mistakes'):?><div class="alert alert-warning">Je oefent nu alleen de vragen die je eerder fout had.</div><?php else:?><div class="alert alert-info">Je antwoorden worden automatisch opgeslagen. Je kunt later verdergaan.</div><?php endif;?><div class="progress mb-4" style="height:8px"><div id="progressBar" class="progress-bar" style="width:<?=count($questions)?100/count($questions):0?>%"></div></div><form method="post" id="quizForm"><input type="hidden" name="action" value="finish"><?php foreach($questions as $n=>$q):?><section class="question-card <?=$n===0?'':'d-none'?>" data-index="<?=$n?>" data-question-id="<?=$q['id']?>"><div class="card shadow-sm mb-4"><div class="card-body"><div class="text-secondary mb-2">Vraag <?=$n+1?> van <?=count($questions)?></div><h2 class="h5"><?=e($q['question_text'])?></h2><?php if($q['question_type']==='open'):?><label class="form-label text-secondary mt-3">Typ je antwoord:</label><textarea class="form-control answer-input" data-question="<?=$q['id']?>" name="question_<?=$q['id']?>" rows="4"><?=e($q['answer_text']??'')?></textarea><?php else:foreach($q['options'] as $opt):?><div class="form-check my-3"><input class="form-check-input answer-input" data-question="<?=$q['id']?>" type="radio" name="question_<?=$q['id']?>" value="<?=$opt['id']?>" <?=((int)($q['selected_option_id']??0)===(int)$opt['id'])?'checked':''?>><label class="form-check-label"><?=e($opt['option_text'])?></label></div><?php endforeach;endif;?><div class="feedback mt-4 d-none"></div></div></div><div class="d-flex justify-content-end gap-2"><button type="button" class="btn btn-primary next-btn"><?=($n+1===count($questions))?'Toets afronden':'Volgende'?></button></div></section><?php endforeach;?></form></main><script>
 (function(){
  const attemptId='<?= (int)$attemptId ?>',testId='<?= (int)$testId ?>';
- function save(questionId,value){fetch('quiz.php?id='+testId,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({action:'save_answer',attempt_id:attemptId,question_id:questionId,answer:value}),keepalive:true}).catch(()=>{});}
- document.querySelectorAll('input.autosave').forEach(el=>el.addEventListener('change',()=>save(el.dataset.question,el.value)));
- document.querySelectorAll('textarea.autosave').forEach(el=>{let timer;el.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>save(el.dataset.question,el.value),500);});});
+ const cards=[...document.querySelectorAll('.question-card')],bar=document.getElementById('progressBar'),form=document.getElementById('quizForm');
+ let current=0,checking=false;
  function activity(data){fetch('activity.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data),keepalive:true}).catch(()=>{});}
+ function save(questionId,value){return fetch('quiz.php?id='+testId,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({action:'save_answer',attempt_id:attemptId,question_id:questionId,answer:value})}).then(r=>r.json());}
+ function value(card){const el=card.querySelector('input[type=radio]:checked,textarea');return el?el.value.trim():'';}
+ function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+ function feedback(card,data){
+   const box=card.querySelector('.feedback');
+   box.className='feedback mt-4 alert '+(data.is_correct?'alert-success':'alert-danger');
+   box.innerHTML='<strong>'+(data.is_correct?'Goed!':'Helaas, fout.')+'</strong>';
+   if(!data.is_correct && data.feedback && data.feedback.correct_answers && data.feedback.correct_answers.length) box.innerHTML+='<div class="mt-2"><strong>Juiste antwoord:</strong> '+data.feedback.correct_answers.map(esc).join(' / ')+'</div>';
+   if(data.feedback && data.feedback.explanation) box.innerHTML+='<div class="mt-2">'+esc(data.feedback.explanation)+'</div>';
+ }
+ function show(i){cards.forEach((c,n)=>c.classList.toggle('d-none',n!==i));current=i;bar.style.width=((i+1)/cards.length*100)+'%';window.scrollTo({top:0,behavior:'smooth'});}
+ async function check(card,i,btn){
+   const v=value(card);
+   if(!v){const b=card.querySelector('.feedback');b.className='feedback mt-4 alert alert-warning';b.textContent='Geef eerst een antwoord voordat je verdergaat.';return;}
+   if(checking)return;checking=true;btn.disabled=true;
+   try{
+     const data=await save(card.dataset.question,v);
+     if(!data.ok||data.answered===false)throw new Error();
+     feedback(card,data);
+     btn.textContent=i===cards.length-1?'Toets afronden':'Volgende';
+     btn.disabled=false;
+     btn.onclick=()=> i===cards.length-1 ? finish() : show(i+1);
+   }catch(e){
+     btn.disabled=false;
+     const b=card.querySelector('.feedback');b.className='feedback mt-4 alert alert-warning';b.textContent='Het antwoord kon niet worden opgeslagen. Probeer het opnieuw.';
+   }finally{checking=false;}
+ }
+ function finish(){activity({action:'end'});form.submit();}
+ cards.forEach((card,i)=>{
+   card.querySelector('.next-btn').addEventListener('click',()=>check(card,i,card.querySelector('.next-btn')));
+   card.querySelectorAll('.answer-input').forEach(el=>{
+     if(el.type==='radio')el.addEventListener('change',()=>save(el.dataset.question,el.value).catch(()=>{}));
+     if(el.tagName==='TEXTAREA'){let timer;el.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>save(el.dataset.question,el.value).catch(()=>{}),500);});}
+   });
+ });
  activity({action:'start',test_id:testId,attempt_id:attemptId});
- let activeUntil=0;const touch=()=>{activeUntil=Date.now()+60000;};
+ let activeUntil=Date.now()+60000;const touch=()=>{activeUntil=Date.now()+60000;};
  ['mousemove','mousedown','keydown','touchstart','scroll'].forEach(e=>window.addEventListener(e,touch,{passive:true}));
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')touch();});
  setInterval(()=>activity({action:'heartbeat',active:(document.visibilityState==='visible'&&Date.now()<activeUntil)?'1':'0'}),15000);
- document.getElementById('quizForm').addEventListener('submit',()=>activity({action:'end'}));
  window.addEventListener('beforeunload',()=>activity({action:'end'}));
 })();
 </script></body></html>
