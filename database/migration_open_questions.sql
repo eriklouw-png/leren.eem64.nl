@@ -1,5 +1,7 @@
 USE leren;
 
+ALTER TABLE tests ADD UNIQUE KEY uq_tests_topic_title(topic_id,title);
+
 ALTER TABLE questions
     ADD COLUMN question_type ENUM('multiple_choice','open') NOT NULL DEFAULT 'multiple_choice' AFTER question_text;
 
