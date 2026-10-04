@@ -1,0 +1,12 @@
+<?php
+require __DIR__.'/../app/bootstrap.php';require_admin();
+$id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);$test=null;
+if($id){$s=$pdo->prepare("SELECT * FROM tests WHERE id=?");$s->execute([$id]);$test=$s->fetch();if(!$test)exit('Toets niet gevonden.');}
+$subjects=$pdo->query("SELECT id,name FROM subjects ORDER BY name")->fetchAll();
+if($_SERVER['REQUEST_METHOD']==='POST'){
+ $title=trim($_POST['title']??'');$description=trim($_POST['description']??'');$topicId=filter_input(INPUT_POST,'topic_id',FILTER_VALIDATE_INT);$active=isset($_POST['is_active'])?1:0;
+ if($title==='')$error='Een titel is verplicht.';
+ elseif($id){$s=$pdo->prepare("UPDATE tests SET topic_id=?,title=?,description=?,is_active=? WHERE id=?");$s->execute([$topicId?:null,$title,$description,$active,$id]);redirect('questions.php?test_id='.$id);}
+ else{$s=$pdo->prepare("INSERT INTO tests(topic_id,title,description,is_active) VALUES(?,?,?,?)");$s->execute([$topicId?:null,$title,$description,$active]);redirect('questions.php?test_id='.$pdo->lastInsertId());}
+}
+?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Toets</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><main class="container py-4" style="max-width:760px"><a href="admin.php">&larr; Beheer</a><div class="card shadow-sm mt-3"><div class="card-body p-4"><h1 class="h3"><?= $id?'Toets bewerken':'Nieuwe toets'?></h1><?php if(!empty($error)):?><div class="alert alert-danger"><?=e($error)?></div><?php endif;?><form method="post"><label class="form-label">Titel</label><input class="form-control mb-3" name="title" value="<?=e($test['title']??'')?>" required><label class="form-label">Beschrijving</label><textarea class="form-control mb-3" name="description" rows="3"><?=e($test['description']??'')?></textarea><label class="form-label">Onderwerp-ID (optioneel)</label><input class="form-control mb-3" type="number" name="topic_id" value="<?=e(isset($test['topic_id'])?(string)$test['topic_id']:'')?>"><div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="is_active" id="active" <?=!isset($test['is_active'])||$test['is_active']?'checked':''?>><label class="form-check-label" for="active">Actief</label></div><button class="btn btn-primary">Opslaan</button></form></div></div></main></body></html>
