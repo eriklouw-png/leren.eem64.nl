@@ -18,7 +18,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='save_answer'
     header('Content-Type: application/json; charset=utf-8');
     $attemptId=filter_var($_POST['attempt_id']??null,FILTER_VALIDATE_INT);
     $questionId=filter_var($_POST['question_id']??null,FILTER_VALIDATE_INT);
-    if(!$attemptId||!$questionId){http_response_code(400);echo json_encode(['ok'=>false]);exit;}
+    if(!$attemptId||!$questionId){http_response_code(400);echo json_encode(['ok'=>false,'error'=>'missing_attempt_or_question']);exit;}
     $a=$pdo->prepare("SELECT id FROM attempts WHERE id=? AND test_id=? AND browser_token=? AND status='in_progress'");
     $a->execute([$attemptId,$testId,$browserToken]);
     if(!$a->fetch()){http_response_code(403);echo json_encode(['ok'=>false]);exit;}
@@ -52,9 +52,14 @@ if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='save_answer'
             'explanation'=>$question['explanation']??''
         ];
     }
-    $x=$pdo->prepare("INSERT INTO attempt_answers(attempt_id,question_id,selected_option_id,answer_text,is_correct,answered_at) VALUES(?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE selected_option_id=VALUES(selected_option_id),answer_text=VALUES(answer_text),is_correct=VALUES(is_correct),answered_at=NOW()");
-    $x->execute([$attemptId,$questionId,$selected,$answerText,$ok]);
-    echo json_encode(['ok'=>true,'answered'=>true,'is_correct'=>(bool)$ok,'feedback'=>$feedback]);exit;
+    try{
+        $x=$pdo->prepare("INSERT INTO attempt_answers(attempt_id,question_id,selected_option_id,answer_text,is_correct,answered_at) VALUES(?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE selected_option_id=VALUES(selected_option_id),answer_text=VALUES(answer_text),is_correct=VALUES(is_correct),answered_at=NOW()");
+        $x->execute([$attemptId,$questionId,$selected,$answerText,$ok]);
+        echo json_encode(['ok'=>true,'answered'=>true,'is_correct'=>(bool)$ok,'feedback'=>$feedback]);exit;
+    }catch(Throwable $e){
+        http_response_code(500);
+        echo json_encode(['ok'=>false,'error'=>'save_failed','message'=>$e->getMessage()]);exit;
+    }
 }
 
 $attempt=null;
@@ -152,14 +157,14 @@ foreach($questions as &$q){$q['options']=[];if($q['question_type']==='multiple_c
    if(checking)return;checking=true;btn.disabled=true;
    try{
      const data=await save(card.dataset.question,v);
-     if(!data.ok||data.answered===false)throw new Error();
+     if(!data.ok||data.answered===false)throw new Error(data.message||data.error||'save_failed');
      feedback(card,data);
      btn.textContent=i===cards.length-1?'Toets afronden':'Volgende';
      btn.disabled=false;
      btn.onclick=()=> i===cards.length-1 ? finish() : show(i+1);
    }catch(e){
      btn.disabled=false;
-     const b=card.querySelector('.feedback');b.className='feedback mt-4 alert alert-warning';b.textContent='Het antwoord kon niet worden opgeslagen. Probeer het opnieuw.';
+     const b=card.querySelector('.feedback');b.className='feedback mt-4 alert alert-warning';b.textContent='Het antwoord kon niet worden opgeslagen. '+(e&&e.message?'Fout: '+e.message:'Probeer het opnieuw.');
    }finally{checking=false;}
  }
  function finish(){activity({action:'end'});form.submit();}
