@@ -1,7 +1,7 @@
 <?php
 require __DIR__.'/../app/bootstrap.php';
 $testId=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);if(!$testId)redirect('index.php');
-$s=$pdo->prepare("SELECT t.id,t.title,t.description,s.name subject_name FROM tests t JOIN topics tp ON tp.id=t.topic_id JOIN subjects s ON s.id=tp.subject_id WHERE t.id=? AND t.is_active=1");$s->execute([$testId]);$test=$s->fetch();if(!$test){http_response_code(404);exit('Toets niet gevonden.');}
+$s=$pdo->prepare("SELECT t.id,t.title,t.description,s.id subject_id,s.name subject_name FROM tests t JOIN topics tp ON tp.id=t.topic_id JOIN subjects s ON s.id=tp.subject_id WHERE t.id=? AND t.is_active=1");$s->execute([$testId]);$test=$s->fetch();if(!$test){http_response_code(404);exit('Toets niet gevonden.');}
 $s=$pdo->prepare("SELECT id,question_text,question_type FROM questions WHERE test_id=? ORDER BY sort_order,id");$s->execute([$testId]);$questions=$s->fetchAll();
 if($_SERVER['REQUEST_METHOD']==='POST'){
     $pdo->beginTransaction();
