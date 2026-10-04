@@ -156,7 +156,7 @@ foreach($questions as &$q){$q['options']=[];if($q['question_type']==='multiple_c
    if(!v){const b=card.querySelector('.feedback');b.className='feedback mt-4 alert alert-warning';b.textContent='Geef eerst een antwoord voordat je verdergaat.';return;}
    if(checking)return;checking=true;btn.disabled=true;
    try{
-     const data=await save(card.dataset.question,v);
+     const data=await save(card.dataset.questionId,v);
      if(!data.ok||data.answered===false)throw new Error(data.message||data.error||'save_failed');
      feedback(card,data);
      btn.textContent=i===cards.length-1?'Toets afronden':'Volgende';
