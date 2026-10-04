@@ -1,0 +1,18 @@
+services:
+  leren-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: leren-web
+    restart: unless-stopped
+    networks:
+      - websites
+    ports:
+      - "30182:80"
+    volumes:
+      - /mnt/POOL/WEBSITES/leren.eem64.nl:/var/www/html
+
+networks:
+  websites:
+    external: true
+    name: websites
