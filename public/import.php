@@ -1,0 +1,68 @@
+<?php
+require __DIR__.'/../app/bootstrap.php';require_admin();
+$errors=[];$success=null;$preview=[];
+$expected=['vak','onderwerp','toets','type','vraag','juiste_antwoord','antwoord_b','antwoord_c','antwoord_d','uitleg','actief'];
+if($_SERVER['REQUEST_METHOD']==='POST'&&isset($_FILES['csv'])){
+    if($_FILES['csv']['error']!==UPLOAD_ERR_OK){$errors[]='Het CSV-bestand kon niet worden geüpload.';}
+    elseif($_FILES['csv']['size']>2*1024*1024){$errors[]='Het CSV-bestand mag maximaal 2 MB zijn.';}
+    else{
+        $fh=fopen($_FILES['csv']['tmp_name'],'rb');
+        $header=fgetcsv($fh,0,';');
+        if(!$header){$errors[]='Het CSV-bestand is leeg.';}
+        else{
+            $header=array_map(fn($v)=>strtolower(trim((string)$v)),$header);
+            if($header!==$expected)$errors[]='De kolomvolgorde is ongeldig. Gebruik exact de meegeleverde template.';
+            else{
+                $line=1;
+                while(($row=fgetcsv($fh,0,';'))!==false){
+                    $line++;
+                    if(count($row)===1&&trim((string)$row[0])==='')continue;
+                    if(count($row)!==count($expected)){$errors[]="Regel $line heeft ".count($row)." kolommen; verwacht ".count($expected).".";continue;}
+                    $row=array_map(fn($v)=>trim((string)$v),$row);$data=array_combine($expected,$row);
+                    $type=strtolower($data['type']);
+                    if(!in_array($type,['mc','open'],true)){$errors[]="Regel $line: type moet mc of open zijn.";continue;}
+                    foreach(['vak','onderwerp','toets','vraag','juiste_antwoord'] as $field)if($data[$field]==='')$errors[]="Regel $line: '$field' is verplicht.";
+                    if($type==='mc'&&($data['antwoord_b']===''||$data['antwoord_c']===''||$data['antwoord_d']===''))$errors[]="Regel $line: bij mc zijn antwoord_b, antwoord_c en antwoord_d verplicht.";
+                    if($type==='open'&&($data['antwoord_b']!==''||$data['antwoord_c']!==''||$data['antwoord_d']!==''))$errors[]="Regel $line: bij open mogen antwoord_b/c/d leeg blijven.";
+                    $preview[]=['line'=>$line,'type'=>$type,'vak'=>$data['vak'],'onderwerp'=>$data['onderwerp'],'toets'=>$data['toets'],'vraag'=>$data['vraag']];
+                }
+                fclose($fh);
+                if(!$errors){
+                    $fh=fopen($_FILES['csv']['tmp_name'],'rb');fgetcsv($fh,0,';');
+                    $pdo->beginTransaction();
+                    try{
+                        $subject=$pdo->prepare("INSERT INTO subjects(name) VALUES(?) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)");
+                        $topic=$pdo->prepare("INSERT INTO topics(subject_id,name) VALUES(?,?) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)");
+                        $test=$pdo->prepare("INSERT INTO tests(topic_id,title,description,is_active) VALUES(?,?,?,?) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id),is_active=VALUES(is_active)");
+                        $q=$pdo->prepare("INSERT INTO questions(test_id,question_text,question_type,explanation,sort_order) VALUES(?,?,?,?,?)");
+                        $opt=$pdo->prepare("INSERT INTO question_options(question_id,option_text,is_correct,sort_order) VALUES(?,?,?,?)");
+                        $oa=$pdo->prepare("INSERT INTO open_question_answers(question_id,answer_text,sort_order) VALUES(?,?,?)");
+                        $sortByTest=[];
+                        while(($row=fgetcsv($fh,0,';'))!==false){
+                            if(count($row)!==count($expected))continue;$data=array_combine($expected,array_map(fn($v)=>trim((string)$v),$row));
+                            $subject->execute([$data['vak']]);$subjectId=(int)$pdo->lastInsertId();
+                            $topic->execute([$subjectId,$data['onderwerp']]);$topicId=(int)$pdo->lastInsertId();
+                            $active=$data['actief']===''?1:(int)in_array(strtolower($data['actief']),['1','ja','yes','true'],true);
+                            $test->execute([$topicId,$data['toets'],'', $active]);$testId=(int)$pdo->lastInsertId();
+                            $sortByTest[$testId]=($sortByTest[$testId]??0)+1;
+                            $q->execute([$testId,$data['vraag'],$data['type']==='open'?'open':'multiple_choice',$data['uitleg'],$sortByTest[$testId]]);
+                            $qid=(int)$pdo->lastInsertId();
+                            if($data['type']==='open'){
+                                $answers=array_values(array_filter(array_map('trim',explode('|',$data['juiste_antwoord'])),fn($v)=>$v!==''));
+                                foreach($answers as $i=>$answer)$oa->execute([$qid,$answer,$i+1]);
+                            }else{
+                                $opts=[$data['juiste_antwoord'],$data['antwoord_b'],$data['antwoord_c'],$data['antwoord_d']];
+                                foreach($opts as $i=>$answer)$opt->execute([$qid,$answer,$i===0?1:0,$i+1]);
+                            }
+                        }
+                        fclose($fh);$pdo->commit();$success=count($preview).' vragen geïmporteerd.';
+                    }catch(Throwable $e){$pdo->rollBack();$errors[]='Import mislukt: '.$e->getMessage();}
+                }
+            }
+        }
+    }
+}
+?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Importeren</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><main class="container py-4" style="max-width:1000px"><a href="admin.php">&larr; Beheer</a><div class="card shadow-sm mt-3"><div class="card-body p-4"><h1>Vragen importeren</h1><p>CSV met <strong>puntkomma's</strong> als scheidingsteken. De import maakt vak, onderwerp en toets automatisch aan als ze nog niet bestaan.</p><div class="alert alert-secondary"><strong>Formaat:</strong> <code>vak;onderwerp;toets;type;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;actief</code><br><strong>type:</strong> <code>mc</code> of <code>open</code>. Bij een open vraag kun je meerdere goede antwoorden opgeven met <code>|</code>.</div><?php foreach($errors as $error):?><div class="alert alert-danger"><?=e($error)?></div><?php endforeach;?><?php if($success):?><div class="alert alert-success"><?=e($success)?></div><?php endif;?><form method="post" enctype="multipart/form-data"><input class="form-control mb-3" type="file" name="csv" accept=".csv,text/csv" required><button class="btn btn-primary">CSV importeren</button></form><hr><h2 class="h5">Voorbeeld voor ChatGPT</h2><pre class="bg-light p-3 border">vak;onderwerp;toets;type;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;actief
+Geschiedenis;De Republiek;Toets 1;mc;Wie was Willem van Oranje?;De leider van de Opstand;Een Franse koning;Een Romeinse keizer;Een Engelse admiraal;;1
+Geschiedenis;De Republiek;Toets 1;open;In welk jaar begon de Tachtigjarige Oorlog?;1568;;;;;1
+Geschiedenis;De Republiek;Toets 1;open;Wie wordt ook de Vader des Vaderlands genoemd?;Willem van Oranje|Willem de Zwijger;;;;;1</pre></div></div></main></body></html>
