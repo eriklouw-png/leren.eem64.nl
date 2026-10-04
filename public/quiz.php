@@ -107,28 +107,6 @@ if(!$attempt){
 $attemptId=(int)$attempt['id'];
 
 if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='finish'){
-    foreach($_POST as $key=>$raw){
-        if(strpos($key,'question_')!==0)continue;
-        $questionId=(int)substr($key,9);
-        $q=$pdo->prepare("SELECT question_type FROM questions q JOIN attempt_questions aq ON aq.question_id=q.id WHERE aq.attempt_id=? AND q.id=? AND q.test_id=?");
-        $q->execute([$attemptId,$questionId,$testId]);$question=$q->fetch();
-        if(!$question)continue;
-        $selected=null;$answerText=null;$ok=null;
-        if($question['question_type']==='open'){
-            $answerText=trim((string)$raw);
-            $x=$pdo->prepare("SELECT answer_text FROM open_question_answers WHERE question_id=?");
-            $x->execute([$questionId]);$ok=$answerText!==''&&open_answer_matches($answerText,$x->fetchAll(PDO::FETCH_COLUMN))?1:0;
-        }else{
-            $selected=filter_var($raw,FILTER_VALIDATE_INT);
-            if($selected!==false&&$selected!==null){
-                $x=$pdo->prepare("SELECT is_correct FROM question_options WHERE id=? AND question_id=?");
-                $x->execute([$selected,$questionId]);$o=$x->fetch();
-                if(!$o)$selected=null;else$ok=(int)$o['is_correct'];
-            }
-        }
-        $x=$pdo->prepare("INSERT INTO attempt_answers(attempt_id,question_id,selected_option_id,answer_text,is_correct,answered_at) VALUES(?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE selected_option_id=VALUES(selected_option_id),answer_text=VALUES(answer_text),is_correct=VALUES(is_correct),answered_at=NOW()");
-        $x->execute([$attemptId,$questionId,$selected,$answerText,$ok]);
-    }
     $x=$pdo->prepare("SELECT COUNT(*) total,SUM(CASE WHEN aa.is_correct=1 THEN 1 ELSE 0 END) correct FROM attempt_questions aq LEFT JOIN attempt_answers aa ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id WHERE aq.attempt_id=?");
     $x->execute([$attemptId]);$stats=$x->fetch();
     $total=(int)$stats['total'];$correct=(int)$stats['correct'];$score=$total?round($correct/$total*100,2):0;
@@ -158,6 +136,7 @@ foreach($questions as &$q){$q['options']=[];if($q['question_type']==='multiple_c
    box.innerHTML='<strong>'+(data.is_correct?'Goed!':'Helaas, fout.')+'</strong>';
    if(!data.is_correct && data.feedback && data.feedback.correct_answers && data.feedback.correct_answers.length) box.innerHTML+='<div class="mt-2"><strong>Juiste antwoord:</strong> '+data.feedback.correct_answers.map(esc).join(' / ')+'</div>';
    if(data.feedback && data.feedback.explanation) box.innerHTML+='<div class="mt-2">'+esc(data.feedback.explanation)+'</div>';
+   else if(data.feedback && data.feedback.ai_reason) box.innerHTML+='<div class="mt-2">'+esc(data.feedback.ai_reason)+'</div>';
  }
  function show(i){cards.forEach((c,n)=>c.classList.toggle('d-none',n!==i));current=i;bar.style.width=((i+1)/cards.length*100)+'%';window.scrollTo({top:0,behavior:'smooth'});}
  async function check(card,i,btn){
