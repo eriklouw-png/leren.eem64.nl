@@ -22,25 +22,39 @@ if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='save_answer'
     $a=$pdo->prepare("SELECT id FROM attempts WHERE id=? AND test_id=? AND browser_token=? AND status='in_progress'");
     $a->execute([$attemptId,$testId,$browserToken]);
     if(!$a->fetch()){http_response_code(403);echo json_encode(['ok'=>false]);exit;}
-    $q=$pdo->prepare("SELECT q.question_type FROM questions q JOIN attempt_questions aq ON aq.question_id=q.id AND aq.attempt_id=? WHERE q.id=? AND q.test_id=?");
+    $q=$pdo->prepare("SELECT q.question_type,q.explanation FROM questions q JOIN attempt_questions aq ON aq.question_id=q.id AND aq.attempt_id=? WHERE q.id=? AND q.test_id=?");
     $q->execute([$attemptId,$questionId,$testId]);$question=$q->fetch();
     if(!$question){http_response_code(400);echo json_encode(['ok'=>false]);exit;}
     $raw=$_POST['answer']??'';$selected=null;$answerText=null;$ok=null;
+    $feedback=[];
     if($question['question_type']==='open'){
         $answerText=trim((string)$raw);
+        if($answerText===''){echo json_encode(['ok'=>true,'answered'=>false]);exit;}
         $x=$pdo->prepare("SELECT answer_text FROM open_question_answers WHERE question_id=? ORDER BY sort_order,id");
-        $x->execute([$questionId]);$ok=$answerText!==''&&open_answer_matches($answerText,$x->fetchAll(PDO::FETCH_COLUMN))?1:0;
+        $x->execute([$questionId]);$correctAnswers=$x->fetchAll(PDO::FETCH_COLUMN);
+        $ok=open_answer_matches($answerText,$correctAnswers)?1:0;
+        $feedback=[
+            'correct_answers'=>$correctAnswers,
+            'explanation'=>$question['explanation']??''
+        ];
     }else{
         $selected=filter_var($raw,FILTER_VALIDATE_INT);
         if($selected!==false&&$selected!==null){
-            $x=$pdo->prepare("SELECT is_correct FROM question_options WHERE id=? AND question_id=?");
+            $x=$pdo->prepare("SELECT option_text,is_correct FROM question_options WHERE id=? AND question_id=?");
             $x->execute([$selected,$questionId]);$o=$x->fetch();
             if(!$o)$selected=null;else$ok=(int)$o['is_correct'];
         }
+        if($selected===null){echo json_encode(['ok'=>true,'answered'=>false]);exit;}
+        $x=$pdo->prepare("SELECT option_text FROM question_options WHERE question_id=? AND is_correct=1 ORDER BY sort_order,id");
+        $x->execute([$questionId]);$correctOptions=$x->fetchAll(PDO::FETCH_COLUMN);
+        $feedback=[
+            'correct_answers'=>$correctOptions,
+            'explanation'=>$question['explanation']??''
+        ];
     }
     $x=$pdo->prepare("INSERT INTO attempt_answers(attempt_id,question_id,selected_option_id,answer_text,is_correct,answered_at) VALUES(?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE selected_option_id=VALUES(selected_option_id),answer_text=VALUES(answer_text),is_correct=VALUES(is_correct),answered_at=NOW()");
     $x->execute([$attemptId,$questionId,$selected,$answerText,$ok]);
-    echo json_encode(['ok'=>true]);exit;
+    echo json_encode(['ok'=>true,'answered'=>true,'is_correct'=>(bool)$ok,'feedback'=>$feedback]);exit;
 }
 
 $attempt=null;
