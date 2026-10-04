@@ -27,6 +27,28 @@ if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='save_answer'
     if(!$question){http_response_code(400);echo json_encode(['ok'=>false]);exit;}
     $raw=$_POST['answer']??'';$selected=null;$answerText=null;$ok=null;
     $feedback=[];
+    if(($_POST['action']??'')==='save_draft'){
+        $answerText=trim((string)$raw);
+        if($question['question_type']==='multiple_choice'){
+            $selected=filter_var($raw,FILTER_VALIDATE_INT);
+            if($selected===false||$selected===null){
+                echo json_encode(['ok'=>true,'answered'=>false]);exit;
+            }
+            $x=$pdo->prepare("SELECT id FROM question_options WHERE id=? AND question_id=?");
+            $x->execute([$selected,$questionId]);
+            if(!$x->fetch()){http_response_code(400);echo json_encode(['ok'=>false,'error'=>'invalid_option']);exit;}
+            $answerText=null;
+        }else{
+            if($answerText===''){echo json_encode(['ok'=>true,'answered'=>false]);exit;}
+        }
+        try{
+            $x=$pdo->prepare("INSERT INTO attempt_answers(attempt_id,question_id,selected_option_id,answer_text,is_correct,answered_at) VALUES(?,?,?,?,NULL,NOW()) ON DUPLICATE KEY UPDATE selected_option_id=VALUES(selected_option_id),answer_text=VALUES(answer_text),is_correct=NULL,answered_at=NOW()");
+            $x->execute([$attemptId,$questionId,$selected,$answerText]);
+            echo json_encode(['ok'=>true,'answered'=>true]);exit;
+        }catch(Throwable $e){
+            http_response_code(500);echo json_encode(['ok'=>false,'error'=>'save_failed']);exit;
+        }
+    }
     if($question['question_type']==='open'){
         $answerText=trim((string)$raw);
         if($answerText===''){echo json_encode(['ok'=>true,'answered'=>false]);exit;}
@@ -128,6 +150,7 @@ foreach($questions as &$q){$q['options']=[];if($q['question_type']==='multiple_c
  let current=0,checking=false;
  function activity(data){fetch('activity.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data),keepalive:true}).catch(()=>{});}
  function save(questionId,value){return fetch('quiz.php?id='+testId,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({action:'save_answer',attempt_id:attemptId,question_id:questionId,answer:value})}).then(r=>r.json());}
+ function saveDraft(questionId,value){return fetch('quiz.php?id='+testId,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({action:'save_draft',attempt_id:attemptId,question_id:questionId,answer:value})}).then(r=>r.json());}
  function value(card){const el=card.querySelector('input[type=radio]:checked,textarea');return el?el.value.trim():'';}
  function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
  function feedback(card,data){
@@ -147,6 +170,7 @@ foreach($questions as &$q){$q['options']=[];if($q['question_type']==='multiple_c
      const data=await save(card.dataset.questionId,v);
      if(!data.ok||data.answered===false)throw new Error(data.message||data.error||'save_failed');
      feedback(card,data);
+     card.querySelectorAll('.answer-input').forEach(el=>el.disabled=true);
      btn.textContent=i===cards.length-1?'Toets afronden':'Volgende';
      btn.disabled=false;
      btn.onclick=()=> i===cards.length-1 ? finish() : show(i+1);
@@ -159,8 +183,8 @@ foreach($questions as &$q){$q['options']=[];if($q['question_type']==='multiple_c
  cards.forEach((card,i)=>{
    card.querySelector('.next-btn').addEventListener('click',()=>check(card,i,card.querySelector('.next-btn')));
    card.querySelectorAll('.answer-input').forEach(el=>{
-     if(el.type==='radio')el.addEventListener('change',()=>save(el.dataset.question,el.value).catch(()=>{}));
-     if(el.tagName==='TEXTAREA'){let timer;el.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>save(el.dataset.question,el.value).catch(()=>{}),500);});}
+     if(el.type==='radio')el.addEventListener('change',()=>saveDraft(el.dataset.question,el.value).catch(()=>{}));
+     if(el.tagName==='TEXTAREA'){let timer;el.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>saveDraft(el.dataset.question,el.value).catch(()=>{}),500);});}
    });
  });
  activity({action:'start',test_id:testId,attempt_id:attemptId});
