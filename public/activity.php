@@ -9,9 +9,10 @@ $token=$_SESSION['study_session_token']??null;
 if($action==='start'){
     $token=bin2hex(random_bytes(32));
     $_SESSION['study_session_token']=$token;
-    $attemptId=filter_var($_POST['attempt_id']??null,FILTER_VALIDATE_INT);
-    $s=$pdo->prepare("INSERT INTO study_sessions(session_token,attempt_id) VALUES(?,?)");
-    $s->execute([$token,$attemptId?:null]);
+    $testId=filter_var($_POST['test_id']??null,FILTER_VALIDATE_INT);
+    if(!$testId){http_response_code(400);echo json_encode(['ok'=>false,'error'=>'missing_test']);exit;}
+    $s=$pdo->prepare("INSERT INTO study_sessions(session_token,test_id) VALUES(?,?)");
+    $s->execute([$token,$testId]);
     echo json_encode(['ok'=>true]);
     exit;
 }
