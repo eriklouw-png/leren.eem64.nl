@@ -40,7 +40,7 @@ foreach($questions as &$q){$q['options']=[];if($q['question_type']==='multiple_c
  ['mousemove','mousedown','keydown','touchstart','scroll'].forEach(e=>window.addEventListener(e,touch,{passive:true}));
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')touch();});
  function post(data){fetch('activity.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data),keepalive:true}).catch(()=>{});}
- post({action:'start',attempt_id:''});
+ post({action:'start',test_id:'<?= (int)$testId ?>'});
  setInterval(()=>{post({action:'heartbeat',active:(document.visibilityState==='visible'&&Date.now()<activeUntil)?'1':'0'});},15000);
  document.getElementById('quizForm').addEventListener('submit',()=>post({action:'end'}));
  window.addEventListener('beforeunload',()=>post({action:'end'}));
