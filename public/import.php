@@ -8,6 +8,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&isset($_FILES['csv'])){
     else{
         $fh=fopen($_FILES['csv']['tmp_name'],'rb');
         $header=fgetcsv($fh,0,';');
+        // Strip UTF-8 BOM from the first header field. Excel and many CSV generators add this automatically.
+        if(isset($header[0])){$header[0]=preg_replace('/^\\xEF\\xBB\\xBF/','',$header[0]);}
         if(!$header){$errors[]='Het CSV-bestand is leeg.';}
         else{
             $header=array_map(fn($v)=>strtolower(trim((string)$v)),$header);
