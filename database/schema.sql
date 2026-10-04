@@ -45,6 +45,7 @@ CREATE TABLE tests (
  is_active TINYINT(1) NOT NULL DEFAULT 1,
  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
  KEY idx_tests_topic(topic_id),
+ UNIQUE KEY uq_tests_topic_title(topic_id,title),
  CONSTRAINT fk_tests_topic FOREIGN KEY(topic_id) REFERENCES topics(id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
