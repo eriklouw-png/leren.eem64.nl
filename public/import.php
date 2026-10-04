@@ -33,7 +33,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&isset($_FILES['csv'])){
                     try{
                         $subject=$pdo->prepare("INSERT INTO subjects(name) VALUES(?) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)");
                         $topic=$pdo->prepare("INSERT INTO topics(subject_id,name) VALUES(?,?) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)");
-                        $test=$pdo->prepare("INSERT INTO tests(topic_id,title,description,is_active) VALUES(?,?,?,?) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id),is_active=VALUES(is_active)");
+                        $findTest=$pdo->prepare("SELECT id FROM tests WHERE topic_id=? AND title=? LIMIT 1");
+                        $createTest=$pdo->prepare("INSERT INTO tests(topic_id,title,description,is_active) VALUES(?,?,?,?)");
+                        $updateTest=$pdo->prepare("UPDATE tests SET is_active=? WHERE id=?");
                         $q=$pdo->prepare("INSERT INTO questions(test_id,question_text,question_type,explanation,sort_order) VALUES(?,?,?,?,?)");
                         $opt=$pdo->prepare("INSERT INTO question_options(question_id,option_text,is_correct,sort_order) VALUES(?,?,?,?)");
                         $oa=$pdo->prepare("INSERT INTO open_question_answers(question_id,answer_text,sort_order) VALUES(?,?,?)");
@@ -43,7 +45,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&isset($_FILES['csv'])){
                             $subject->execute([$data['vak']]);$subjectId=(int)$pdo->lastInsertId();
                             $topic->execute([$subjectId,$data['onderwerp']]);$topicId=(int)$pdo->lastInsertId();
                             $active=$data['actief']===''?1:(int)in_array(strtolower($data['actief']),['1','ja','yes','true'],true);
-                            $test->execute([$topicId,$data['toets'],'', $active]);$testId=(int)$pdo->lastInsertId();
+                            $findTest->execute([$topicId,$data['toets']]);$existingTest=$findTest->fetchColumn();
+                            if($existingTest){$testId=(int)$existingTest;$updateTest->execute([$active,$testId]);}
+                            else{$createTest->execute([$topicId,$data['toets'],'',$active]);$testId=(int)$pdo->lastInsertId();}
                             $sortByTest[$testId]=($sortByTest[$testId]??0)+1;
                             $q->execute([$testId,$data['vraag'],$data['type']==='open'?'open':'multiple_choice',$data['uitleg'],$sortByTest[$testId]]);
                             $qid=(int)$pdo->lastInsertId();
