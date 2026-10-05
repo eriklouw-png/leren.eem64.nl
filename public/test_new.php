@@ -94,18 +94,18 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }
 }
 ?>
-<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nieuwe toets</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nieuwe sub-test</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>.import-help{font-size:.9rem}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}</style></head>
 <body class="bg-light"><main class="container py-4" style="max-width:900px">
 <a href="subject_manage.php?id=<?=$subjectId?>">&larr; <?=e($subject['name'])?></a>
 <div class="card shadow-sm mt-3"><div class="card-body p-4">
-<h1 class="h3">Nieuwe toets — <?=e($subject['name'])?></h1>
+<h1 class="h3">Nieuwe sub-test — <?=e($subject['name'])?></h1>
 <div class="alert alert-info"><strong>Taal:</strong> <?=e($leftLabel)?> → <?=e($rightLabel)?>. De taal is al bekend en hoeft niet opnieuw te worden ingevuld.</div>
 <?php foreach($errors as $error):?><div class="alert alert-danger"><?=e($error)?></div><?php endforeach;?>
 <form method="post">
 <label class="form-label">Titel</label><input class="form-control mb-3" name="title" value="<?=e($title)?>" required>
 <label class="form-label">Beschrijving</label><textarea class="form-control mb-3" name="description" rows="2"><?=e($description)?></textarea>
-<label class="form-label">Type toets</label>
+<label class="form-label">Type sub-test</label>
 <select class="form-select mb-3" name="test_type" id="testType">
 <option value="vocabulary" <?=$testType==='vocabulary'?'selected':''?>>Woordjes oefenen</option>
 <option value="multiple_choice" <?=$testType==='multiple_choice'?'selected':''?>>Multiple choice</option>
@@ -117,7 +117,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <label class="form-label"><strong>Gegevens importeren</strong></label>
 <textarea class="form-control mono" name="import_text" id="importText" rows="14" placeholder=""></textarea>
 <div class="form-text mb-3">Lege regels en regels die beginnen met # worden overgeslagen.</div>
-<button class="btn btn-primary">Toets maken</button>
+<button class="btn btn-primary">Sub-Test maken</button>
 </form>
 </div></div></main>
 <script>
