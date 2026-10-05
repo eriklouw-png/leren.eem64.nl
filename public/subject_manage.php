@@ -28,7 +28,9 @@ if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='delete_subje
 }
 $s=$pdo->prepare("SELECT id,name,description,image_mime FROM subjects WHERE id=?");$s->execute([$id]);$subject=$s->fetch();
 if(!$subject){http_response_code(404);exit('Taal niet gevonden.');}
-$x=$pdo->prepare("SELECT t.id,t.title,t.description,t.test_type,t.is_active,COUNT(q.id) question_count FROM tests t JOIN topics tp ON tp.id=t.topic_id LEFT JOIN questions q ON q.test_id=t.id WHERE tp.subject_id=? GROUP BY t.id ORDER BY t.created_at DESC");
+$tx=$pdo->prepare("SELECT id,name,test_date FROM topics WHERE subject_id=? ORDER BY name");
+$tx->execute([$id]);$topics=$tx->fetchAll();
+$x=$pdo->prepare("SELECT t.id,t.title,t.description,t.test_type,t.is_active,COUNT(q.id) question_count FROM tests t JOIN topics tp ON tp.id=t.topic_id LEFT JOIN questions q ON q.test_id=t.id WHERE tp.subject_id=? GROUP BY t.id ORDER BY tp.name,t.created_at DESC");
 $x->execute([$id]);$tests=$x->fetchAll();
 $testIds=array_map('intval',array_column($tests,'id'));
 $sessionGroups=[];
@@ -56,6 +58,11 @@ $labels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Multiple choice','
 <a class="btn btn-outline-secondary" href="subject_edit.php?id=<?=$id?>">Bewerken</a>
 </div></div></div>
 </div>
+<h2 class="h4 mt-4">Onderwerpen</h2>
+<?php if(!$topics):?><div class="alert alert-info">Nog geen onderwerpen voor dit vak.</div><?php else:?><div class="list-group shadow-sm mb-4">
+<?php foreach($topics as $topic): $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d');?>
+<div class="list-group-item"><div class="d-flex justify-content-between align-items-center gap-3"><div><strong><?=e($topic['name'])?></strong><div class="small text-secondary"><?php if($topic['test_date']):?>Overhoringsdatum: <?=e(date('d-m-Y',strtotime($topic['test_date'])))?> · <?= $archived?'Gearchiveerd':'Actief'?><?php else:?>Geen overhoringsdatum<?php endif;?></div></div><a class="btn btn-sm btn-outline-primary" href="topic_edit.php?id=<?=$topic['id']?>">Bewerken</a></div></div>
+<?php endforeach;?></div><?php endif;?>
 <h2 class="h4 mt-4">Toetsen</h2>
 <?php if(!$tests):?><div class="alert alert-info">Nog geen toetsen voor deze taal.</div><?php else:?><div class="list-group shadow-sm">
 <?php foreach($tests as $t):?><div class="list-group-item"><div class="d-flex justify-content-between align-items-center gap-3"><div><strong><?=e($t['title'])?></strong><div class="small text-secondary"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=$t['question_count']?> vragen · <?=((int)$t['is_active']?'Actief':'Inactief')?></div></div><div class="text-nowrap"><a class="btn btn-sm btn-outline-primary" href="test_edit.php?id=<?=$t['id']?>">Bewerken</a><a class="btn btn-sm btn-outline-secondary ms-1" href="questions.php?test_id=<?=$t['id']?>">Vragen</a></div></div></div><?php endforeach;?>
