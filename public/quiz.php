@@ -78,7 +78,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && in_array(($_POST['action']??''),['save
             if($answerText===''){echo json_encode(['ok'=>true,'answered'=>false]);exit;}
         }
         try{
-            $x=$pdo->prepare("INSERT INTO attempt_answers(attempt_id,question_id,selected_option_id,answer_text,is_correct,answered_at) VALUES(?,?,?,?,NULL,NOW()) ON DUPLICATE KEY UPDATE selected_option_id=VALUES(selected_option_id),answer_text=VALUES(answer_text),is_correct=NULL,answered_at=NOW()");
+            $x=$pdo->prepare("INSERT INTO attempt_answers(attempt_id,question_id,selected_option_id,answer_text,is_correct,answered_at) VALUES(?,?,?,?,NULL,NOW()) ON DUPLICATE KEY UPDATE selected_option_id=VALUES(selected_option_id),answer_text=VALUES(answer_text),is_correct=attempt_answers.is_correct,answered_at=NOW()");
             $x->execute([$attemptId,$questionId,$selected,$answerText]);
             echo json_encode(['ok'=>true,'answered'=>true]);exit;
         }catch(Throwable $e){
