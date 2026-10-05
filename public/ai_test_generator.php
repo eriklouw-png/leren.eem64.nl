@@ -72,6 +72,108 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $analysis=$_SESSION['ai_test_analysis']['analysis']??$analysis;
     }
 
+
+    if($action==='save'){
+        $saved=$_SESSION['ai_test_analysis']??null;
+        $posted=$_POST['tests']??[];
+        if(!is_array($saved)||!isset($saved['generated']['subtests'])||!is_array($posted)){
+            $errors[]='De gegenereerde vragen zijn verlopen. Genereer ze opnieuw.';
+        }else{
+            $generated=$saved['generated']['subtests'];
+            $sourceImages=(array)($saved['images']??[]);
+            $validTests=[];
+            foreach($posted as $si=>$test){
+                if(!isset($generated[$si])||!is_array($test))continue;
+                $title=trim((string)($test['title']??''));
+                $description=trim((string)($test['description']??''));
+                $questions=$test['questions']??[];
+                if($title===''){ $errors[]='Elke sub-test moet een titel hebben.'; continue; }
+                if(!is_array($questions)||!$questions){$errors[]='Sub-test "'.$title.'" bevat geen vragen.';continue;}
+                $validQuestions=[];
+                foreach($questions as $qi=>$q){
+                    if(!isset($generated[$si]['questions'][$qi])||!is_array($q))continue;
+                    $type=(string)($q['type']??'');
+                    $question=trim((string)($q['question']??''));
+                    $correct=trim((string)($q['correct_answer']??''));
+                    $explanation=trim((string)($q['explanation']??''));
+                    $sourcePage=max(1,(int)($q['source_page']??1));
+                    $useImage=!empty($q['use_image']);
+                    if($question===''||$correct===''){$errors[]='Vraag '.($qi+1).' in "'.$title.'" mist vraag of antwoord.';continue;}
+                    if(!in_array($type,['mc','open'],true)){$errors[]='Ongeldig vraagtype in "'.$title.'".';continue;}
+                    $options=[];
+                    if($type==='mc'){
+                        $rawOptions=$q['options']??[];
+                        if(!is_array($rawOptions)||count($rawOptions)!==4){$errors[]='Multiple-choicevraag '.($qi+1).' in "'.$title.'" moet precies vier antwoorden hebben.';continue;}
+                        foreach($rawOptions as $option)$options[]=trim((string)$option);
+                        if(in_array('', $options,true)){$errors[]='Een antwoordoptie is leeg in "'.$title.'".';continue;}
+                        $correctOption=(int)($q['correct_option']??-1);
+                        if($correctOption<0||$correctOption>3||$options[$correctOption]!==$correct){$errors[]='Het juiste antwoord van vraag '.($qi+1).' in "'.$title.'" klopt niet met de opties.';continue;}
+                    }else{
+                        $accepted=$q['accepted_answers']??[];
+                        if(!is_array($accepted))$accepted=[];
+                        $accepted=array_values(array_filter(array_map(fn($v)=>trim((string)$v),$accepted),fn($v)=>$v!==''));
+                        if(!$accepted)$accepted=[$correct];
+                        $correct=implode(' | ',$accepted);
+                    }
+                    $validQuestions[]=['type'=>$type,'question'=>$question,'correct'=>$correct,'options'=>$options,'correct_option'=>$type==='mc'?(int)$q['correct_option']:0,'explanation'=>$explanation,'source_page'=>$sourcePage,'use_image'=>$useImage];
+                }
+                if($validQuestions)$validTests[]=['title'=>$title,'description'=>$description,'questions'=>$validQuestions];
+            }
+            if(!$errors&&!$validTests)$errors[]='Er is geen geldige sub-test om op te slaan.';
+            if(!$errors){
+                $pdo->beginTransaction();
+                try{
+                    $qIns=$pdo->prepare("INSERT INTO questions(test_id,question_text,image_path,question_type,explanation,sort_order) VALUES(?,?,?,?,?,?)");
+                    $optIns=$pdo->prepare("INSERT INTO question_options(question_id,option_text,is_correct,sort_order) VALUES(?,?,?,?)");
+                    $oaIns=$pdo->prepare("INSERT INTO open_question_answers(question_id,answer_text,sort_order) VALUES(?,?,?)");
+                    $testIns=$pdo->prepare("INSERT INTO tests(topic_id,title,description,test_type,vocab_left_label,vocab_right_label,vocab_direction,is_active) VALUES(?,?,?,?,NULL,NULL,NULL,1)");
+                    $savedCount=0;
+                    $questionImageDir=__DIR__.'/uploads/questions';
+                    if(!is_dir($questionImageDir)&&!@mkdir($questionImageDir,0755,true))throw new RuntimeException('De map uploads/questions kon niet worden aangemaakt.');
+                    foreach($validTests as $test){
+                        $testType='multiple_choice';
+                        $hasOpen=false;$hasMc=false;
+                        foreach($test['questions'] as $q){$hasOpen=$hasOpen||$q['type']==='open';$hasMc=$hasMc||$q['type']==='mc';}
+                        if($hasOpen&&$hasMc)$testType='mixed';elseif($hasOpen)$testType='open';
+                        $check=$pdo->prepare("SELECT id FROM tests WHERE topic_id=? AND title=? LIMIT 1");
+                        $check->execute([$topicId,$test['title']]);
+                        if($check->fetchColumn())throw new RuntimeException('Er bestaat al een sub-test met de titel "'.$test['title'].'". Pas de titel aan voordat je opslaat.');
+                        $testIns->execute([$topicId,$test['title'],$test['description'],$testType]);
+                        $testId=(int)$pdo->lastInsertId();
+                        foreach($test['questions'] as $sort=>$q){
+                            $imagePath=null;
+                            if($q['use_image']){
+                                $source=$sourceImages[$q['source_page']-1]??null;
+                                if($source&&is_file($source)){
+                                    $mime=(string)(@mime_content_type($source)?:'');
+                                    $ext=$mime==='image/png'?'png':($mime==='image/webp'?'webp':'jpg');
+                                    $filename='ai_'.bin2hex(random_bytes(12)).'.'.$ext;
+                                    if(!@copy($source,$questionImageDir.'/'.$filename))throw new RuntimeException('Afbeelding kon niet aan een vraag worden gekoppeld.');
+                                    $imagePath=$filename;
+                                }
+                            }
+                            $qIns->execute([$testId,$q['question'],$imagePath,$q['type']==='mc'?'multiple_choice':'open',$q['explanation'],$sort+1]);
+                            $qid=(int)$pdo->lastInsertId();
+                            if($q['type']==='mc'){
+                                foreach($q['options'] as $oi=>$option)$optIns->execute([$qid,$option,$oi===$q['correct_option']?1:0,$oi+1]);
+                            }else{
+                                foreach(array_map('trim',explode('|',$q['correct'])) as $ai=>$answer)$oaIns->execute([$qid,$answer,$ai+1]);
+                            }
+                        }
+                        $savedCount++;
+                    }
+                    $pdo->commit();
+                    unset($_SESSION['ai_test_analysis']);
+                    redirect('subject_manage.php?id='.$subjectId.'&ai_saved='.$savedCount);
+                }catch(Throwable $e){
+                    if($pdo->inTransaction())$pdo->rollBack();
+                    $errors[]='Opslaan mislukt: '.$e->getMessage();
+                }
+            }
+        }
+        $analysis=$_SESSION['ai_test_analysis']['analysis']??$analysis;
+    }
+
     if($action==='analyze'){
         if(!warm_ai())$errors[]='AI is niet beschikbaar. Controleer OPENAI_API_KEY en de AI-instellingen.';
         $files=$_FILES['pages']??null;
@@ -177,24 +279,48 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 </form>
 <?php if(isset($_SESSION['ai_test_analysis']['generated']['subtests'])):?>
 <hr class="my-4">
-<h3 class="h5">Gegenereerde vragen</h3>
-<div class="alert alert-warning">Controleer deze vragen eerst. Er is nog niets in de database opgeslagen.</div>
-<?php foreach($_SESSION['ai_test_analysis']['generated']['subtests'] as $generatedSub):?>
-<div class="card mb-3"><div class="card-body">
-<h4 class="h6"><?=e($generatedSub['title'])?></h4>
+<h3 class="h5">Gegenereerde vragen controleren</h3>
+<div class="alert alert-warning">Pas hieronder de teksten, antwoorden en uitleg aan. Er wordt pas iets in de database opgeslagen wanneer je onderaan op <strong>Opslaan als sub-tests</strong> klikt.</div>
+<form method="post">
+<input type="hidden" name="action" value="save">
+<?php foreach($_SESSION['ai_test_analysis']['generated']['subtests'] as $si=>$generatedSub):?>
+<div class="card mb-4"><div class="card-body">
+<div class="row g-2 mb-3">
+<div class="col-md-8"><label class="form-label fw-semibold">Naam sub-test</label><input class="form-control" name="tests[<?=$si?>][title]" value="<?=e($generatedSub['title'])?>" required></div>
+<div class="col-md-4"><label class="form-label fw-semibold">Beschrijving</label><input class="form-control" name="tests[<?=$si?>][description]" value="<?=e($generatedSub['description']??'')?>"></div>
+</div>
 <?php foreach(($generatedSub['questions']??[]) as $qi=>$q):?>
 <div class="border-top pt-3 mt-3">
-<div><strong><?=($qi+1)?>. <?=e($q['question'])?></strong> <span class="badge text-bg-light"><?=e(strtoupper($q['type']))?></span></div>
+<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][type]" value="<?=e($q['type'])?>">
+<div class="d-flex justify-content-between align-items-center mb-2"><strong>Vraag <?=($qi+1)?></strong><span class="badge text-bg-light"><?=e(strtoupper($q['type']))?></span></div>
+<label class="form-label">Vraag</label>
+<textarea class="form-control mb-2" name="tests[<?=$si?>][questions][<?=$qi?>][question]" rows="2" required><?=e($q['question'])?></textarea>
 <?php if($q['type']==='mc'):?>
-<ol class="mb-1" type="A"><?php foreach(($q['options']??[]) as $oi=>$option):?><li class="<?=$oi===(int)$q['correct_option']?'fw-bold':''?>"><?=e($option)?><?=$oi===(int)$q['correct_option']?' ✓':''?></li><?php endforeach;?></ol>
-<?php else:?><div class="small text-secondary mt-1">Juiste antwoord: <?=e($q['correct_answer'])?></div><?php endif;?>
-<div class="small text-secondary">Uitleg: <?=e($q['explanation'])?> · Bronpagina: <?=e((string)$q['source_page'])?><?=!empty($q['use_image'])?' · afbeelding gebruiken':''?></div>
+<div class="row g-2 mb-2">
+<?php foreach(($q['options']??[]) as $oi=>$option):?><div class="col-md-6"><label class="form-label small">Antwoord <?=chr(65+$oi)?></label><input class="form-control" name="tests[<?=$si?>][questions][<?=$qi?>][options][<?=$oi?>]" value="<?=e($option)?>" required></div><?php endforeach;?>
+</div>
+<label class="form-label">Juiste antwoord</label>
+<select class="form-select mb-2" name="tests[<?=$si?>][questions][<?=$qi?>][correct_option]">
+<?php foreach(($q['options']??[]) as $oi=>$option):?><option value="<?=$oi?>" <?=$oi===(int)$q['correct_option']?'selected':''?>><?=chr(65+$oi)?> — <?=e($option)?></option><?php endforeach;?>
+</select>
+<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][correct_answer]" value="<?=e($q['correct_answer'])?>">
+<?php else:?>
+<label class="form-label">Juiste antwoord(en)</label>
+<input class="form-control mb-2" name="tests[<?=$si?>][questions][<?=$qi?>][accepted_answers]" value="<?=e(implode(' | ',(array)($q['accepted_answers']??[$q['correct_answer']])))?>" required>
+<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][correct_answer]" value="<?=e($q['correct_answer'])?>">
+<?php endif;?>
+<label class="form-label">Uitleg</label>
+<textarea class="form-control mb-2" name="tests[<?=$si?>][questions][<?=$qi?>][explanation]" rows="2"><?=e($q['explanation']??'')?></textarea>
+<div class="row g-2 align-items-end">
+<div class="col-md-4"><label class="form-label small">Bronpagina</label><input class="form-control" type="number" min="1" max="10" name="tests[<?=$si?>][questions][<?=$qi?>][source_page]" value="<?=e((string)($q['source_page']??1))?>"></div>
+<div class="col-md-8"><div class="form-check"><input class="form-check-input" type="checkbox" name="tests[<?=$si?>][questions][<?=$qi?>][use_image]" value="1" id="img<?=$si?>_<?=$qi?>" <?=$q['use_image']?'checked':''?>><label class="form-check-label" for="img<?=$si?>_<?=$qi?>">Gebruik afbeelding van deze bronpagina bij deze vraag</label></div></div>
+</div>
 </div>
 <?php endforeach;?>
 </div></div>
 <?php endforeach;?>
-<?php endif;?>
-<div class="alert alert-success mt-4 mb-0"><strong>Veilige tussenstap:</strong> de analyse en gegenereerde vragen staan alleen in deze sessie. De volgende stap kan de geselecteerde vragen laten aanpassen en pas daarna een nieuwe sub-test in de database aanmaken.</div>
+<div class="d-flex gap-2 mb-3"><button class="btn btn-success btn-lg" type="submit">Opslaan als sub-tests</button><button class="btn btn-outline-secondary" type="submit" name="action" value="clear" formnovalidate>Annuleren</button></div>
+</form><div class="alert alert-success mt-4 mb-0"><strong>Veilige tussenstap:</strong> de analyse en gegenereerde vragen staan alleen in deze sessie. De volgende stap kan de geselecteerde vragen laten aanpassen en pas daarna een nieuwe sub-test in de database aanmaken.</div>
 <?php endif;?>
 </div></div></main>
 <script>
