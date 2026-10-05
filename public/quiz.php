@@ -304,7 +304,24 @@ function setupQuestionImages(){
      const b=card.querySelector('.feedback');b.className='feedback mt-4 alert alert-warning';b.textContent='Het antwoord kon niet worden opgeslagen. '+(e&&e.message?'Fout: '+e.message:'Probeer het opnieuw.');
    }finally{checking=false;}
  }
- function finish(){activity({action:'end'});form.submit();}
+ async function finish(){
+   btnFinishState();
+   try{
+     const response=await fetch('quiz.php?id='+testId,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({action:'finish',attempt_id:attemptId})});
+     if(!response.ok)throw new Error('finish_failed_'+response.status);
+     window.location.href='result.php?id='+attemptId;
+   }catch(e){
+     const card=cards[cards.length-1];
+     const b=card.querySelector('.feedback');
+     b.className='feedback mt-4 alert alert-warning';
+     b.textContent='De toets kon niet worden afgerond. Probeer het opnieuw.';
+     const btn=card.querySelector('.next-btn');btn.disabled=false;btn.textContent='Afronden';
+   }
+ }
+ function btnFinishState(){
+   const btn=cards[cards.length-1]?.querySelector('.next-btn');
+   if(btn){btn.disabled=true;btn.textContent='Afronden…';}
+ }
  cards.forEach((card,i)=>{
    card.querySelector('.next-btn').addEventListener('click',()=>check(card,i,card.querySelector('.next-btn')));
    card.querySelectorAll('.answer-input').forEach(el=>{
