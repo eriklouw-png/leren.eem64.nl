@@ -3,6 +3,7 @@ require __DIR__.'/../app/bootstrap.php';require_admin();
 
 $requestFile=__DIR__.'/../.update_request';
 $statusFile=__DIR__.'/../.update_status.json';
+$outputFile=__DIR__.'/../.update_output.log';
 
 function read_update_status(string $file):array{
     if(!is_file($file))return ['state'=>'idle'];
@@ -26,7 +27,9 @@ if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='start'){
 
 if(($_GET['action']??'')==='status'){
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(read_update_status($statusFile),JSON_UNESCAPED_UNICODE);exit;
+    $s=read_update_status($statusFile);
+    if(is_file($outputFile))$s['output']=file_get_contents($outputFile)?:'';
+    echo json_encode($s,JSON_UNESCAPED_UNICODE);exit;
 }
 $status=read_update_status($statusFile);
 ?>
