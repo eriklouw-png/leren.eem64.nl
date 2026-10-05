@@ -30,7 +30,7 @@ $s=$pdo->prepare("SELECT id,name,description,image_mime FROM subjects WHERE id=?
 if(!$subject){http_response_code(404);exit('Taal niet gevonden.');}
 $tx=$pdo->prepare("SELECT id,name,test_date,is_active FROM topics WHERE subject_id=? AND is_active=1 ORDER BY test_date DESC, created_at DESC, name");
 $tx->execute([$id]);$topics=$tx->fetchAll();
-$x=$pdo->prepare("SELECT t.id,t.topic_id,t.title,t.description,t.test_type,t.is_active,COUNT(q.id) question_count FROM tests t JOIN topics tp ON tp.id=t.topic_id LEFT JOIN questions q ON q.test_id=t.id WHERE tp.subject_id=? AND t.is_active=1 GROUP BY t.id ORDER BY tp.name,t.created_at DESC");
+$x=$pdo->prepare("SELECT t.id,t.topic_id,t.title,t.description,t.test_type,t.vocab_direction,t.is_active,COUNT(q.id) question_count FROM tests t JOIN topics tp ON tp.id=t.topic_id LEFT JOIN questions q ON q.test_id=t.id WHERE tp.subject_id=? AND t.is_active=1 GROUP BY t.id ORDER BY tp.name,t.created_at DESC");
 $x->execute([$id]);$tests=$x->fetchAll();
 $testIds=array_map('intval',array_column($tests,'id'));
 $sessionGroups=[];
@@ -87,7 +87,7 @@ foreach($tests as $t){
 <?php else:?>
 <div class="list-group">
 <?php foreach($topicTests as $t):?>
-<div class="list-group-item"><div class="d-flex justify-content-between align-items-center gap-3"><div><strong><?=e($t['title'])?></strong><div class="small text-secondary"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=$t['question_count']?> vragen · <?=((int)$t['is_active']?'Actief':'Inactief')?></div></div><div class="text-nowrap"><a class="btn btn-sm btn-outline-primary" href="test_edit.php?id=<?=$t['id']?>">Bewerken</a><a class="btn btn-sm btn-outline-secondary ms-1" href="questions.php?test_id=<?=$t['id']?>">Vragen</a></div></div></div>
+<div class="list-group-item"><div class="d-flex justify-content-between align-items-center gap-3"><div><strong><?=e($t['title'])?></strong><div class="small text-secondary"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=((($t['test_type']??'mixed')==='vocabulary' && ($t['vocab_direction']??'both')==='both') ? (int)ceil(((int)$t['question_count'])/2) : (int)$t['question_count'])?> <?=($t['test_type']??'mixed')==='vocabulary'?'woorden':'vragen'?> · <?=((int)$t['is_active']?'Actief':'Inactief')?></div></div><div class="text-nowrap"><a class="btn btn-sm btn-outline-primary" href="test_edit.php?id=<?=$t['id']?>">Bewerken</a><a class="btn btn-sm btn-outline-secondary ms-1" href="questions.php?test_id=<?=$t['id']?>">Vragen</a></div></div></div>
 <?php endforeach;?>
 </div>
 <?php endif;?>
