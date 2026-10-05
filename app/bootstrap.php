@@ -4,21 +4,47 @@ declare(strict_types=1);
 session_start();
 
 // Inject the global website theme into all HTML pages. JSON/API responses are left untouched.
+function leren_navbar_html(string $area): string{
+    if(!isset($_SESSION['user']) || !is_array($_SESSION['user']))return '';
+
+    $name=e((string)($_SESSION['user']['name']??''));
+    $area=$area==='admin'?'admin':'website';
+    $right=$area==='admin'
+        ? '<a class="btn btn-outline-light btn-sm" href="index.php">Website</a>'
+        : '<a class="btn btn-outline-light btn-sm" href="admin.php">Beheer</a>';
+
+    return '<nav class="navbar navbar-dark bg-dark mb-4"><div class="container">'
+        .'<a class="navbar-brand" href="index.php">Leren</a>'
+        .'<span class="text-white me-3">'.$name.'</span>'
+        .'<div><a class="btn btn-outline-light btn-sm me-2" href="logout.php">Uitloggen</a>'.$right.'</div>'
+        .'</div></nav>';
+}
+
 ob_start(static function(string $html): string{
     if(stripos($html,'</head>')!==false){
         $theme='<link rel="stylesheet" href="/theme.css">';
         $html=preg_replace('~</head>~i',$theme.'</head>',$html,1)??$html;
     }
-    if(isset($_SESSION['user']) && is_array($_SESSION['user']) && ($_SESSION['user']['role']??'')==='student' && stripos($html,'<nav')!==false){
-        $name=htmlspecialchars((string)($_SESSION['user']['name']??''),ENT_QUOTES,'UTF-8');
-        $links='<span class="text-white me-3">'.$name.'</span><a class="btn btn-outline-light btn-sm me-2" href="logout.php">Uitloggen</a><a class="btn btn-outline-light btn-sm" href="index.php">Website</a>';
-        $pattern='~(<a class="btn btn-outline-light btn-sm" href="admin\\.php">Beheer</a>)~i';
-        if(preg_match($pattern,$html)){
-            $html=preg_replace($pattern,$links.' $1',$html,1)??$html;
-        }else{
-            $html=preg_replace('~(</div></nav>)~i',$links.'$1',$html,1)??$html;
+
+    if(isset($_SESSION['user']) && is_array($_SESSION['user']) && stripos($html,'<body')!==false){
+        $script=basename((string)($_SERVER['SCRIPT_NAME']??''));
+        $adminPages=[
+            'admin.php','subject_manage.php','subject_edit.php','topic_edit.php',
+            'test_new.php','test_edit.php','import.php','vocabulary_import.php',
+            'system_update.php','debug_question.php'
+        ];
+        $area=in_array($script,$adminPages,true)?'admin':'website';
+        $navbar=leren_navbar_html($area);
+
+        if($navbar!==''){
+            if(preg_match('~<nav\\b[^>]*>.*?</nav>~is',$html)){
+                $html=preg_replace('~<nav\\b[^>]*>.*?</nav>~is',$navbar,$html,1)??$html;
+            }else{
+                $html=preg_replace('~(<body\\b[^>]*>)~i','$1'.$navbar,$html,1)??$html;
+            }
         }
     }
+
     return $html;
 });
 
