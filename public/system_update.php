@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../app/bootstrap.php';require_admin();
+require __DIR__.'/../app/bootstrap.php';
 
 $statusFile=__DIR__.'/../.update_status.json';
 $outputFile=__DIR__.'/../.update_output.log';
@@ -9,6 +9,30 @@ function read_update_status(string $file):array{
     $raw=@file_get_contents($file);$data=json_decode($raw?:'',true);
     return is_array($data)?$data:['state'=>'idle'];
 }
+
+/*
+ * The status endpoint must remain available while the Docker container is
+ * being recreated. During that short restart the PHP session can disappear,
+ * so requiring admin authentication here would cause the browser's polling
+ * request to receive a 302 to login.php and the update screen would remain
+ * stuck forever.
+ *
+ * Only non-sensitive status fields are exposed without authentication.
+ */
+if(($_GET['action']??'')==='status'){
+    header('Content-Type: application/json; charset=utf-8');
+    $s=read_update_status($statusFile);
+    echo json_encode([
+        'state'=>$s['state']??'idle',
+        'stage'=>$s['stage']??null,
+        'message'=>$s['message']??null,
+        'requested_at'=>$s['requested_at']??null,
+        'finished_at'=>$s['finished_at']??null,
+    ],JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+require_admin();
 
 if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='start'){
     $status=read_update_status($statusFile);
@@ -28,12 +52,6 @@ if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='start'){
     header('Content-Type: application/json');echo json_encode(['ok'=>true]);exit;
 }
 
-if(($_GET['action']??'')==='status'){
-    header('Content-Type: application/json; charset=utf-8');
-    $s=read_update_status($statusFile);
-    if(is_file($outputFile))$s['output']=file_get_contents($outputFile)?:'';
-    echo json_encode($s,JSON_UNESCAPED_UNICODE);exit;
-}
 $status=read_update_status($statusFile);
 ?>
 <!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Website bijwerken</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -58,6 +76,7 @@ $status=read_update_status($statusFile);
 </main>
 <script>
 const statusBox=document.getElementById('statusBox'),btn=document.getElementById('startBtn'),details=document.getElementById('details'),log=document.getElementById('log');
+
 function render(s){
  const state=s.state||'idle';
  if(state==='idle'){statusBox.className='alert alert-secondary';statusBox.textContent='De website is bijgewerkt. Je kunt een nieuwe update starten.';btn.disabled=false;}
@@ -65,6 +84,7 @@ function render(s){
  else if(state==='running'){statusBox.className='alert alert-primary';statusBox.textContent=s.message||'Website wordt bijgewerkt...';btn.disabled=true;}
  else if(state==='success'){statusBox.className='alert alert-success';statusBox.textContent=s.message||'Website is succesvol bijgewerkt.';btn.disabled=false;}
  else {statusBox.className='alert alert-danger';statusBox.textContent=s.message||'De update is mislukt.';btn.disabled=false;}
+
  document.querySelectorAll('.step').forEach(x=>x.className='step');
  if(state==='requested')document.getElementById('stepRequest').classList.add('active');
  if(state==='running'){
@@ -81,11 +101,16 @@ function render(s){
    document.getElementById('stepRequest').classList.add('done');
    document.getElementById('stepDone').classList.add('error');
  }
- if(s.output){details.classList.remove('d-none');log.textContent=s.output;log.scrollTop=log.scrollHeight;}
 }
+
 async function poll(){
- try{const r=await fetch('system_update.php?action=status',{cache:'no-store'});render(await r.json());}catch(e){}
+ try{
+   const r=await fetch('system_update.php?action=status',{cache:'no-store'});
+   if(!r.ok)return;
+   render(await r.json());
+ }catch(e){}
 }
+
 btn.addEventListener('click',async()=>{
  if(!confirm('Website bijwerken? De website kan tijdens het bouwen kort niet beschikbaar zijn.'))return;
  btn.disabled=true;
@@ -99,6 +124,7 @@ btn.addEventListener('click',async()=>{
    btn.disabled=false;
  }
 });
-render({"state":"success","finished_at":"2026-10-05T07:07:55+02:00","message":"Website is succesvol bijgewerkt en draait weer."});
+
+render(<?php echo json_encode($status,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES); ?>);
 setInterval(poll,2000);
 </script></body></html>
