@@ -4,7 +4,7 @@ require __DIR__.'/../app/bootstrap.php';
 $testId=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if(!$testId)redirect('index.php');
 
-$s=$pdo->prepare("SELECT t.id,t.title,t.description,t.test_type,s.id subject_id,s.name subject_name FROM tests t JOIN topics tp ON tp.id=t.topic_id JOIN subjects s ON s.id=tp.subject_id WHERE t.id=? AND t.is_active=1");
+$s=$pdo->prepare("SELECT t.id,t.title,t.description,t.test_type,t.vocab_left_label,t.vocab_right_label,t.vocab_direction,s.id subject_id,s.name subject_name FROM tests t JOIN topics tp ON tp.id=t.topic_id JOIN subjects s ON s.id=tp.subject_id WHERE t.id=? AND t.is_active=1");
 $s->execute([$testId]);$test=$s->fetch();
 if(!$test){http_response_code(404);exit('Toets niet gevonden.');}
 
@@ -147,21 +147,53 @@ if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='finish'){
     redirect('result.php?id='.$attemptId);
 }
 
-$x=$pdo->prepare("SELECT q.id,q.question_text,q.question_type,aq.sort_order,aa.selected_option_id,aa.answer_text FROM attempt_questions aq JOIN questions q ON q.id=aq.question_id LEFT JOIN attempt_answers aa ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id WHERE aq.attempt_id=? ORDER BY aq.sort_order,q.id");
+$x=$pdo->prepare("SELECT q.id,q.question_text,q.question_type,q.explanation,aq.sort_order,aa.selected_option_id,aa.answer_text FROM attempt_questions aq JOIN questions q ON q.id=aq.question_id LEFT JOIN attempt_answers aa ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id WHERE aq.attempt_id=? ORDER BY aq.sort_order,q.id");
 $x->execute([$attemptId]);$questions=$x->fetchAll();
 $o=$pdo->prepare("SELECT id,option_text FROM question_options WHERE question_id=? ORDER BY sort_order,id");
 foreach($questions as &$q){$q['options']=[];if($q['question_type']==='multiple_choice'){$o->execute([$q['id']]);$q['options']=$o->fetchAll();}}unset($q);
 ?>
-<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($test['title'])?></title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><main class="container py-4" style="max-width:850px"><a href="subject.php?id=<?=$test['subject_id']?>">&larr; Terug</a><h1 class="mt-3"><?=e($test['title'])?></h1><div class="mb-3"><?php $typeLabels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Alleen multiple choice','mixed'=>'Combinatie'];?><span class="badge text-bg-secondary"><?=e($typeLabels[$test['test_type']??'mixed']??'Combinatie')?></span></div><?php if($mode==='mistakes'):?><div class="alert alert-warning">Je oefent nu alleen de vragen die je eerder fout had.</div><?php else:?><div class="alert alert-info">Je antwoorden worden automatisch opgeslagen. Je kunt later verdergaan.</div><?php endif;?><div class="progress mb-4" style="height:8px"><div id="progressBar" class="progress-bar" style="width:<?=count($questions)?100/count($questions):0?>%"></div></div><form method="post" id="quizForm"><input type="hidden" name="action" value="finish"><?php foreach($questions as $n=>$q):?><section class="question-card <?=$n===0?'':'d-none'?>" data-index="<?=$n?>" data-question-id="<?=$q['id']?>"><div class="card shadow-sm mb-4"><div class="card-body"><div class="text-secondary mb-2">Vraag <?=$n+1?> van <?=count($questions)?></div><h2 class="h5"><?=e($q['question_text'])?></h2><?php if($q['question_type']==='open'):?><label class="form-label text-secondary mt-3">Typ je antwoord:</label><textarea class="form-control answer-input" data-question="<?=$q['id']?>" name="question_<?=$q['id']?>" rows="4"><?=e($q['answer_text']??'')?></textarea><?php else:foreach($q['options'] as $opt):?><div class="form-check my-3"><input class="form-check-input answer-input" data-question="<?=$q['id']?>" type="radio" name="question_<?=$q['id']?>" value="<?=$opt['id']?>" <?=((int)($q['selected_option_id']??0)===(int)$opt['id'])?'checked':''?>><label class="form-check-label"><?=e($opt['option_text'])?></label></div><?php endforeach;endif;?><div class="feedback mt-4 d-none"></div></div></div><div class="d-flex justify-content-end gap-2"><button type="button" class="btn btn-primary next-btn"><?=($n+1===count($questions))?'Toets afronden':'Volgende'?></button></div></section><?php endforeach;?></form></main><script>
+<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($test['title'])?></title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><style>.special-char-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:.65rem}.special-char-btn{font-size:1.45rem;font-weight:500;min-height:52px}</style></head><body class="bg-light"><main class="container py-4" style="max-width:850px"><a href="subject.php?id=<?=$test['subject_id']?>">&larr; Terug</a><h1 class="mt-3"><?=e($test['title'])?></h1><div class="mb-3"><?php $typeLabels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Alleen multiple choice','mixed'=>'Combinatie'];?><span class="badge text-bg-secondary"><?=e($typeLabels[$test['test_type']??'mixed']??'Combinatie')?></span></div><?php if($mode==='mistakes'):?><div class="alert alert-warning">Je oefent nu alleen de vragen die je eerder fout had.</div><?php else:?><div class="alert alert-info">Je antwoorden worden automatisch opgeslagen. Je kunt later verdergaan.</div><?php endif;?><div class="progress mb-4" style="height:8px"><div id="progressBar" class="progress-bar" style="width:<?=count($questions)?100/count($questions):0?>%"></div></div><form method="post" id="quizForm"><input type="hidden" name="action" value="finish"><?php foreach($questions as $n=>$q):?><section class="question-card <?=$n===0?'':'d-none'?>" data-index="<?=$n?>" data-question-id="<?=$q['id']?>"><div class="card shadow-sm mb-4"><div class="card-body"><div class="text-secondary mb-2">Vraag <?=$n+1?> van <?=count($questions)?></div><h2 class="h5"><?=e($q['question_text'])?></h2><?php if($q['question_type']==='open'):?><label class="form-label text-secondary mt-3">Typ je antwoord:</label><textarea class="form-control answer-input" data-question="<?=$q['id']?>" name="question_<?=$q['id']?>" rows="4"><?=e($q['answer_text']??'')?></textarea><?php if(($test['test_type']??'mixed')==='vocabulary'):?><div class="special-chars mt-3" data-explanation="<?=e($q['explanation']??'')?>"><div class="text-secondary small mb-2">Speciale tekens</div><div class="special-char-grid"></div></div><?php endif;?><?php else:foreach($q['options'] as $opt):?><div class="form-check my-3"><input class="form-check-input answer-input" data-question="<?=$q['id']?>" type="radio" name="question_<?=$q['id']?>" value="<?=$opt['id']?>" <?=((int)($q['selected_option_id']??0)===(int)$opt['id'])?'checked':''?>><label class="form-check-label"><?=e($opt['option_text'])?></label></div><?php endforeach;endif;?><div class="feedback mt-4 d-none"></div></div></div><div class="d-flex justify-content-end gap-2"><button type="button" class="btn btn-primary next-btn"><?=($n+1===count($questions))?'Toets afronden':'Volgende'?></button></div></section><?php endforeach;?></form></main><script>
 (function(){
  const attemptId='<?= (int)$attemptId ?>',testId='<?= (int)$testId ?>';
  const cards=[...document.querySelectorAll('.question-card')],bar=document.getElementById('progressBar'),form=document.getElementById('quizForm');
+ cards.forEach(setupSpecialChars);
  let current=0,checking=false;
  function activity(data){fetch('activity.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data),keepalive:true}).catch(()=>{});}
  function save(questionId,value){return fetch('quiz.php?id='+testId,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({action:'save_answer',attempt_id:attemptId,question_id:questionId,answer:value})}).then(r=>r.json());}
  function saveDraft(questionId,value){return fetch('quiz.php?id='+testId,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({action:'save_draft',attempt_id:attemptId,question_id:questionId,answer:value})}).then(r=>r.json());}
  function value(card){const el=card.querySelector('input[type=radio]:checked,textarea');return el?el.value.trim():'';}
  function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+ const specialChars={
+   nederlands:['ë','ï','é'],dutch:['ë','ï','é'],
+   duits:['ä','ö','ü','ß'],deutsch:['ä','ö','ü','ß'],german:['ä','ö','ü','ß'],
+   spaans:['á','é','í','ó','ú','ü','ñ','¿','¡'],spanish:['á','é','í','ó','ú','ü','ñ','¿','¡'],
+   frans:['à','â','æ','ç','é','è','ê','ë','î','ï','ô','œ','ù','û','ü','ÿ'],french:['à','â','æ','ç','é','è','ê','ë','î','ï','ô','œ','ù','û','ü','ÿ'],
+   engels:['’'],english:['’']
+ };
+ function languageKey(label){return String(label||'').trim().toLowerCase().replace(/\s+/g,' ').replace(/^de /,'');}
+ function charsForExplanation(explanation){
+   const m=String(explanation||'').match(/^Vertaal naar\s+(.+?)\.?$/i);
+   const label=m?m[1].trim():explanation;
+   return specialChars[languageKey(label)]||[];
+ }
+ function setupSpecialChars(card){
+   const box=card.querySelector('.special-chars');if(!box)return;
+   const grid=box.querySelector('.special-char-grid');
+   const chars=charsForExplanation(box.dataset.explanation);
+   if(!chars.length){box.classList.add('d-none');return;}
+   chars.forEach(ch=>{
+     const btn=document.createElement('button');btn.type='button';
+     btn.className='btn btn-outline-primary btn-lg special-char-btn';btn.textContent=ch;
+     btn.addEventListener('click',()=>{
+       const input=card.querySelector('textarea.answer-input');if(!input)return;
+       const start=input.selectionStart??input.value.length,end=input.selectionEnd??start;
+       input.value=input.value.slice(0,start)+ch+input.value.slice(end);input.focus();
+       const pos=start+ch.length;input.setSelectionRange(pos,pos);
+       input.dispatchEvent(new Event('input',{bubbles:true}));
+     });
+     grid.appendChild(btn);
+   });
+ }
  function feedback(card,data){
    const box=card.querySelector('.feedback');
    box.className='feedback mt-4 alert '+(data.is_correct?'alert-success':'alert-danger');
