@@ -173,7 +173,7 @@ function warm_ai():bool{
 
 function ai_grade_open_answer(string $question,string $correctAnswer,string $studentAnswer):array{
     if(ai_provider()!=='openai'){
-        return ['correct'=>false,'reason'=>'AI-beoordeling niet beschikbaar.'];
+        return ['correct'=>false,'reason'=>'AI-beoordeling niet beschikbaar.','available'=>false,'model'=>ai_provider()];
     }
 
     $input="Beoordeel dit leerlingantwoord. Geef uitsluitend het JSON-resultaat volgens het schema.
@@ -189,7 +189,7 @@ ANTWOORD VAN DE LEERLING:
 
     $data=openai_generate($input);
     if(!$data){
-        return ['correct'=>false,'reason'=>'AI-beoordeling niet beschikbaar.'];
+        return ['correct'=>false,'reason'=>'AI-beoordeling niet beschikbaar.','available'=>false,'model'=>openai_model()];
     }
 
     $result=null;
@@ -209,11 +209,13 @@ ANTWOORD VAN DE LEERLING:
     }
 
     if(!is_array($result)||!array_key_exists('correct',$result)){
-        return ['correct'=>false,'reason'=>'AI-beoordeling gaf geen geldig resultaat.'];
+        return ['correct'=>false,'reason'=>'AI-beoordeling gaf geen geldig resultaat.','available'=>false,'model'=>openai_model()];
     }
 
     return [
         'correct'=>(bool)$result['correct'],
-        'reason'=>trim((string)($result['reason']??''))
+        'reason'=>trim((string)($result['reason']??'')),
+        'available'=>true,
+        'model'=>openai_model()
     ];
 }
