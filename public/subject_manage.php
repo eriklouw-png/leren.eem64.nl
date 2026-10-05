@@ -85,7 +85,7 @@ $labels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Multiple choice','
 <a class="btn btn-outline-secondary" href="subject_edit.php?id=<?=$id?>">Bewerken</a>
 </div></div></div>
 </div>
-<h2 class="h4 mt-4">Overhoringen</h2>
+<div class="d-flex justify-content-between align-items-center gap-2 mt-4 mb-2"><h2 class="h4 mb-0">Overhoringen</h2><a class="btn btn-primary" href="topic_new.php?subject_id=<?=$id?>">Nieuwe overhoring</a></div>
 <?php if(!$topics):?><div class="alert alert-info">Nog geen overhoringen voor dit vak.</div><?php else:?><div class="accordion shadow-sm mb-4" id="overhoringen">
 <?php
 $testsByTopic=[];
