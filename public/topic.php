@@ -4,10 +4,10 @@ require __DIR__.'/../app/bootstrap.php';
 $topicId=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if(!$topicId)redirect('index.php');
 
-$x=$pdo->prepare("SELECT tp.id,tp.name,tp.test_date,s.id subject_id,s.name subject_name,s.description subject_description FROM topics tp JOIN subjects s ON s.id=tp.subject_id WHERE tp.id=?");
+$x=$pdo->prepare("SELECT tp.id,tp.name,tp.test_date,tp.is_active,s.id subject_id,s.name subject_name,s.description subject_description FROM topics tp JOIN subjects s ON s.id=tp.subject_id WHERE tp.id=?");
 $x->execute([$topicId]);
 $topic=$x->fetch();
-if(!$topic){http_response_code(404);exit('Overhoring niet gevonden.');}
+if(!$topic || !(int)$topic['is_active']){http_response_code(404);exit('Overhoring niet gevonden.');}
 
 $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d');
 
