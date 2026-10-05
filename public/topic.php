@@ -1,5 +1,9 @@
 <?php
 require __DIR__.'/../app/bootstrap.php';
+require __DIR__.'/../app/auth.php';
+require_login();
+$currentUser=current_user();
+$studentId=(int)$currentUser['id'];
 
 $topicId=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if(!$topicId)redirect('index.php');
@@ -23,9 +27,9 @@ $labels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Multiple choice','
 if(!isset($_SESSION['learner_token']))$_SESSION['learner_token']=bin2hex(random_bytes(32));
 $browserToken=$_SESSION['learner_token'];
 $inProgress=[];
-$rx=$pdo->prepare("SELECT id FROM attempts WHERE test_id=? AND browser_token=? AND status='in_progress' AND mode='normal' ORDER BY started_at DESC LIMIT 1");
+$rx=$pdo->prepare("SELECT id FROM attempts WHERE test_id=? AND student_id=? AND browser_token=? AND status='in_progress' AND mode='normal' ORDER BY started_at DESC LIMIT 1");
 foreach($tests as &$testRow){
-    $rx->execute([(int)$testRow['id'],$browserToken]);
+    $rx->execute([(int)$testRow['id'],$studentId,$browserToken]);
     $testRow['in_progress_attempt_id']=$rx->fetchColumn()?:null;
 }
 unset($testRow);
