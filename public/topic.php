@@ -11,7 +11,7 @@ if(!$topic || !(int)$topic['is_active']){http_response_code(404);exit('Overhorin
 
 $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d');
 
-$x=$pdo->prepare("SELECT t.id,t.title,t.description,t.test_type,COUNT(q.id) question_count
+$x=$pdo->prepare("SELECT t.id,t.title,t.description,t.test_type,t.vocab_direction,COUNT(q.id) question_count
 FROM tests t LEFT JOIN questions q ON q.test_id=t.id
 WHERE t.topic_id=? AND t.is_active=1
 GROUP BY t.id
@@ -63,7 +63,7 @@ $labels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Multiple choice','
 <div class="d-flex justify-content-between align-items-center gap-3">
 <div>
 <strong class="fs-5"><?=e($t['title'])?></strong>
-<div class="small text-secondary"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=e((string)$t['question_count'])?> vragen</div>
+<div class="small text-secondary"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=((($t['test_type']??'mixed')==='vocabulary' && ($t['vocab_direction']??'both')==='both') ? (int)ceil(((int)$t['question_count'])/2) : (int)$t['question_count'])?> <?=($t['test_type']??'mixed')==='vocabulary'?'woorden':'vragen'?></div>
 <?php if($t['description']):?><div class="text-secondary mt-1"><?=e($t['description'])?></div><?php endif;?>
 </div>
 <span class="btn btn-outline-primary btn-sm">Start</span>
