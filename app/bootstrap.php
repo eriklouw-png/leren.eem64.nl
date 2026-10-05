@@ -5,9 +5,16 @@ session_start();
 
 // Inject the global website theme into all HTML pages. JSON/API responses are left untouched.
 ob_start(static function(string $html): string{
-    if(stripos($html,'</head>')===false)return $html;
-    $theme='<link rel="stylesheet" href="/theme.css">';
-    return preg_replace('~</head>~i',$theme.'</head>',$html,1)??$html;
+    if(stripos($html,'</head>')!==false){
+        $theme='<link rel="stylesheet" href="/theme.css">';
+        $html=preg_replace('~</head>~i',$theme.'</head>',$html,1)??$html;
+    }
+    if(isset($_SESSION['user']) && is_array($_SESSION['user']) && ($_SESSION['user']['role']??'')==='student' && stripos($html,'</body>')!==false){
+        $name=htmlspecialchars((string)($_SESSION['user']['name']??''),ENT_QUOTES,'UTF-8');
+        $bar='<div class="leren-userbar"><span>Ingelogd als <strong>'.$name.'</strong></span><a href="/logout.php" class="btn btn-outline-secondary btn-sm">Uitloggen</a></div>';
+        $html=preg_replace('~</body>~i',$bar.'</body>',$html,1)??$html;
+    }
+    return $html;
 });
 
 $configPath=__DIR__.'/../config/config.php';
