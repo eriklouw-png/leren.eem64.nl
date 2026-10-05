@@ -1,0 +1,36 @@
+/* Leren - groene huisstijl */
+:root{
+  --bs-primary:#2f7d4a;
+  --bs-primary-rgb:47,125,74;
+  --bs-link-color:#2f7d4a;
+  --bs-link-hover-color:#235d37;
+  --leren-green:#2f7d4a;
+  --leren-green-dark:#235d37;
+  --leren-green-light:#eaf4ed;
+}
+.btn-primary{
+  --bs-btn-bg:#2f7d4a;
+  --bs-btn-border-color:#2f7d4a;
+  --bs-btn-hover-bg:#235d37;
+  --bs-btn-hover-border-color:#235d37;
+  --bs-btn-active-bg:#1e5030;
+  --bs-btn-active-border-color:#1e5030;
+}
+.btn-outline-primary{
+  --bs-btn-color:#2f7d4a;
+  --bs-btn-border-color:#2f7d4a;
+  --bs-btn-hover-bg:#2f7d4a;
+  --bs-btn-hover-border-color:#2f7d4a;
+  --bs-btn-active-bg:#235d37;
+  --bs-btn-active-border-color:#235d37;
+}
+.text-primary{color:#2f7d4a!important}
+.bg-primary{background-color:#2f7d4a!important}
+.border-primary{border-color:#2f7d4a!important}
+.progress-bar{background-color:#2f7d4a}
+.badge.text-bg-primary{background-color:#2f7d4a!important}
+.alert-info{--bs-alert-color:#235d37;--bs-alert-bg:#eaf4ed;--bs-alert-border-color:#cfe5d5}
+.navbar.bg-primary{background-color:#2f7d4a!important}
+a{color:#2f7d4a}
+a:hover{color:#235d37}
+body.bg-light{background:#f4f8f5!important}
