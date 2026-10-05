@@ -1,11 +1,11 @@
 <?php
 require __DIR__.'/../app/bootstrap.php';require_admin();
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);$test=null;
-if($id){$s=$pdo->prepare("SELECT * FROM tests WHERE id=?");$s->execute([$id]);$test=$s->fetch();if(!$test)exit('Toets niet gevonden.');}
+if($id){$s=$pdo->prepare("SELECT t.*,s.name subject_name FROM tests t JOIN topics tp ON tp.id=t.topic_id JOIN subjects s ON s.id=tp.subject_id WHERE t.id=?");$s->execute([$id]);$test=$s->fetch();if(!$test)exit('Toets niet gevonden.');}
 $subjects=$pdo->query("SELECT id,name FROM subjects ORDER BY name")->fetchAll();
 $topics=$pdo->query("SELECT id,subject_id,name FROM topics ORDER BY subject_id,name")->fetchAll();
 if($_SERVER['REQUEST_METHOD']==='POST'){
- $title=trim($_POST['title']??'');$description=trim($_POST['description']??'');$topicId=filter_input(INPUT_POST,'topic_id',FILTER_VALIDATE_INT);$testType=$_POST['test_type']??'mixed';$vocabLeft=trim($_POST['vocab_left_label']??'');$vocabRight=trim($_POST['vocab_right_label']??'');$vocabDirection=$_POST['vocab_direction']??'both';$active=isset($_POST['is_active'])?1:0;
+ $title=trim($_POST['title']??'');$description=trim($_POST['description']??'');$topicId=filter_input(INPUT_POST,'topic_id',FILTER_VALIDATE_INT);$testType=$_POST['test_type']??'mixed';$vocabDirection=$_POST['vocab_direction']??($test['vocab_direction']??'both');$active=isset($_POST['is_active'])?1:0;
  if(!in_array($testType,['vocabulary','multiple_choice','mixed'],true))$testType='mixed';
  if(!in_array($vocabDirection,['both','left_to_right','right_to_left'],true))$vocabDirection='both';
  if(!in_array($testType,['vocabulary','multiple_choice','mixed'],true))$testType='mixed';
@@ -18,15 +18,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
      $x->execute([$id,$requiredType]);
      if((int)$x->fetchColumn()>0)$error='Deze toets bevat vragen van het verkeerde type. Een toets van dit type mag alleen '.$wrongLabel.'vragen bevatten.';
  }
- elseif($id){$s=$pdo->prepare("UPDATE tests SET topic_id=?,title=?,description=?,test_type=?,is_active=? WHERE id=?");$s->execute([$topicId,$title,$description,$testType,$active,$id]);redirect('questions.php?test_id='.$id);}
+ elseif($id){$leftLabel=$test['subject_name']??'';$rightLabel='Nederlands';$s=$pdo->prepare("UPDATE tests SET topic_id=?,title=?,description=?,test_type=?,vocab_left_label=?,vocab_right_label=?,vocab_direction=?,is_active=? WHERE id=?");$s->execute([$topicId,$title,$description,$testType,$testType==='vocabulary'?$leftLabel:null,$testType==='vocabulary'?$rightLabel:null,$vocabDirection,$active,$id]);redirect('questions.php?test_id='.$id);}
  else{$s=$pdo->prepare("INSERT INTO tests(topic_id,title,description,test_type,is_active) VALUES(?,?,?,?,?)");$s->execute([$topicId,$title,$description,$testType,$active]);redirect('questions.php?test_id='.$pdo->lastInsertId());}
 }
 ?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Toets</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><main class="container py-4" style="max-width:760px"><a href="admin.php">&larr; Beheer</a><div class="card shadow-sm mt-3"><div class="card-body p-4"><h1 class="h3"><?= $id?'Toets bewerken':'Nieuwe toets'?></h1><?php if(!empty($error)):?><div class="alert alert-danger"><?=e($error)?></div><?php endif;?><form method="post"><label class="form-label">Titel</label><input class="form-control mb-3" name="title" value="<?=e($test['title']??'')?>" required><label class="form-label">Beschrijving</label><textarea class="form-control mb-3" name="description" rows="3"><?=e($test['description']??'')?></textarea><label class="form-label">Type toets</label><select class="form-select mb-3" name="test_type"><option value="vocabulary" <?=($test['test_type']??'mixed')==='vocabulary'?'selected':''?>>Woordjes oefenen</option><option value="multiple_choice" <?=($test['test_type']??'mixed')==='multiple_choice'?'selected':''?>>Alleen multiple choice</option><option value="mixed" <?=($test['test_type']??'mixed')==='mixed'?'selected':''?>>Combinatie van multiple choice en open vragen</option></select><div class="form-text mb-3">Bij Woordjes oefenen kun je een woordenlijst importeren en beide richtingen oefenen.</div>
 <div id="vocab-settings" class="border rounded p-3 mb-3 <?=($test['test_type']??'mixed')==='vocabulary'?'':'d-none'?>">
-<label class="form-label">Eerste taal</label>
-<input class="form-control mb-2" name="vocab_left_label" value="<?=e($test['vocab_left_label']??'')?>" placeholder="Bijvoorbeeld Nederlands">
-<label class="form-label">Tweede taal</label>
-<input class="form-control mb-2" name="vocab_right_label" value="<?=e($test['vocab_right_label']??'')?>" placeholder="Bijvoorbeeld Duits">
+<div class="alert alert-secondary py-2">Taal: <strong><?=e($test['subject_name']??'')?> → Nederlands</strong></div>
 <label class="form-label">Oefenrichting</label>
 <select class="form-select" name="vocab_direction">
 <option value="both" <?=($test['vocab_direction']??'both')==='both'?'selected':''?>>Beide richtingen</option>
