@@ -13,6 +13,7 @@ $browserToken=$_SESSION['learner_token'];
 $mode=$_GET['mode']??'normal';
 if(!in_array($mode,['normal','mistakes'],true))$mode='normal';
 $sourceAttemptId=filter_input(INPUT_GET,'source',FILTER_VALIDATE_INT)?:null;
+$newAttempt=isset($_GET['new'])&&$_GET['new']==='1';
 
 if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='save_answer'){
     header('Content-Type: application/json; charset=utf-8');
@@ -94,7 +95,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='save_answer'
 }
 
 $attempt=null;
-if($mode==='normal'){
+if($mode==='normal' && !$newAttempt){
     $x=$pdo->prepare("SELECT * FROM attempts WHERE test_id=? AND browser_token=? AND status='in_progress' AND mode='normal' ORDER BY started_at DESC LIMIT 1");
     $x->execute([$testId,$browserToken]);$attempt=$x->fetch();
 }
