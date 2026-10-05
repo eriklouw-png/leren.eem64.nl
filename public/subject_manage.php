@@ -40,7 +40,7 @@ if($testIds){
     $sx->execute($testIds);$sessions=$sx->fetchAll();
     foreach($sessions as $ss){
         $tid=(int)$ss['test_id'];
-        if(!isset($sessionGroups[$tid]))$sessionGroups[$tid]=['title'=>$ss['title']??'Toets','total_seconds'=>0,'sessions'=>[]];
+        if(!isset($sessionGroups[$tid]))$sessionGroups[$tid]=['title'=>$ss['title']??'Sub-Test','total_seconds'=>0,'sessions'=>[]];
         $sessionGroups[$tid]['total_seconds']+=(int)$ss['active_seconds'];
         $sessionGroups[$tid]['sessions'][]=$ss;
     }
@@ -54,17 +54,17 @@ $labels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Multiple choice','
 <div class="card shadow-sm mt-3 overflow-hidden">
 <?php if($subject['image_mime']):?><img src="subject_image.php?id=<?=$id?>" style="height:180px;object-fit:cover" alt="<?=e($subject['name'])?>"><?php endif;?>
 <div class="card-body p-4"><div class="d-flex justify-content-between align-items-start gap-3"><div><h1 class="h3 mb-1"><?=e($subject['name'])?></h1><?php if($subject['description']):?><p class="text-secondary mb-0"><?=e($subject['description'])?></p><?php endif;?></div><div class="d-flex flex-column flex-sm-row gap-2">
-<a class="btn btn-primary" href="test_new.php?subject_id=<?=$id?>">Nieuwe toets</a>
+<a class="btn btn-primary" href="test_new.php?subject_id=<?=$id?>">Nieuwe sub-test</a>
 <a class="btn btn-outline-secondary" href="subject_edit.php?id=<?=$id?>">Bewerken</a>
 </div></div></div>
 </div>
-<h2 class="h4 mt-4">Onderwerpen</h2>
-<?php if(!$topics):?><div class="alert alert-info">Nog geen onderwerpen voor dit vak.</div><?php else:?><div class="list-group shadow-sm mb-4">
+<h2 class="h4 mt-4">Overhoringen</h2>
+<?php if(!$topics):?><div class="alert alert-info">Nog geen overhoringen voor dit vak.</div><?php else:?><div class="list-group shadow-sm mb-4">
 <?php foreach($topics as $topic): $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d');?>
 <div class="list-group-item"><div class="d-flex justify-content-between align-items-center gap-3"><div><strong><?=e($topic['name'])?></strong><div class="small text-secondary"><?php if($topic['test_date']):?>Overhoringsdatum: <?=e(date('d-m-Y',strtotime($topic['test_date'])))?> · <?= $archived?'Gearchiveerd':'Actief'?><?php else:?>Geen overhoringsdatum<?php endif;?></div></div><a class="btn btn-sm btn-outline-primary" href="topic_edit.php?id=<?=$topic['id']?>">Bewerken</a></div></div>
 <?php endforeach;?></div><?php endif;?>
-<h2 class="h4 mt-4">Toetsen</h2>
-<?php if(!$tests):?><div class="alert alert-info">Nog geen toetsen voor deze taal.</div><?php else:?><div class="list-group shadow-sm">
+<h2 class="h4 mt-4">Sub-Testen</h2>
+<?php if(!$tests):?><div class="alert alert-info">Nog geen sub-testen voor deze taal.</div><?php else:?><div class="list-group shadow-sm">
 <?php foreach($tests as $t):?><div class="list-group-item"><div class="d-flex justify-content-between align-items-center gap-3"><div><strong><?=e($t['title'])?></strong><div class="small text-secondary"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=$t['question_count']?> vragen · <?=((int)$t['is_active']?'Actief':'Inactief')?></div></div><div class="text-nowrap"><a class="btn btn-sm btn-outline-primary" href="test_edit.php?id=<?=$t['id']?>">Bewerken</a><a class="btn btn-sm btn-outline-secondary ms-1" href="questions.php?test_id=<?=$t['id']?>">Vragen</a></div></div></div><?php endforeach;?>
 </div><?php endif;?>
 <h2 class="h4 mt-5">Oefentijd</h2>
