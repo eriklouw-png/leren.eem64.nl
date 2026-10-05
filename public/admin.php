@@ -78,7 +78,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     http_response_code(400);exit('Ongeldige actie.');
 }
 $subjects=$pdo->query("SELECT id,name,description,image_mime FROM subjects ORDER BY name")->fetchAll();
-$tests=$pdo->query("SELECT t.id,t.title,t.is_active,t.test_type,COUNT(q.id) question_count,s.name subject_name,tp.name topic_name FROM tests t LEFT JOIN topics tp ON tp.id=t.topic_id LEFT JOIN subjects s ON s.id=tp.subject_id LEFT JOIN questions q ON q.test_id=t.id GROUP BY t.id ORDER BY t.created_at DESC")->fetchAll();
 $attempts=$pdo->query("SELECT a.id,a.score,a.finished_at,t.title FROM attempts a JOIN tests t ON t.id=a.test_id WHERE a.finished_at IS NOT NULL ORDER BY a.finished_at DESC LIMIT 10")->fetchAll();
 $sessions=$pdo->query("SELECT ss.id,ss.test_id,ss.attempt_id,ss.started_at,ss.ended_at,ss.active_seconds,t.title,a.score FROM study_sessions ss LEFT JOIN attempts a ON a.id=ss.attempt_id LEFT JOIN tests t ON t.id=ss.test_id ORDER BY ss.started_at DESC")->fetchAll();
 $answeredRows=$pdo->query("SELECT ss.test_id,aa.question_id FROM study_sessions ss JOIN attempt_answers aa ON aa.attempt_id=ss.attempt_id GROUP BY ss.test_id,aa.question_id")->fetchAll();
@@ -129,62 +128,4 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
 <?php endforeach;?>
 </div>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-<h1 class="mb-0">Toetsen</h1>
-</div>
-
-<?php
-$testsBySubject=[];
-foreach($tests as $test){
-    $key=(string)($test['subject_name']??'Onbekend vak');
-    $testsBySubject[$key][]=$test;
-}
-ksort($testsBySubject);
-?>
-
-<?php if(!$testsBySubject):?>
-<div class="alert alert-info mb-5">Er zijn nog geen toetsen.</div>
-<?php else:?>
-<div class="accordion mb-5" id="subjectTests">
-<?php $accordionIndex=0; foreach($testsBySubject as $subjectName=>$subjectTests): $accordionIndex++; $collapseId='subjectTests'.$accordionIndex;?>
-<div class="accordion-item">
-<h2 class="accordion-header" id="heading<?=$accordionIndex?>">
-<button class="accordion-button <?= $accordionIndex===1?'':'collapsed' ?>" type="button" data-bs-toggle="collapse" data-bs-target="#<?=$collapseId?>" aria-expanded="<?= $accordionIndex===1?'true':'false' ?>" aria-controls="<?=$collapseId?>">
-<strong><?=e($subjectName)?></strong><span class="badge text-bg-secondary ms-2"><?=count($subjectTests)?></span>
-</button>
-</h2>
-<div id="<?=$collapseId?>" class="accordion-collapse collapse <?= $accordionIndex===1?'show':'' ?>" aria-labelledby="heading<?=$accordionIndex?>" data-bs-parent="#subjectTests">
-<div class="accordion-body p-0">
-<div class="table-responsive">
-<table class="table table-hover mb-0">
-<thead><tr><th>Toets</th><th>Onderwerp</th><th>Type</th><th>Vragen</th><th>Status</th><th></th></tr></thead>
-<tbody>
-<?php foreach($subjectTests as $t):?>
-<tr>
-<td><?=e($t['title'])?></td>
-<td><?=e($t['topic_name']??'')?></td>
-<td><?php $typeLabels=['vocabulary'=>'Woordjes','multiple_choice'=>'Multiple choice','mixed'=>'Combinatie'];?><span class="badge text-bg-light border"><?=e($typeLabels[$t['test_type']??'mixed']??'Combinatie')?></span></td>
-<td><?=$t['question_count']?></td>
-<td><?=((int)$t['is_active']?'Actief':'Inactief')?></td>
-<td class="text-nowrap">
-<a class="btn btn-sm btn-outline-primary" href="test_edit.php?id=<?=$t['id']?>">Bewerken</a>
-<a class="btn btn-sm btn-outline-secondary" href="questions.php?test_id=<?=$t['id']?>">Vragen</a>
-<form method="post" class="d-inline" onsubmit="return confirm('U gaat toets &quot;<?=e($t['title'])?>&quot; verwijderen. Weet u het zeker? Dit verwijdert ook de vragen, resultaten en oefentijd die bij deze toets horen.');">
-<input type="hidden" name="action" value="delete_test">
-<input type="hidden" name="id" value="<?=$t['id']?>">
-<button class="btn btn-sm btn-outline-danger" type="submit">Verwijderen</button>
-</form>
-</td>
-</tr>
-<?php endforeach;?>
-</tbody>
-</table>
-</div>
-</div>
-</div>
-<?php endforeach;?>
-</div>
-</div>
-<?php endif;?>
-
-<h2 class="h4 mt-5">Oefentijd</h2><p class="text-secondary">Actieve tijd wordt gemeten zolang de pagina zichtbaar is en er recent toetsenbord-, muis-, scroll- of touchactiviteit is geweest. Er worden geen toetsaanslagen of muisbewegingen opgeslagen.</p><?php if(!$sessionGroups): ?><div class="alert alert-secondary">Er zijn nog geen oefensessies.</div><?php else: ?><?php foreach($sessionGroups as $testId=>$group): $answered=(int)($answeredByTest[$testId]??0);$totalQuestions=(int)($totalQuestionsByTest[$testId]??0);$percentage=$totalQuestions>0?min(100,round($answered/$totalQuestions*100)):0; ?><details class="card shadow-sm mb-3"><summary class="list-group-item list-group-item-action p-3" style="cursor:pointer;list-style:none"><div class="row align-items-center g-2"><div class="col-md-5"><strong><?=e($group['title'])?></strong></div><div class="col-md-3"><span class="text-secondary" style="display:block">Totale oefentijd:</span> <strong><?=e(format_duration((int)$group['total_seconds']))?></strong></div><div class="col-md-3"><span class="text-secondary" style="display:block">Vragen beantwoord:</span> <strong><?=$answered?> / <?=$totalQuestions?> (<?=$percentage?>%)</strong></div><div class="col-md-1 text-end fs-5"><span class="chevron" aria-hidden="true">⌄</span></div></div></summary><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>Start</th><th>Einde</th><th>Actieve tijd</th><th>Score</th><th></th></tr></thead><tbody><?php foreach($group['sessions'] as $s): ?><tr><td><?=e($s['started_at'])?></td><td><?=e($s['ended_at']??'Actief')?></td><td><?=e(format_duration((int)$s['active_seconds']))?></td><td><?=isset($s['score'])?e((string)$s['score']).'%':'-'?></td><td><form method="post" class="d-inline" onsubmit="return confirm('U gaat deze oefentijd verwijderen. Weet u het zeker?');"><input type="hidden" name="action" value="delete_session"><input type="hidden" name="id" value="<?=$s['id']?>"><button class="btn btn-sm btn-outline-danger" type="submit">Verwijderen</button></form></td></tr><?php endforeach; ?></tbody></table></div></details><?php endforeach; ?><?php endif; ?><h2 class="h4 mt-5">Recente resultaten</h2><div class="card shadow-sm"><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Toets</th><th>Score</th><th>Datum</th><th></th></tr></thead><tbody><?php foreach($attempts as $a):?><tr><td><?=e($a['title'])?></td><td><?=e((string)$a['score'])?>%</td><td><?=e($a['finished_at'])?></td><td><form method="post" class="d-inline" onsubmit="return confirm('U gaat het resultaat van toets &quot;<?=e($a['title'])?>&quot; van <?=e((string)$a['score'])?>% verwijderen. Weet u het zeker?');"><input type="hidden" name="action" value="delete_attempt"><input type="hidden" name="id" value="<?=$a['id']?>"><button class="btn btn-sm btn-outline-danger" type="submit">Verwijderen</button></form></td></tr><?php endforeach;?></tbody></table></div></div></main><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script></body></html>
+<h2 class="h4 mt-5">Recente resultaten</h2><div class="card shadow-sm"><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Toets</th><th>Score</th><th>Datum</th><th></th></tr></thead><tbody><?php foreach($attempts as $a):?><tr><td><?=e($a['title'])?></td><td><?=e((string)$a['score'])?>%</td><td><?=e($a['finished_at'])?></td><td><form method="post" class="d-inline" onsubmit="return confirm('U gaat het resultaat van toets &quot;<?=e($a['title'])?>&quot; van <?=e((string)$a['score'])?>% verwijderen. Weet u het zeker?');"><input type="hidden" name="action" value="delete_attempt"><input type="hidden" name="id" value="<?=$a['id']?>"><button class="btn btn-sm btn-outline-danger" type="submit">Verwijderen</button></form></td></tr><?php endforeach;?></tbody></table></div></div></main><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script></body></html>
