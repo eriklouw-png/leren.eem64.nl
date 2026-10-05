@@ -38,7 +38,7 @@ body.bg-light{background:#f4f8f5!important}
 
 .leren-userbar{
   position:fixed;
-  top:12px;
+  top:8px;
   right:24px;
   z-index:1050;
   display:flex;
