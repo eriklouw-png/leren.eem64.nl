@@ -247,7 +247,7 @@ foreach($questions as &$q){$q['options']=[];if($q['question_type']==='multiple_c
    box.innerHTML='<strong>'+(data.is_correct?'Goed!':'Helaas, fout.')+'</strong>';
    if(!data.is_correct && data.feedback && data.feedback.correct_answers && data.feedback.correct_answers.length) box.innerHTML+='<div class="mt-2"><strong>Juiste antwoord:</strong> '+data.feedback.correct_answers.map(esc).join(' / ')+'</div>';
    if(data.feedback && data.feedback.explanation) box.innerHTML+='<div class="mt-2">'+esc(data.feedback.explanation)+'</div>';
-   else if(data.feedback && data.feedback.ai_reason) box.innerHTML+='<div class="mt-2">'+esc(data.feedback.ai_reason)+'</div>';
+   if(data.feedback && data.feedback.ai_reason) box.innerHTML+='<div class="mt-2 small text-secondary"><strong>AI-melding:</strong> '+esc(data.feedback.ai_reason)+'</div>';
    if(data.feedback && data.feedback.ai_used){
      box.innerHTML+='<div class="mt-3 small text-secondary">✓ Beoordeeld door '+esc(data.feedback.ai_model||'AI')+'</div>';
    }else if(data.feedback && data.feedback.ai_available===false && !data.is_correct){
