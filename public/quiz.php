@@ -120,8 +120,16 @@ if(!$attempt){
             $y=$pdo->prepare("INSERT INTO attempt_questions(attempt_id,question_id,sort_order) VALUES(?,?,?)");
             foreach($mistakes as $i=>$q)$y->execute([$attemptId,$q['id'],$i+1]);
         }else{
-            $y=$pdo->prepare("INSERT INTO attempt_questions(attempt_id,question_id,sort_order) SELECT ?,id,sort_order FROM questions WHERE test_id=? ORDER BY sort_order,id");
-            $y->execute([$attemptId,$testId]);
+            if(($test['test_type']??'mixed')==='vocabulary'){
+                $y=$pdo->prepare("SELECT id FROM questions WHERE test_id=? ORDER BY RAND()");
+                $y->execute([$testId]);
+                $questionIds=$y->fetchAll(PDO::FETCH_COLUMN);
+                $ins=$pdo->prepare("INSERT INTO attempt_questions(attempt_id,question_id,sort_order) VALUES(?,?,?)");
+                foreach($questionIds as $i=>$questionId)$ins->execute([$attemptId,(int)$questionId,$i+1]);
+            }else{
+                $y=$pdo->prepare("INSERT INTO attempt_questions(attempt_id,question_id,sort_order) SELECT ?,id,sort_order FROM questions WHERE test_id=? ORDER BY sort_order,id");
+                $y->execute([$attemptId,$testId]);
+            }
         }
         $pdo->commit();
         $attempt=['id'=>$attemptId];
