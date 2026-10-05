@@ -89,15 +89,24 @@ if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='save_answer'
         if($exact){
             $ok=1;
             $aiReason='';
+            $aiUsed=false;
+            $aiAvailable=true;
+            $aiModel='';
         }else{
             $ai=ai_grade_open_answer($question['question_text']??'',implode(' | ',$correctAnswers),$answerText);
             $ok=$ai['correct']?1:0;
             $aiReason=$ai['reason'];
+            $aiUsed=(bool)($ai['available']??false);
+            $aiAvailable=$aiUsed;
+            $aiModel=(string)($ai['model']??'');
         }
         $feedback=[
             'correct_answers'=>$correctAnswers,
             'explanation'=>$question['explanation']??'',
-            'ai_reason'=>$aiReason
+            'ai_reason'=>$aiReason,
+            'ai_used'=>$aiUsed,
+            'ai_available'=>$aiAvailable,
+            'ai_model'=>$aiModel
         ];
     }else{
         $selected=filter_var($raw,FILTER_VALIDATE_INT);
@@ -239,6 +248,11 @@ foreach($questions as &$q){$q['options']=[];if($q['question_type']==='multiple_c
    if(!data.is_correct && data.feedback && data.feedback.correct_answers && data.feedback.correct_answers.length) box.innerHTML+='<div class="mt-2"><strong>Juiste antwoord:</strong> '+data.feedback.correct_answers.map(esc).join(' / ')+'</div>';
    if(data.feedback && data.feedback.explanation) box.innerHTML+='<div class="mt-2">'+esc(data.feedback.explanation)+'</div>';
    else if(data.feedback && data.feedback.ai_reason) box.innerHTML+='<div class="mt-2">'+esc(data.feedback.ai_reason)+'</div>';
+   if(data.feedback && data.feedback.ai_used){
+     box.innerHTML+='<div class="mt-3 small text-secondary">✓ Beoordeeld door '+esc(data.feedback.ai_model||'AI')+'</div>';
+   }else if(data.feedback && data.feedback.ai_available===false && !data.is_correct){
+     box.innerHTML+='<div class="mt-3 small text-warning">⚠ AI-beoordeling niet beschikbaar. Het antwoord is daarom niet als goed beoordeeld.</div>';
+   }
  }
  function show(i){cards.forEach((c,n)=>c.classList.toggle('d-none',n!==i));current=i;bar.style.width=((i+1)/cards.length*100)+'%';window.scrollTo({top:0,behavior:'smooth'});}
  async function check(card,i,btn){
