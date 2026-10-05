@@ -3,6 +3,13 @@ declare(strict_types=1);
 
 session_start();
 
+// Inject the global website theme into all HTML pages. JSON/API responses are left untouched.
+ob_start(static function(string $html): string{
+    if(stripos($html,'</head>')===false)return $html;
+    $theme='<link rel="stylesheet" href="/theme.css">';
+    return preg_replace('~</head>~i',$theme.'</head>',$html,1)??$html;
+});
+
 $configPath=__DIR__.'/../config/config.php';
 if(!is_file($configPath)){http_response_code(500);exit('config/config.php ontbreekt.');}
 $config=require $configPath;
