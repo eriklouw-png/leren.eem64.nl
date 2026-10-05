@@ -85,15 +85,6 @@ unset($testRow);
 </div>
 </div>
 </div>
-<div class="d-flex justify-content-between align-items-center gap-3">
-<div>
-<strong class="fs-5"><?=e($t['title'])?></strong>
-<div class="small text-secondary"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=((($t['test_type']??'mixed')==='vocabulary' && ($t['vocab_direction']??'both')==='both') ? (int)ceil(((int)$t['question_count'])/2) : (int)$t['question_count'])?> <?=($t['test_type']??'mixed')==='vocabulary'?'woorden':'vragen'?></div>
-<?php if($t['description']):?><div class="text-secondary mt-1"><?=e($t['description'])?></div><?php endif;?>
-</div>
-<span class="btn btn-outline-primary btn-sm">Start</span>
-</div>
-</a>
 <?php endforeach;?>
 </div>
 <?php endif;?>
