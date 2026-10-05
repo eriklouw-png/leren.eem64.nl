@@ -9,10 +9,15 @@ ob_start(static function(string $html): string{
         $theme='<link rel="stylesheet" href="/theme.css">';
         $html=preg_replace('~</head>~i',$theme.'</head>',$html,1)??$html;
     }
-    if(isset($_SESSION['user']) && is_array($_SESSION['user']) && ($_SESSION['user']['role']??'')==='student' && stripos($html,'</body>')!==false){
+    if(isset($_SESSION['user']) && is_array($_SESSION['user']) && ($_SESSION['user']['role']??'')==='student' && stripos($html,'<nav')!==false){
         $name=htmlspecialchars((string)($_SESSION['user']['name']??''),ENT_QUOTES,'UTF-8');
-        $bar='<div class="leren-userbar"><span class="text-white me-3">'.$name.'</span><a class="btn btn-outline-light btn-sm" href="index.php">Website</a> <a class="btn btn-outline-light btn-sm" href="logout.php">Uitloggen</a></div>';
-        $html=preg_replace('~</body>~i',$bar.'</body>',$html,1)??$html;
+        $links='<span class="text-white me-3">'.$name.'</span><a class="btn btn-outline-light btn-sm me-2" href="index.php">Website</a><a class="btn btn-outline-light btn-sm" href="logout.php">Uitloggen</a>';
+        $pattern='~(<a class="btn btn-outline-light btn-sm" href="admin\\.php">Beheer</a>)~i';
+        if(preg_match($pattern,$html)){
+            $html=preg_replace($pattern,$links.' $1',$html,1)??$html;
+        }else{
+            $html=preg_replace('~(</div></nav>)~i',$links.'$1',$html,1)??$html;
+        }
     }
     return $html;
 });
