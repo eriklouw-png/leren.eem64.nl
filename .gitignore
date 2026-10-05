@@ -3,5 +3,4 @@
 /storage/
 .DS_Store
 Thumbs.db
-.update_request
 .update_status.json
