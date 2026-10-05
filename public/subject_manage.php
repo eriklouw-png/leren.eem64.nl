@@ -32,7 +32,30 @@ $tx=$pdo->prepare("SELECT id,name,test_date,is_active FROM topics WHERE subject_
 $tx->execute([$id]);$topics=$tx->fetchAll();
 $x=$pdo->prepare("SELECT t.id,t.topic_id,t.title,t.description,t.test_type,t.vocab_direction,t.is_active,COUNT(q.id) question_count FROM tests t JOIN topics tp ON tp.id=t.topic_id LEFT JOIN questions q ON q.test_id=t.id WHERE tp.subject_id=? AND t.is_active=1 GROUP BY t.id ORDER BY tp.name,t.created_at DESC");
 $x->execute([$id]);$tests=$x->fetchAll();
+
 $testIds=array_map('intval',array_column($tests,'id'));
+$resultGroups=[];
+if($testIds){
+    $ph=implode(',',array_fill(0,count($testIds),'?'));
+    $rx=$pdo->prepare("
+        SELECT
+            a.id,a.test_id,a.score,a.finished_at,
+            u.name AS student_name
+        FROM attempts a
+        JOIN users u ON u.id=a.student_id
+        WHERE a.test_id IN ($ph)
+          AND a.status='finished'
+          AND a.mode='normal'
+          AND a.student_id IS NOT NULL
+        ORDER BY a.finished_at DESC,a.id DESC
+    ");
+    $rx->execute($testIds);
+    $results=$rx->fetchAll();
+    foreach($results as $result){
+        $tid=(int)$result['test_id'];
+        $resultGroups[$tid][]=$result;
+    }
+}
 $sessionGroups=[];
 if($testIds){
     $ph=implode(',',array_fill(0,count($testIds),'?'));
@@ -48,7 +71,12 @@ if($testIds){
 function format_duration_subject(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds%60;return $m.' min '.str_pad((string)$s,2,'0',STR_PAD_LEFT).' sec';}
 $labels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Multiple choice','mixed'=>'Combinatie'];
 ?>
-<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($subject['name'])?> - Beheer</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head>
+<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($subject['name'])?> - Beheer</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+.admin-test-results summary::-webkit-details-marker{display:none}
+.admin-result-chevron{width:10px;height:10px;border-right:2px solid #6c757d;border-bottom:2px solid #6c757d;transform:rotate(45deg);transition:transform .15s ease;margin-right:4px;margin-top:-5px}
+.admin-test-results[open] .admin-result-chevron{transform:rotate(225deg);margin-top:5px}
+</style></head>
 <body class="bg-light"><main class="container py-4" style="max-width:1000px">
 <a href="admin.php">&larr; Beheer</a>
 <div class="card shadow-sm mt-3 overflow-hidden">
@@ -87,7 +115,46 @@ foreach($tests as $t){
 <?php else:?>
 <div class="list-group">
 <?php foreach($topicTests as $t):?>
-<div class="list-group-item"><div class="d-flex justify-content-between align-items-center gap-3"><div><strong><?=e($t['title'])?></strong><div class="small text-secondary"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=((($t['test_type']??'mixed')==='vocabulary' && ($t['vocab_direction']??'both')==='both') ? (int)ceil(((int)$t['question_count'])/2) : (int)$t['question_count'])?> <?=($t['test_type']??'mixed')==='vocabulary'?'woorden':'vragen'?> · <?=((int)$t['is_active']?'Actief':'Inactief')?></div></div><div class="text-nowrap"><a class="btn btn-sm btn-outline-primary" href="test_edit.php?id=<?=$t['id']?>">Bewerken</a><a class="btn btn-sm btn-outline-secondary ms-1" href="questions.php?test_id=<?=$t['id']?>">Vragen</a></div></div></div>
+<div class="list-group-item p-3">
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
+<div>
+<strong><?=e($t['title'])?></strong>
+<div class="small text-secondary"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=((($t['test_type']??'mixed')==='vocabulary' && ($t['vocab_direction']??'both')==='both') ? (int)ceil(((int)$t['question_count'])/2) : (int)$t['question_count'])?> <?=($t['test_type']??'mixed')==='vocabulary'?'woorden':'vragen'?> · <?=((int)$t['is_active']?'Actief':'Inactief')?></div>
+</div>
+<div class="text-nowrap">
+<a class="btn btn-sm btn-outline-primary" href="test_edit.php?id=<?=$t['id']?>">Bewerken</a>
+<a class="btn btn-sm btn-outline-secondary ms-1" href="questions.php?test_id=<?=$t['id']?>">Vragen</a>
+</div>
+</div>
+
+<?php $testResults=$resultGroups[(int)$t['id']]??[]; ?>
+<?php if($testResults):?>
+<details class="mt-3 pt-3 border-top admin-test-results">
+<summary class="d-flex justify-content-between align-items-center" style="cursor:pointer;list-style:none">
+<span class="small fw-semibold text-secondary">Eerdere resultaten</span>
+<span class="admin-result-chevron" aria-hidden="true"></span>
+</summary>
+<div class="table-responsive mt-2">
+<table class="table table-sm table-hover align-middle mb-0">
+<thead><tr><th>Naam</th><th>Datum</th><th class="text-end">Resultaat</th></tr></thead>
+<tbody>
+<?php foreach($testResults as $result):?>
+<tr>
+<td><a href="result.php?id=<?=(int)$result['id']?>" class="text-decoration-none"><?=e($result['student_name'])?></a></td>
+<td><a href="result.php?id=<?=(int)$result['id']?>" class="text-decoration-none text-secondary"><?=e(date('d-m-Y H:i',strtotime((string)$result['finished_at'])))?></a></td>
+<td class="text-end">
+<a href="result.php?id=<?=(int)$result['id']?>" class="text-decoration-none fw-semibold <?=((float)$result['score']>=70?'text-success':((float)$result['score']>=50?'text-warning':'text-danger'))?>">
+<?=e(rtrim(rtrim(number_format((float)$result['score'],2,',','.'),'0'),','))?>%
+</a>
+</td>
+</tr>
+<?php endforeach;?>
+</tbody>
+</table>
+</div>
+</details>
+<?php endif;?>
+</div>
 <?php endforeach;?>
 </div>
 <?php endif;?>
