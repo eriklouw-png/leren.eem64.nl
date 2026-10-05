@@ -10,4 +10,6 @@ RUN sed -ri -e 's!/var/www/html!\${APACHE_DOCUMENT_ROOT}!g' \
     /etc/apache2/apache2.conf \
     /etc/apache2/conf-available/*.conf
 
+RUN printf 'upload_max_filesize=10M\npost_max_size=10M\n' > /usr/local/etc/php/conf.d/uploads.ini
+
 WORKDIR /var/www/html
