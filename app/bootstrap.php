@@ -11,7 +11,7 @@ ob_start(static function(string $html): string{
     }
     if(isset($_SESSION['user']) && is_array($_SESSION['user']) && ($_SESSION['user']['role']??'')==='student' && stripos($html,'</body>')!==false){
         $name=htmlspecialchars((string)($_SESSION['user']['name']??''),ENT_QUOTES,'UTF-8');
-        $bar='<div class="leren-userbar"><span>Ingelogd als <strong>'.$name.'</strong></span><a href="/logout.php" class="btn btn-outline-secondary btn-sm">Uitloggen</a></div>';
+        $bar='<div class="leren-userbar"><span class="text-white me-3">'.$name.'</span><a class="btn btn-outline-light btn-sm" href="index.php">Website</a> <a class="btn btn-outline-light btn-sm" href="logout.php">Uitloggen</a></div>';
         $html=preg_replace('~</body>~i',$bar.'</body>',$html,1)??$html;
     }
     return $html;
