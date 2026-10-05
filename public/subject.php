@@ -18,8 +18,9 @@ if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='reactivate_t
 }
 
 $x=$pdo->prepare("SELECT id,name,test_date FROM topics WHERE subject_id=? AND is_active=1 ORDER BY
-    CASE WHEN test_date IS NULL THEN 1 ELSE 0 END,
-    test_date,name");
+    test_date DESC,
+    created_at DESC,
+    name");
 $x->execute([$subjectId]);
 $topics=$x->fetchAll();
 ?><!doctype html>
