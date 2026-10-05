@@ -9,10 +9,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
  if(!in_array($testType,['vocabulary','multiple_choice','mixed'],true))$testType='mixed';
  if($title==='')$error='Een titel is verplicht.';
  elseif(!$topicId)$error='Kies een onderwerp.';
- elseif($testType==='multiple_choice' && $id){
-     $x=$pdo->prepare("SELECT COUNT(*) FROM questions WHERE test_id=? AND question_type='open'");
-     $x->execute([$id]);
-     if((int)$x->fetchColumn()>0)$error='Deze toets bevat open vragen. Verwijder of wijzig die eerst voordat je het type Alleen multiple choice kiest.';
+ elseif(in_array($testType,['multiple_choice','vocabulary'],true) && $id){
+     $requiredType=$testType==='multiple_choice'?'multiple_choice':'open';
+     $wrongLabel=$testType==='multiple_choice'?'open':'meerkeuze';
+     $x=$pdo->prepare("SELECT COUNT(*) FROM questions WHERE test_id=? AND question_type<>?");
+     $x->execute([$id,$requiredType]);
+     if((int)$x->fetchColumn()>0)$error='Deze toets bevat vragen van het verkeerde type. Een toets van dit type mag alleen '.$wrongLabel.'vragen bevatten.';
  }
  elseif($id){$s=$pdo->prepare("UPDATE tests SET topic_id=?,title=?,description=?,test_type=?,is_active=? WHERE id=?");$s->execute([$topicId,$title,$description,$testType,$active,$id]);redirect('questions.php?test_id='.$id);}
  else{$s=$pdo->prepare("INSERT INTO tests(topic_id,title,description,test_type,is_active) VALUES(?,?,?,?,?)");$s->execute([$topicId,$title,$description,$testType,$active]);redirect('questions.php?test_id='.$pdo->lastInsertId());}
