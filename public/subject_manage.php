@@ -30,7 +30,7 @@ $s=$pdo->prepare("SELECT id,name,description,image_mime FROM subjects WHERE id=?
 if(!$subject){http_response_code(404);exit('Taal niet gevonden.');}
 $tx=$pdo->prepare("SELECT id,name,test_date FROM topics WHERE subject_id=? ORDER BY name");
 $tx->execute([$id]);$topics=$tx->fetchAll();
-$x=$pdo->prepare("SELECT t.id,t.title,t.description,t.test_type,t.is_active,COUNT(q.id) question_count FROM tests t JOIN topics tp ON tp.id=t.topic_id LEFT JOIN questions q ON q.test_id=t.id WHERE tp.subject_id=? GROUP BY t.id ORDER BY tp.name,t.created_at DESC");
+$x=$pdo->prepare("SELECT t.id,t.topic_id,t.title,t.description,t.test_type,t.is_active,COUNT(q.id) question_count FROM tests t JOIN topics tp ON tp.id=t.topic_id LEFT JOIN questions q ON q.test_id=t.id WHERE tp.subject_id=? GROUP BY t.id ORDER BY tp.name,t.created_at DESC");
 $x->execute([$id]);$tests=$x->fetchAll();
 $testIds=array_map('intval',array_column($tests,'id'));
 $sessionGroups=[];
@@ -54,19 +54,50 @@ $labels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Multiple choice','
 <div class="card shadow-sm mt-3 overflow-hidden">
 <?php if($subject['image_mime']):?><img src="subject_image.php?id=<?=$id?>" style="height:180px;object-fit:cover" alt="<?=e($subject['name'])?>"><?php endif;?>
 <div class="card-body p-4"><div class="d-flex justify-content-between align-items-start gap-3"><div><h1 class="h3 mb-1"><?=e($subject['name'])?></h1><?php if($subject['description']):?><p class="text-secondary mb-0"><?=e($subject['description'])?></p><?php endif;?></div><div class="d-flex flex-column flex-sm-row gap-2">
-<a class="btn btn-primary" href="test_new.php?subject_id=<?=$id?>">Nieuwe sub-test</a>
 <a class="btn btn-outline-secondary" href="subject_edit.php?id=<?=$id?>">Bewerken</a>
 </div></div></div>
 </div>
 <h2 class="h4 mt-4">Overhoringen</h2>
-<?php if(!$topics):?><div class="alert alert-info">Nog geen overhoringen voor dit vak.</div><?php else:?><div class="list-group shadow-sm mb-4">
-<?php foreach($topics as $topic): $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d');?>
-<div class="list-group-item"><div class="d-flex justify-content-between align-items-center gap-3"><div><strong><?=e($topic['name'])?></strong><div class="small text-secondary"><?php if($topic['test_date']):?>Overhoringsdatum: <?=e(date('d-m-Y',strtotime($topic['test_date'])))?> · <?= $archived?'Gearchiveerd':'Actief'?><?php else:?>Geen overhoringsdatum<?php endif;?></div></div><a class="btn btn-sm btn-outline-primary" href="topic_edit.php?id=<?=$topic['id']?>">Bewerken</a></div></div>
-<?php endforeach;?></div><?php endif;?>
-<h2 class="h4 mt-4">Sub-Testen</h2>
-<?php if(!$tests):?><div class="alert alert-info">Nog geen sub-testen voor deze taal.</div><?php else:?><div class="list-group shadow-sm">
-<?php foreach($tests as $t):?><div class="list-group-item"><div class="d-flex justify-content-between align-items-center gap-3"><div><strong><?=e($t['title'])?></strong><div class="small text-secondary"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=$t['question_count']?> vragen · <?=((int)$t['is_active']?'Actief':'Inactief')?></div></div><div class="text-nowrap"><a class="btn btn-sm btn-outline-primary" href="test_edit.php?id=<?=$t['id']?>">Bewerken</a><a class="btn btn-sm btn-outline-secondary ms-1" href="questions.php?test_id=<?=$t['id']?>">Vragen</a></div></div></div><?php endforeach;?>
-</div><?php endif;?>
+<?php if(!$topics):?><div class="alert alert-info">Nog geen overhoringen voor dit vak.</div><?php else:?><div class="accordion shadow-sm mb-4" id="overhoringen">
+<?php
+$testsByTopic=[];
+foreach($tests as $t){
+    $testsByTopic[(int)$t['topic_id']][]=$t;
+}
+?>
+<?php foreach($topics as $topic): $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d'); $topicTests=$testsByTopic[(int)$topic['id']]??[];?>
+<div class="accordion-item">
+<h2 class="accordion-header" id="heading<?=$topic['id']?>">
+<button class="accordion-button <?=$archived?'collapsed':''?>" type="button" data-bs-toggle="collapse" data-bs-target="#collapse<?=$topic['id']?>" aria-expanded="<?=$archived?'false':'true'?>" aria-controls="collapse<?=$topic['id']?>">
+<span class="<?=$archived?'text-secondary':''?>"><strong><?=e($topic['name'])?></strong>
+<span class="small text-secondary ms-2"><?php if($topic['test_date']):?><?=e(date('d-m-Y',strtotime($topic['test_date'])))?> · <?= $archived?'Gearchiveerd':'Actief'?><?php else:?>Geen overhoringsdatum<?php endif;?></span></span>
+</button>
+</h2>
+<div id="collapse<?=$topic['id']?>" class="accordion-collapse collapse <?=$archived?'':'show'?>" aria-labelledby="heading<?=$topic['id']?>" data-bs-parent="#overhoringen">
+<div class="accordion-body">
+<div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+<strong>Sub-Testen</strong>
+<div>
+<a class="btn btn-sm btn-primary" href="test_new.php?topic_id=<?=$topic['id']?>">Nieuwe sub-test</a>
+<a class="btn btn-sm btn-outline-secondary ms-1" href="topic_edit.php?id=<?=$topic['id']?>">Overhoring bewerken</a>
+</div>
+</div>
+<?php if(!$topicTests):?>
+<div class="alert alert-info mb-0">Nog geen sub-testen binnen deze overhoring.</div>
+<?php else:?>
+<div class="list-group">
+<?php foreach($topicTests as $t):?>
+<div class="list-group-item"><div class="d-flex justify-content-between align-items-center gap-3"><div><strong><?=e($t['title'])?></strong><div class="small text-secondary"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=$t['question_count']?> vragen · <?=((int)$t['is_active']?'Actief':'Inactief')?></div></div><div class="text-nowrap"><a class="btn btn-sm btn-outline-primary" href="test_edit.php?id=<?=$t['id']?>">Bewerken</a><a class="btn btn-sm btn-outline-secondary ms-1" href="questions.php?test_id=<?=$t['id']?>">Vragen</a></div></div></div>
+<?php endforeach;?>
+</div>
+<?php endif;?>
+</div>
+</div>
+</div>
+<?php endforeach;?>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<?php endif;?>
 <h2 class="h4 mt-5">Oefentijd</h2>
 <p class="text-secondary">Actieve tijd wordt gemeten zolang de pagina zichtbaar is en er recent toetsenbord-, muis-, scroll- of touchactiviteit is geweest.</p>
 <?php if(!$sessionGroups):?>
