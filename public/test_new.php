@@ -1,11 +1,24 @@
 <?php
 require __DIR__.'/../app/bootstrap.php';require_admin();
 
+$topicId=filter_input(INPUT_GET,'topic_id',FILTER_VALIDATE_INT);
 $subjectId=filter_input(INPUT_GET,'subject_id',FILTER_VALIDATE_INT);
-if(!$subjectId){redirect('admin.php');}
-$x=$pdo->prepare("SELECT id,name,description FROM subjects WHERE id=?");
-$x->execute([$subjectId]);$subject=$x->fetch();
-if(!$subject){http_response_code(404);exit('Taal niet gevonden.');}
+if(!$topicId && !$subjectId){redirect('admin.php');}
+
+if($topicId){
+    $x=$pdo->prepare("SELECT tp.id topic_id,tp.name topic_name,s.id subject_id,s.name,s.description FROM topics tp JOIN subjects s ON s.id=tp.subject_id WHERE tp.id=?");
+    $x->execute([$topicId]);$context=$x->fetch();
+    if(!$context){http_response_code(404);exit('Overhoring niet gevonden.');}
+    $topicId=(int)$context['topic_id'];
+    $subjectId=(int)$context['subject_id'];
+    $topicName=$context['topic_name'];
+    $subject=$context;
+}else{
+    $x=$pdo->prepare("SELECT id,name,description FROM subjects WHERE id=?");
+    $x->execute([$subjectId]);$subject=$x->fetch();
+    if(!$subject){http_response_code(404);exit('Taal niet gevonden.');}
+    $topicName='Algemeen';
+}
 
 function language_labels(string $name):array{
     $n=mb_strtolower(trim($name));
@@ -32,9 +45,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     if(!$errors){
         $pdo->beginTransaction();
         try{
-            $topic=$pdo->prepare("INSERT INTO topics(subject_id,name) VALUES(?,?) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)");
-            $topic->execute([$subjectId,'Algemeen']);
-            $topicId=(int)$pdo->lastInsertId();
+            if(!$topicId){
+                $topic=$pdo->prepare("INSERT INTO topics(subject_id,name) VALUES(?,?) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)");
+                $topic->execute([$subjectId,'Algemeen']);
+                $topicId=(int)$pdo->lastInsertId();
+            }
             $ins=$pdo->prepare("INSERT INTO tests(topic_id,title,description,test_type,vocab_left_label,vocab_right_label,vocab_direction,is_active) VALUES(?,?,?,?,?,?,?,1)");
             $ins->execute([$topicId,$title,$description,$testType,$testType==='vocabulary'?$leftLabel:null,$testType==='vocabulary'?$rightLabel:null,'both']);
             $testId=(int)$pdo->lastInsertId();
@@ -100,6 +115,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <a href="subject_manage.php?id=<?=$subjectId?>">&larr; <?=e($subject['name'])?></a>
 <div class="card shadow-sm mt-3"><div class="card-body p-4">
 <h1 class="h3">Nieuwe sub-test — <?=e($subject['name'])?></h1>
+<div class="small text-secondary mb-3">Overhoring: <strong><?=e($topicName)?></strong></div>
 <div class="alert alert-info"><strong>Taal:</strong> <?=e($leftLabel)?> → <?=e($rightLabel)?>. De taal is al bekend en hoeft niet opnieuw te worden ingevuld.</div>
 <?php foreach($errors as $error):?><div class="alert alert-danger"><?=e($error)?></div><?php endforeach;?>
 <form method="post">
