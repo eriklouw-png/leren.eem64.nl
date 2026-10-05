@@ -255,6 +255,23 @@ foreach($questions as &$q){$q['options']=[];if($q['question_type']==='multiple_c
    });
  }
  cards.forEach(setupSpecialChars);
+function setupQuestionImages(){
+   cards.forEach(card=>{
+     const questionId=card.dataset.questionId;
+     if(!questionId || card.querySelector('.question-image'))return;
+     const img=document.createElement('img');
+     img.className='question-image img-fluid rounded mb-3 d-none';
+     img.alt='Afbeelding bij de vraag';
+     img.loading='lazy';
+     img.src='question_image.php?id='+encodeURIComponent(questionId);
+     img.addEventListener('load',()=>img.classList.remove('d-none'));
+     img.addEventListener('error',()=>img.remove());
+     const title=card.querySelector('h2');
+     if(title)title.parentNode.insertBefore(img,title);
+   });
+ }
+ setupQuestionImages();
+ 
  function feedback(card,data){
    const box=card.querySelector('.feedback');
    box.className='feedback mt-4 alert '+(data.is_correct?'alert-success':'alert-danger');
