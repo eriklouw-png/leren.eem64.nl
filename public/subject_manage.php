@@ -107,6 +107,7 @@ foreach($tests as $t){
 <strong>Sub-Testen</strong>
 <div>
 <a class="btn btn-sm btn-primary" href="test_new.php?topic_id=<?=$topic['id']?>">Nieuwe sub-test</a>
+<a class="btn btn-sm btn-outline-success ms-1" href="ai_test_generator.php?topic_id=<?=$topic['id']?>">AI toets maken</a>
 <a class="btn btn-sm btn-outline-secondary ms-1" href="topic_edit.php?id=<?=$topic['id']?>">Overhoring bewerken</a>
 </div>
 </div>
