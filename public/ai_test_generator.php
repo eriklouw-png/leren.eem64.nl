@@ -342,6 +342,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <div class="d-flex gap-2 mb-3"><button class="btn btn-success btn-lg" type="submit">Opslaan als sub-tests</button><button class="btn btn-outline-secondary" type="submit" name="action" value="clear" formnovalidate>Annuleren</button></div>
 </form><div class="alert alert-success mt-4 mb-0"><strong>Veilige tussenstap:</strong> de analyse en gegenereerde vragen staan alleen in deze sessie. De volgende stap kan de geselecteerde vragen laten aanpassen en pas daarna een nieuwe sub-test in de database aanmaken.</div>
 <?php endif;?>
+<?php endif;?>
 </div></div></main>
 <script>
 const input=document.getElementById('pages'),list=document.getElementById('fileList');
