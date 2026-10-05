@@ -11,30 +11,34 @@ $stmt = $pdo->prepare("SELECT image_path FROM questions WHERE id = ?");
 $stmt->execute([$id]);
 $imagePath = $stmt->fetchColumn();
 
-if (!$imagePath) {
+if ($imagePath === false) {
     http_response_code(404);
-    exit('Geen afbeelding gekoppeld aan vraag '.$id.'.');
+    exit('Vraag '.$id.' bestaat niet.');
+}
+
+if ($imagePath === null || trim((string)$imagePath) === '') {
+    http_response_code(404);
+    exit('Geen afbeelding gekoppeld aan vraag '.$id.'. image_path = NULL/leeg.');
 }
 
 $imagePath = trim((string)$imagePath);
 
 // Alleen bestandsnamen en veilige relatieve paden toestaan.
 if (
-    $imagePath === '' ||
     str_contains($imagePath, '..') ||
     str_starts_with($imagePath, '/') ||
     str_starts_with($imagePath, '\\') ||
     !preg_match('/^[A-Za-z0-9._\\/-]+$/', $imagePath)
 ) {
     http_response_code(404);
-    exit('Ongeldig afbeeldingspad.');
+    exit('Ongeldig afbeeldingspad voor vraag '.$id.'. image_path = ['.$imagePath.']');
 }
 
 $file = __DIR__.'/uploads/questions/'.$imagePath;
 
 if (!is_file($file) || !is_readable($file)) {
     http_response_code(404);
-    exit('Afbeeldingsbestand niet gevonden: '.$imagePath);
+    exit('Afbeeldingsbestand niet gevonden voor vraag '.$id.'. image_path = ['.$imagePath.']');
 }
 
 $finfo = new finfo(FILEINFO_MIME_TYPE);
@@ -49,7 +53,7 @@ $allowed = [
 
 if (!in_array($mime, $allowed, true)) {
     http_response_code(415);
-    exit('Bestand is geen ondersteund afbeeldingstype.');
+    exit('Bestand is geen ondersteund afbeeldingstype voor vraag '.$id.'. image_path = ['.$imagePath.']');
 }
 
 header('Content-Type: '.$mime);
