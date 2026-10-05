@@ -14,6 +14,11 @@ $mode=$_GET['mode']??'normal';
 if(!in_array($mode,['normal','mistakes'],true))$mode='normal';
 $sourceAttemptId=filter_input(INPUT_GET,'source',FILTER_VALIDATE_INT)?:null;
 $newAttempt=isset($_GET['new'])&&$_GET['new']==='1';
+if(!$newAttempt && $mode==='normal'){
+    $resume=$pdo->prepare("SELECT id FROM attempts WHERE test_id=? AND browser_token=? AND status='in_progress' AND mode='normal' ORDER BY started_at DESC LIMIT 1");
+    $resume->execute([$testId,$browserToken]);
+    if(!$resume->fetch())$newAttempt=true;
+}
 $vocabDirectionChoice=$_POST['vocab_direction']??($_GET['direction']??null);
 if(($test['test_type']??'mixed')==='vocabulary' && $newAttempt && $_SERVER['REQUEST_METHOD']==='GET' && !$vocabDirectionChoice){
     $allowed=$test['vocab_direction']??'both';
