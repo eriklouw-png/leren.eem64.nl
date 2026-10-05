@@ -4,7 +4,7 @@ require __DIR__.'/../app/bootstrap.php';
 $subjectId=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if(!$subjectId)redirect('index.php');
 
-$s=$pdo->prepare("SELECT id,name,description FROM subjects WHERE id=?");
+$s=$pdo->prepare("SELECT id,name,description,image_mime FROM subjects WHERE id=?");
 $s->execute([$subjectId]);
 $subject=$s->fetch();
 if(!$subject){http_response_code(404);exit('Vak niet gevonden.');}
@@ -61,12 +61,11 @@ if($tests){
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?=e($subject['name'])?> - Leren</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
+<style>.subject-header{position:relative;min-height:220px;border-radius:1rem;background-size:cover;background-position:center;overflow:hidden;background-color:#6c757d}.subject-header-overlay{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.68),rgba(0,0,0,.2))}.subject-header-content{position:relative;z-index:1;min-height:220px;display:flex;flex-direction:column;justify-content:end;padding:2rem;color:#fff}.subject-header-content h1{font-size:clamp(2rem,7vw,3.5rem);margin:0}.subject-header-content p{margin:.35rem 0 0;color:rgba(255,255,255,.8)}</style></head>
 <body class="bg-light">
 <main class="container py-4">
 <a href="index.php">&larr; Alle vakken</a>
-<h1 class="mt-3"><?=e($subject['name'])?></h1>
-<?php if($subject['description']):?><p class="text-secondary"><?=e($subject['description'])?></p><?php endif;?>
+<div class="subject-header mt-3" style="background-image:<?=($subject['image_mime'] ? 'url("subject_image.php?id='.(int)$subject['id'].'")' : 'none')?>"><div class="subject-header-overlay"></div><div class="subject-header-content"><h1><?=e($subject['name'])?></h1><?php if($subject['description']):?><p><?=e($subject['description'])?></p><?php endif;?></div></div>
 
 <div class="row g-3">
 <?php
