@@ -1,4 +1,21 @@
 <?php
 require __DIR__.'/../app/bootstrap.php';
-$subjects=$pdo->query("SELECT s.id,s.name,s.description,COUNT(DISTINCT t.id) test_count FROM subjects s JOIN topics tp ON tp.subject_id=s.id JOIN tests t ON t.topic_id=tp.id AND t.is_active=1 GROUP BY s.id ORDER BY s.name")->fetchAll();
-?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Leren</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><nav class="navbar navbar-dark bg-dark mb-4"><div class="container"><a class="navbar-brand" href="index.php">Leren</a><a class="btn btn-outline-light btn-sm" href="admin.php">Beheer</a></div></nav><main class="container pb-5"><h1>Kies een vak</h1><p class="text-secondary">Kies eerst een vak om de beschikbare toetsen te bekijken.</p><div class="row g-3"><?php foreach($subjects as $s):?><div class="col-md-6 col-lg-4"><a class="text-decoration-none text-dark" href="subject.php?id=<?=$s['id']?>"><div class="card h-100 shadow-sm"><div class="card-body"><h2 class="h4"><?=e($s['name'])?></h2><?php if($s['description']):?><p class="text-secondary"><?=e($s['description'])?></p><?php endif;?><span class="badge text-bg-primary"><?=$s['test_count']?> <?=((int)$s['test_count']===1?'toets':'toetsen')?></span></div></div></a></div><?php endforeach;?></div><?php if(!$subjects):?><div class="alert alert-info mt-3">Er zijn nog geen vakken met actieve toetsen.</div><?php endif;?></main></body></html>
+$subjects=$pdo->query("SELECT s.id,s.name,s.description,s.image_mime,COUNT(DISTINCT t.id) test_count FROM subjects s JOIN topics tp ON tp.subject_id=s.id JOIN tests t ON t.topic_id=tp.id AND t.is_active=1 GROUP BY s.id ORDER BY s.name")->fetchAll();
+?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Leren</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><style>.subject-card-image{position:relative;background-size:cover;background-position:center;min-height:180px;background-color:#6c757d}.subject-card-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.12),rgba(0,0,0,.72))}</style></head><body class="bg-light"><nav class="navbar navbar-dark bg-dark mb-4"><div class="container"><a class="navbar-brand" href="index.php">Leren</a><a class="btn btn-outline-light btn-sm" href="admin.php">Beheer</a></div></nav><main class="container pb-5"><h1>Kies een vak</h1><p class="text-secondary">Kies eerst een vak om de beschikbare toetsen te bekijken.</p><div class="row g-3">
+<?php foreach($subjects as $s):?>
+<div class="col-md-6 col-lg-4">
+<a class="text-decoration-none text-dark" href="subject.php?id=<?=$s['id']?>">
+<div class="card h-100 shadow-sm overflow-hidden">
+<div class="subject-card-image" style="background-image:<?=($s['image_mime']?'url(\\'subject_image.php?id='.(int)$s['id'].'\\')':'none')?>;">
+<div class="subject-card-overlay"></div>
+<div class="card-body position-relative d-flex flex-column justify-content-end" style="min-height:180px;">
+<h2 class="h4 text-white mb-1"><?=e($s['name'])?></h2>
+<?php if($s['description']):?><p class="text-white-50 mb-2"><?=e($s['description'])?></p><?php endif;?>
+<span class="badge text-bg-primary align-self-start"><?=$s['test_count']?> <?=((int)$s['test_count']===1?'toets':'toetsen')?></span>
+</div>
+</div>
+</div>
+</a>
+</div>
+<?php endforeach;?>
+</div><?php if(!$subjects):?><div class="alert alert-info mt-3">Er zijn nog geen vakken met actieve toetsen.</div><?php endif;?></main></body></html>
