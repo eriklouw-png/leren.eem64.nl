@@ -27,9 +27,9 @@ $labels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Multiple choice','
 if(!isset($_SESSION['learner_token']))$_SESSION['learner_token']=bin2hex(random_bytes(32));
 $browserToken=$_SESSION['learner_token'];
 $inProgress=[];
-$rx=$pdo->prepare("SELECT id FROM attempts WHERE test_id=? AND student_id=? AND browser_token=? AND status='in_progress' AND mode='normal' ORDER BY started_at DESC LIMIT 1");
+$rx=$pdo->prepare("SELECT id FROM attempts WHERE test_id=? AND student_id=? AND status='in_progress' AND mode='normal' ORDER BY started_at DESC LIMIT 1");
 foreach($tests as &$testRow){
-    $rx->execute([(int)$testRow['id'],$studentId,$browserToken]);
+    $rx->execute([(int)$testRow['id'],$studentId]);
     $testRow['in_progress_attempt_id']=$rx->fetchColumn()?:null;
 }
 unset($testRow);
