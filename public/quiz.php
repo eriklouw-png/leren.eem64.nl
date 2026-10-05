@@ -20,8 +20,8 @@ if(!in_array($mode,['normal','mistakes'],true))$mode='normal';
 $sourceAttemptId=filter_input(INPUT_GET,'source',FILTER_VALIDATE_INT)?:null;
 $newAttempt=isset($_GET['new'])&&$_GET['new']==='1';
 if(!$newAttempt && $mode==='normal'){
-    $resume=$pdo->prepare("SELECT id FROM attempts WHERE test_id=? AND student_id=? AND browser_token=? AND status='in_progress' AND mode='normal' ORDER BY started_at DESC LIMIT 1");
-    $resume->execute([$testId,$studentId,$browserToken]);
+    $resume=$pdo->prepare("SELECT id FROM attempts WHERE test_id=? AND student_id=? AND status='in_progress' AND mode='normal' ORDER BY started_at DESC LIMIT 1");
+    $resume->execute([$testId,$studentId]);
     if(!$resume->fetch())$newAttempt=true;
 }
 $vocabDirectionChoice=$_POST['vocab_direction']??($_GET['direction']??null);
@@ -60,8 +60,8 @@ if($_SERVER['REQUEST_METHOD']==='POST' && in_array(($_POST['action']??''),['save
     $attemptId=filter_var($_POST['attempt_id']??null,FILTER_VALIDATE_INT);
     $questionId=filter_var($_POST['question_id']??null,FILTER_VALIDATE_INT);
     if(!$attemptId||!$questionId){http_response_code(400);echo json_encode(['ok'=>false,'error'=>'missing_attempt_or_question']);exit;}
-    $a=$pdo->prepare("SELECT id FROM attempts WHERE id=? AND test_id=? AND student_id=? AND browser_token=? AND status='in_progress'");
-    $a->execute([$attemptId,$testId,$studentId,$browserToken]);
+    $a=$pdo->prepare("SELECT id FROM attempts WHERE id=? AND test_id=? AND student_id=? AND status='in_progress'");
+    $a->execute([$attemptId,$testId,$studentId]);
     if(!$a->fetch()){http_response_code(403);echo json_encode(['ok'=>false]);exit;}
     $q=$pdo->prepare("SELECT q.question_text,q.question_type,q.explanation FROM questions q JOIN attempt_questions aq ON aq.question_id=q.id AND aq.attempt_id=? WHERE q.id=? AND q.test_id=?");
     $q->execute([$attemptId,$questionId,$testId]);$question=$q->fetch();
@@ -145,16 +145,16 @@ if($_SERVER['REQUEST_METHOD']==='POST' && in_array(($_POST['action']??''),['save
 
 $attempt=null;
 if($mode==='normal' && !$newAttempt){
-    $x=$pdo->prepare("SELECT * FROM attempts WHERE test_id=? AND student_id=? AND browser_token=? AND status='in_progress' AND mode='normal' ORDER BY started_at DESC LIMIT 1");
-    $x->execute([$testId,$studentId,$browserToken]);$attempt=$x->fetch();
+    $x=$pdo->prepare("SELECT * FROM attempts WHERE test_id=? AND student_id=? AND status='in_progress' AND mode='normal' ORDER BY started_at DESC LIMIT 1");
+    $x->execute([$testId,$studentId]);$attempt=$x->fetch();
 }
 
 if(!$attempt){
     $mistakes=[];
     if($mode==='mistakes'){
         if(!$sourceAttemptId)redirect('subject.php?id='.$test['subject_id']);
-        $x=$pdo->prepare("SELECT id FROM attempts WHERE id=? AND test_id=? AND student_id=? AND browser_token=? AND status='finished'");
-        $x->execute([$sourceAttemptId,$testId,$studentId,$browserToken]);
+        $x=$pdo->prepare("SELECT id FROM attempts WHERE id=? AND test_id=? AND student_id=? AND status='finished'");
+        $x->execute([$sourceAttemptId,$testId,$studentId]);
         if(!$x->fetch()){http_response_code(403);exit('Deze poging kan niet worden gebruikt voor foutentraining.');}
         $x=$pdo->prepare("SELECT q.id,q.sort_order FROM attempt_questions aq JOIN questions q ON q.id=aq.question_id JOIN attempt_answers aa ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id WHERE aq.attempt_id=? AND aa.is_correct=0 ORDER BY aq.sort_order,q.id");
         $x->execute([$sourceAttemptId]);$mistakes=$x->fetchAll();
