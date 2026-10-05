@@ -59,7 +59,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     if($action==='delete_test'){
         $x=$pdo->prepare("SELECT title FROM tests WHERE id=?");
         $x->execute([$id]);$item=$x->fetch();
-        if(!$item){http_response_code(404);exit('Toets niet gevonden.');}
+        if(!$item){http_response_code(404);exit('Sub-Test niet gevonden.');}
         $x=$pdo->prepare("DELETE FROM tests WHERE id=?");$x->execute([$id]);
         redirect('admin.php?deleted=test');
     }
@@ -128,4 +128,4 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
 <?php endforeach;?>
 </div>
 
-<h2 class="h4 mt-5">Recente resultaten</h2><div class="card shadow-sm"><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Toets</th><th>Score</th><th>Datum</th><th></th></tr></thead><tbody><?php foreach($attempts as $a):?><tr><td><?=e($a['title'])?></td><td><?=e((string)$a['score'])?>%</td><td><?=e($a['finished_at'])?></td><td><form method="post" class="d-inline" onsubmit="return confirm('U gaat het resultaat van toets &quot;<?=e($a['title'])?>&quot; van <?=e((string)$a['score'])?>% verwijderen. Weet u het zeker?');"><input type="hidden" name="action" value="delete_attempt"><input type="hidden" name="id" value="<?=$a['id']?>"><button class="btn btn-sm btn-outline-danger" type="submit">Verwijderen</button></form></td></tr><?php endforeach;?></tbody></table></div></div></main><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script></body></html>
+<h2 class="h4 mt-5">Recente resultaten</h2><div class="card shadow-sm"><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Sub-Test</th><th>Score</th><th>Datum</th><th></th></tr></thead><tbody><?php foreach($attempts as $a):?><tr><td><?=e($a['title'])?></td><td><?=e((string)$a['score'])?>%</td><td><?=e($a['finished_at'])?></td><td><form method="post" class="d-inline" onsubmit="return confirm('U gaat het resultaat van sub-test &quot;<?=e($a['title'])?>&quot; van <?=e((string)$a['score'])?>% verwijderen. Weet u het zeker?');"><input type="hidden" name="action" value="delete_attempt"><input type="hidden" name="id" value="<?=$a['id']?>"><button class="btn btn-sm btn-outline-danger" type="submit">Verwijderen</button></form></td></tr><?php endforeach;?></tbody></table></div></div></main><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script></body></html>
