@@ -34,3 +34,24 @@
 a{color:#2f7d4a}
 a:hover{color:#235d37}
 body.bg-light{background:#f4f8f5!important}
+
+
+.leren-userbar{
+  position:fixed;
+  top:12px;
+  right:24px;
+  z-index:1050;
+  display:flex;
+  align-items:center;
+  gap:.6rem;
+  padding:.35rem .45rem .35rem .75rem;
+  background:rgba(255,255,255,.96);
+  border:1px solid #dee2e6;
+  border-radius:.5rem;
+  box-shadow:0 .15rem .5rem rgba(0,0,0,.12);
+}
+.leren-userbar span{font-size:.9rem;color:#495057}
+@media(max-width:576px){
+  .leren-userbar{top:8px;right:8px}
+  .leren-userbar span{display:none}
+}
