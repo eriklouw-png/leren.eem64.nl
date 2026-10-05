@@ -38,6 +38,7 @@ $title=trim($_POST['title']??'');
 $description=trim($_POST['description']??'');
 $testType=$_POST['test_type']??'vocabulary';
 $importText=(string)($_POST['import_text']??'');
+$replaceExisting=!empty($_POST['replace_existing']);
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
     if(!in_array($testType,['vocabulary','multiple_choice','mixed'],true))$testType='vocabulary';
@@ -50,9 +51,33 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $topic->execute([$subjectId,'Algemeen']);
                 $topicId=(int)$pdo->lastInsertId();
             }
-            $ins=$pdo->prepare("INSERT INTO tests(topic_id,title,description,test_type,vocab_left_label,vocab_right_label,vocab_direction,is_active) VALUES(?,?,?,?,?,?,?,1)");
-            $ins->execute([$topicId,$title,$description,$testType,$testType==='vocabulary'?$leftLabel:null,$testType==='vocabulary'?$rightLabel:null,'both']);
-            $testId=(int)$pdo->lastInsertId();
+
+            $existing=$pdo->prepare("SELECT id FROM tests WHERE topic_id=? AND title=? LIMIT 1");
+            $existing->execute([$topicId,$title]);
+            $existingTest=$existing->fetchColumn();
+
+            if($existingTest){
+                if(!$replaceExisting){
+                    throw new RuntimeException('Er bestaat al een sub-test met de titel "'.$title.'". Vink "Bestaande toets vervangen" aan als je de inhoud opnieuw wilt importeren.');
+                }
+
+                $attempts=$pdo->prepare("SELECT COUNT(*) FROM attempts WHERE test_id=?");
+                $attempts->execute([(int)$existingTest]);
+                if((int)$attempts->fetchColumn()>0){
+                    throw new RuntimeException('De bestaande toets heeft al gemaakte pogingen en kan daarom niet automatisch worden vervangen. Kies een nieuwe titel.');
+                }
+
+                $testId=(int)$existingTest;
+                $upd=$pdo->prepare("UPDATE tests SET description=?,test_type=?,vocab_left_label=?,vocab_right_label=?,vocab_direction=?,is_active=1 WHERE id=?");
+                $upd->execute([$description,$testType,$testType==='vocabulary'?$leftLabel:null,$testType==='vocabulary'?$rightLabel:null,'both',$testId]);
+
+                $del=$pdo->prepare("DELETE FROM questions WHERE test_id=?");
+                $del->execute([$testId]);
+            }else{
+                $ins=$pdo->prepare("INSERT INTO tests(topic_id,title,description,test_type,vocab_left_label,vocab_right_label,vocab_direction,is_active) VALUES(?,?,?,?,?,?,?,1)");
+                $ins->execute([$topicId,$title,$description,$testType,$testType==='vocabulary'?$leftLabel:null,$testType==='vocabulary'?$rightLabel:null,'both']);
+                $testId=(int)$pdo->lastInsertId();
+            }
 
             if(trim($importText)!==''){
                 $lines=preg_split('/\R/u',$importText);
@@ -69,10 +94,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         $l=trim(substr($line,0,$pos));$r=trim(substr($line,$pos+1));
                         if($l===''||$r==='')throw new RuntimeException('Regel '.($lineNo+1).' moet aan beide kanten tekst bevatten.');
                         $sort++;
-                        $q->execute([$testId,$l,'open','Vertaal naar '.$rightLabel.'.',$sort]);
+                        $q->execute([$testId,$l,null,'open','Vertaal naar '.$rightLabel.'.',$sort]);
                         $qid=(int)$pdo->lastInsertId();$oa->execute([$qid,$r,1]);
                         $sort++;
-                        $q->execute([$testId,$r,'open','Vertaal naar '.$leftLabel.'.',$sort]);
+                        $q->execute([$testId,$r,null,'open','Vertaal naar '.$leftLabel.'.',$sort]);
                         $qid=(int)$pdo->lastInsertId();$oa->execute([$qid,$l,1]);
                     }else{
                         $row=str_getcsv($line,';');
@@ -80,8 +105,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                             if(count($row)<6)throw new RuntimeException('Regel '.($lineNo+1).' heeft te weinig kolommen.');
                             [$question,$correct,$b,$c,$d,$explanation,$imagePath]=array_pad(array_map('trim',$row),7,'');
                             if($imagePath!==''){
-                                $imagePath=str_replace('\\\\','/',$imagePath);
-                                if($imagePath[0]==='/' || str_contains($imagePath,'..') || !preg_match('/^[A-Za-z0-9._\\/-]+$/',$imagePath) || !preg_match('/\\.(?:jpe?g|png|webp|gif)$/i',$imagePath) || !is_file(__DIR__.'/uploads/questions/'.$imagePath))throw new RuntimeException('Regel '.($lineNo+1).': afbeelding '.$imagePath.' bestaat niet in uploads/questions/.');
+                                $imagePath=str_replace('\\','/',$imagePath);
+                                if($imagePath[0]==='/' || str_contains($imagePath,'..') || !preg_match('/^[A-Za-z0-9._\/-]+$/',$imagePath) || !preg_match('/\.(?:jpe?g|png|webp|gif)$/i',$imagePath) || !is_file(__DIR__.'/uploads/questions/'.$imagePath))throw new RuntimeException('Regel '.($lineNo+1).': afbeelding '.$imagePath.' bestaat niet in uploads/questions/.');
                             }
                             if($question===''||$correct===''||$b===''||$c===''||$d==='')throw new RuntimeException('Regel '.($lineNo+1).' mist een verplicht veld.');
                             $sort++;$q->execute([$testId,$question,$imagePath!==''?$imagePath:null,'multiple_choice',$explanation,$sort]);$qid=(int)$pdo->lastInsertId();
@@ -90,14 +115,14 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                             if(count($row)<7)throw new RuntimeException('Regel '.($lineNo+1).' heeft te weinig kolommen.');
                             [$type,$question,$correct,$b,$c,$d,$explanation,$imagePath]=array_pad(array_map('trim',$row),8,'');
                             if($imagePath!==''){
-                                $imagePath=str_replace('\\\\','/',$imagePath);
-                                if($imagePath[0]==='/' || str_contains($imagePath,'..') || !preg_match('/^[A-Za-z0-9._\\/-]+$/',$imagePath) || !preg_match('/\\.(?:jpe?g|png|webp|gif)$/i',$imagePath) || !is_file(__DIR__.'/uploads/questions/'.$imagePath))throw new RuntimeException('Regel '.($lineNo+1).': afbeelding '.$imagePath.' bestaat niet in uploads/questions/.');
+                                $imagePath=str_replace('\\','/',$imagePath);
+                                if($imagePath[0]==='/' || str_contains($imagePath,'..') || !preg_match('/^[A-Za-z0-9._\/-]+$/',$imagePath) || !preg_match('/\.(?:jpe?g|png|webp|gif)$/i',$imagePath) || !is_file(__DIR__.'/uploads/questions/'.$imagePath))throw new RuntimeException('Regel '.($lineNo+1).': afbeelding '.$imagePath.' bestaat niet in uploads/questions/.');
                             }
                             if(!in_array(strtolower($type),['mc','open'],true))throw new RuntimeException('Regel '.($lineNo+1).': type moet mc of open zijn.');
                             if($question===''||$correct==='')throw new RuntimeException('Regel '.($lineNo+1).' mist vraag of juiste antwoord.');
                             $qt=strtolower($type)==='mc'?'multiple_choice':'open';
                             if($qt==='multiple_choice'&&($b===''||$c===''||$d===''))throw new RuntimeException('Regel '.($lineNo+1).': bij mc zijn B, C en D verplicht.');
-                            if($qt==='open'&&($b!==''||$c!==''||$d!==''))throw new RuntimeException('Regel '.($lineNo+1).': bij open moeten B, C en D leeg zijn.');
+                            if($qt==='open'&&($b!==''||$c!==''||$d!==''))throw new RuntimeException('Regel '.($lineNo+1).': bij open moeten B/C/D leeg zijn.');
                             $sort++;$q->execute([$testId,$question,$imagePath!==''?$imagePath:null,$qt,$explanation,$sort]);$qid=(int)$pdo->lastInsertId();
                             if($qt==='open'){
                                 foreach(array_values(array_filter(array_map('trim',explode('|',$correct)),fn($v)=>$v!=='')) as $i=>$answer)$oa->execute([$qid,$answer,$i+1]);
@@ -135,6 +160,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <option value="multiple_choice" <?=$testType==='multiple_choice'?'selected':''?>>Multiple choice</option>
 <option value="mixed" <?=$testType==='mixed'?'selected':''?>>Combinatie</option>
 </select>
+<div class="form-check mb-3">
+<input class="form-check-input" type="checkbox" name="replace_existing" value="1" id="replaceExisting" <?=$replaceExisting?'checked':''?>>
+<label class="form-check-label" for="replaceExisting"><strong>Bestaande toets met dezelfde titel vervangen</strong><br><span class="text-secondary">De huidige vragen worden vervangen door de geïmporteerde vragen. Dit kan alleen als er nog geen pogingen voor deze toets zijn.</span></label>
+</div>
 <div id="vocabHelp" class="alert alert-secondary import-help"><strong>Importformaat:</strong> één woordpaar per regel met <code>=</code>.<br><span class="mono"><?=e($leftLabel)?> = <?=e($rightLabel)?></span><br><span class="text-secondary">Er worden beide richtingen aangemaakt.</span></div>
 <div id="mcHelp" class="alert alert-secondary import-help d-none"><strong>Importformaat:</strong> één vraag per regel, met <code>;</code> als scheidingsteken:<br><span class="mono">vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;afbeelding</span></div>
 <div id="mixedHelp" class="alert alert-secondary import-help d-none"><strong>Importformaat:</strong> één vraag per regel, met <code>;</code> als scheidingsteken:<br><span class="mono">type;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;afbeelding</span><br><code>type</code> is <code>mc</code> of <code>open</code>. Bij open laat je B/C/D leeg.</div>
