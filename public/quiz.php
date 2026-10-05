@@ -329,7 +329,8 @@ function setupQuestionImages(){
      if(el.tagName==='TEXTAREA'){let timer;el.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>saveDraft(el.dataset.question,el.value).catch(()=>{}),500);});}
    });
  });
- show(current);\n activity({action:'start',test_id:testId,attempt_id:attemptId});
+ show(current);
+ activity({action:'start',test_id:testId,attempt_id:attemptId});
 
  let activeUntil=Date.now()+60000;const touch=()=>{activeUntil=Date.now()+60000;};
  ['mousemove','mousedown','keydown','touchstart','scroll'].forEach(e=>window.addEventListener(e,touch,{passive:true}));
