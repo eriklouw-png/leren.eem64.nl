@@ -55,3 +55,13 @@ body.bg-light{background:#f4f8f5!important}
   .leren-userbar{top:8px;right:8px}
   .leren-userbar span{display:none}
 }
+
+.leren-userbar{
+  position:fixed;
+  top:14px;
+  right:24px;
+  z-index:1050;
+  display:flex;
+  align-items:center;
+}
+.leren-userbar .text-white{color:#fff!important}
