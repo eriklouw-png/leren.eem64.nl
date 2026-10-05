@@ -14,6 +14,36 @@ $mode=$_GET['mode']??'normal';
 if(!in_array($mode,['normal','mistakes'],true))$mode='normal';
 $sourceAttemptId=filter_input(INPUT_GET,'source',FILTER_VALIDATE_INT)?:null;
 $newAttempt=isset($_GET['new'])&&$_GET['new']==='1';
+$vocabDirectionChoice=$_POST['vocab_direction']??($_GET['direction']??null);
+if(($test['test_type']??'mixed')==='vocabulary' && $newAttempt && $_SERVER['REQUEST_METHOD']==='GET' && !$vocabDirectionChoice){
+    $allowed=$test['vocab_direction']??'both';
+    ?>
+    <!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($test['title'])?></title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head>
+    <body class="bg-light"><main class="container py-4" style="max-width:700px">
+    <a href="subject.php?id=<?=(int)$test['subject_id']?>">&larr; Terug</a>
+    <div class="card shadow-sm mt-4"><div class="card-body p-4">
+    <h1 class="h3"><?=e($test['title'])?></h1>
+    <p class="text-secondary">Kies eerst welke richting je wilt oefenen.</p>
+    <div class="d-grid gap-3 mt-4">
+    <?php if(in_array($allowed,['both','left_to_right'],true)):?>
+    <form method="post"><input type="hidden" name="vocab_direction" value="left_to_right"><button class="btn btn-primary btn-lg w-100" type="submit"><?=e($test['vocab_left_label'])?> → <?=e($test['vocab_right_label'])?></button></form>
+    <?php endif;?>
+    <?php if(in_array($allowed,['both','right_to_left'],true)):?>
+    <form method="post"><input type="hidden" name="vocab_direction" value="right_to_left"><button class="btn btn-outline-primary btn-lg w-100" type="submit"><?=e($test['vocab_right_label'])?> → <?=e($test['vocab_left_label'])?></button></form>
+    <?php endif;?>
+    <?php if($allowed==='both'):?>
+    <form method="post"><input type="hidden" name="vocab_direction" value="both"><button class="btn btn-outline-secondary btn-lg w-100" type="submit">Beide richtingen</button></form>
+    <?php endif;?>
+    </div></div></div></main></body></html>
+    <?php
+    exit;
+}
+if(($test['test_type']??'mixed')==='vocabulary' && $newAttempt && $vocabDirectionChoice){
+    $allowed=$test['vocab_direction']??'both';
+    if(!in_array($vocabDirectionChoice,['both','left_to_right','right_to_left'],true) || ($allowed!=='both' && $vocabDirectionChoice!==$allowed)){
+        http_response_code(400);exit('Ongeldige oefenrichting.');
+    }
+}
 
 if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='save_answer'){
     header('Content-Type: application/json; charset=utf-8');
@@ -121,8 +151,16 @@ if(!$attempt){
             foreach($mistakes as $i=>$q)$y->execute([$attemptId,$q['id'],$i+1]);
         }else{
             if(($test['test_type']??'mixed')==='vocabulary'){
-                $y=$pdo->prepare("SELECT id FROM questions WHERE test_id=? ORDER BY RAND()");
-                $y->execute([$testId]);
+                if($vocabDirectionChoice==='left_to_right'){
+                    $y=$pdo->prepare("SELECT id FROM questions WHERE test_id=? AND explanation=? ORDER BY RAND()");
+                    $y->execute([$testId,'Vertaal naar '.$test['vocab_right_label'].'.']);
+                }elseif($vocabDirectionChoice==='right_to_left'){
+                    $y=$pdo->prepare("SELECT id FROM questions WHERE test_id=? AND explanation=? ORDER BY RAND()");
+                    $y->execute([$testId,'Vertaal naar '.$test['vocab_left_label'].'.']);
+                }else{
+                    $y=$pdo->prepare("SELECT id FROM questions WHERE test_id=? ORDER BY RAND()");
+                    $y->execute([$testId]);
+                }
                 $questionIds=$y->fetchAll(PDO::FETCH_COLUMN);
                 $ins=$pdo->prepare("INSERT INTO attempt_questions(attempt_id,question_id,sort_order) VALUES(?,?,?)");
                 foreach($questionIds as $i=>$questionId)$ins->execute([$attemptId,(int)$questionId,$i+1]);
@@ -152,7 +190,7 @@ $x->execute([$attemptId]);$questions=$x->fetchAll();
 $o=$pdo->prepare("SELECT id,option_text FROM question_options WHERE question_id=? ORDER BY sort_order,id");
 foreach($questions as &$q){$q['options']=[];if($q['question_type']==='multiple_choice'){$o->execute([$q['id']]);$q['options']=$o->fetchAll();}}unset($q);
 ?>
-<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($test['title'])?></title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><style>.special-char-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:.65rem}.special-char-btn{font-size:1.45rem;font-weight:500;min-height:52px}</style></head><body class="bg-light"><main class="container py-4" style="max-width:850px"><a href="subject.php?id=<?=$test['subject_id']?>">&larr; Terug</a><h1 class="mt-3"><?=e($test['title'])?></h1><div class="mb-3"><?php $typeLabels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Alleen multiple choice','mixed'=>'Combinatie'];?><span class="badge text-bg-secondary"><?=e($typeLabels[$test['test_type']??'mixed']??'Combinatie')?></span></div><?php if($mode==='mistakes'):?><div class="alert alert-warning">Je oefent nu alleen de vragen die je eerder fout had.</div><?php else:?><div class="alert alert-info">Je antwoorden worden automatisch opgeslagen. Je kunt later verdergaan.</div><?php endif;?><div class="progress mb-4" style="height:8px"><div id="progressBar" class="progress-bar" style="width:<?=count($questions)?100/count($questions):0?>%"></div></div><form method="post" id="quizForm"><input type="hidden" name="action" value="finish"><?php foreach($questions as $n=>$q):?><section class="question-card <?=$n===0?'':'d-none'?>" data-index="<?=$n?>" data-question-id="<?=$q['id']?>"><div class="card shadow-sm mb-4"><div class="card-body"><div class="text-secondary mb-2">Vraag <?=$n+1?> van <?=count($questions)?></div><h2 class="h5"><?=e($q['question_text'])?></h2><?php if($q['question_type']==='open'):?><label class="form-label text-secondary mt-3">Typ je antwoord:</label><textarea class="form-control answer-input" data-question="<?=$q['id']?>" name="question_<?=$q['id']?>" rows="4"><?=e($q['answer_text']??'')?></textarea><?php if(($test['test_type']??'mixed')==='vocabulary'):?><div class="special-chars mt-3" data-explanation="<?=e($q['explanation']??'')?>"><div class="text-secondary small mb-2">Speciale tekens</div><div class="special-char-grid"></div></div><?php endif;?><?php else:foreach($q['options'] as $opt):?><div class="form-check my-3"><input class="form-check-input answer-input" data-question="<?=$q['id']?>" type="radio" name="question_<?=$q['id']?>" value="<?=$opt['id']?>" <?=((int)($q['selected_option_id']??0)===(int)$opt['id'])?'checked':''?>><label class="form-check-label"><?=e($opt['option_text'])?></label></div><?php endforeach;endif;?><div class="feedback mt-4 d-none"></div></div></div><div class="d-flex justify-content-end gap-2"><button type="button" class="btn btn-primary next-btn"><?=($n+1===count($questions))?'Toets afronden':'Volgende'?></button></div></section><?php endforeach;?></form></main><script>
+<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($test['title'])?></title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><style>.special-char-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:.65rem}.special-char-btn{font-size:1.45rem;font-weight:500;min-height:52px}</style></head><body class="bg-light"><main class="container py-4" style="max-width:850px"><a href="subject.php?id=<?=$test['subject_id']?>">&larr; Terug</a><h1 class="mt-3"><?=e($test['title'])?></h1><div class="mb-3"><?php $typeLabels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Alleen multiple choice','mixed'=>'Combinatie'];?><span class="badge text-bg-secondary"><?=e($typeLabels[$test['test_type']??'mixed']??'Combinatie')?></span><?php if(($test['test_type']??'mixed')==='vocabulary' && $vocabDirectionChoice):?> <span class="badge text-bg-primary"><?=e($test['vocab_left_label'])?> → <?=e($test['vocab_right_label'])?><?php if($vocabDirectionChoice==='right_to_left'):?> omgekeerd<?php endif;?></span><?php endif;?></div><?php if($mode==='mistakes'):?><div class="alert alert-warning">Je oefent nu alleen de vragen die je eerder fout had.</div><?php else:?><div class="alert alert-info">Je antwoorden worden automatisch opgeslagen. Je kunt later verdergaan.</div><?php endif;?><div class="progress mb-4" style="height:8px"><div id="progressBar" class="progress-bar" style="width:<?=count($questions)?100/count($questions):0?>%"></div></div><form method="post" id="quizForm"><input type="hidden" name="action" value="finish"><?php foreach($questions as $n=>$q):?><section class="question-card <?=$n===0?'':'d-none'?>" data-index="<?=$n?>" data-question-id="<?=$q['id']?>"><div class="card shadow-sm mb-4"><div class="card-body"><div class="text-secondary mb-2">Vraag <?=$n+1?> van <?=count($questions)?></div><h2 class="h5"><?=e($q['question_text'])?></h2><?php if($q['question_type']==='open'):?><label class="form-label text-secondary mt-3">Typ je antwoord:</label><textarea class="form-control answer-input" data-question="<?=$q['id']?>" name="question_<?=$q['id']?>" rows="4"><?=e($q['answer_text']??'')?></textarea><?php if(($test['test_type']??'mixed')==='vocabulary'):?><div class="special-chars mt-3" data-explanation="<?=e($q['explanation']??'')?>"><div class="text-secondary small mb-2">Speciale tekens</div><div class="special-char-grid"></div></div><?php endif;?><?php else:foreach($q['options'] as $opt):?><div class="form-check my-3"><input class="form-check-input answer-input" data-question="<?=$q['id']?>" type="radio" name="question_<?=$q['id']?>" value="<?=$opt['id']?>" <?=((int)($q['selected_option_id']??0)===(int)$opt['id'])?'checked':''?>><label class="form-check-label"><?=e($opt['option_text'])?></label></div><?php endforeach;endif;?><div class="feedback mt-4 d-none"></div></div></div><div class="d-flex justify-content-end gap-2"><button type="button" class="btn btn-primary next-btn"><?=($n+1===count($questions))?'Toets afronden':'Volgende'?></button></div></section><?php endforeach;?></form></main><script>
 (function(){
  const attemptId='<?= (int)$attemptId ?>',testId='<?= (int)$testId ?>';
  const cards=[...document.querySelectorAll('.question-card')],bar=document.getElementById('progressBar'),form=document.getElementById('quizForm');
