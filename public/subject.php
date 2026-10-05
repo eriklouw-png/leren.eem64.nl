@@ -9,7 +9,15 @@ $s->execute([$subjectId]);
 $subject=$s->fetch();
 if(!$subject){http_response_code(404);exit('Vak niet gevonden.');}
 
-$s=$pdo->prepare("SELECT t.id,t.title,t.description,tp.name topic_name,COUNT(q.id) question_count
+if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='reactivate_topic'){
+    $topicId=filter_var($_POST['topic_id']??null,FILTER_VALIDATE_INT);
+    if(!$topicId){http_response_code(400);exit('Ongeldig onderwerp.');}
+    $x=$pdo->prepare("UPDATE topics SET test_date=NULL WHERE id=? AND subject_id=?");
+    $x->execute([$topicId,$subjectId]);
+    redirect('subject.php?id='.$subjectId);
+}
+
+$s=$pdo->prepare("SELECT t.id,t.title,t.description,tp.id topic_id,tp.name topic_name,tp.test_date,COUNT(q.id) question_count
 FROM tests t
 JOIN topics tp ON tp.id=t.topic_id
 LEFT JOIN questions q ON q.test_id=t.id
@@ -61,7 +69,7 @@ if($tests){
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?=e($subject['name'])?> - Leren</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<style>.subject-header{position:relative;min-height:220px;border-radius:1rem;overflow:hidden;background:#6c757d}.subject-header-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.subject-header-overlay{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.68),rgba(0,0,0,.2))}.subject-header-content{position:relative;z-index:1;min-height:220px;display:flex;flex-direction:column;justify-content:end;padding:2rem;color:#fff}.subject-header-content h1{font-size:clamp(2rem,7vw,3.5rem);margin:0}.subject-header-content p{margin:.35rem 0 0;color:rgba(255,255,255,.8)}</style></head>
+<style>.topic-archived .topic-heading,.topic-archived .topic-test{filter:grayscale(1);opacity:.58}.topic-heading{display:flex;align-items:center;justify-content:space-between;gap:1rem}.subject-header{position:relative;min-height:220px;border-radius:1rem;overflow:hidden;background:#6c757d}.subject-header-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.subject-header-overlay{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.68),rgba(0,0,0,.2))}.subject-header-content{position:relative;z-index:1;min-height:220px;display:flex;flex-direction:column;justify-content:end;padding:2rem;color:#fff}.subject-header-content h1{font-size:clamp(2rem,7vw,3.5rem);margin:0}.subject-header-content p{margin:.35rem 0 0;color:rgba(255,255,255,.8)}</style></head>
 <body class="bg-light">
 <main class="container py-4">
 <a href="index.php">&larr; Alle vakken</a>
@@ -70,11 +78,18 @@ if($tests){
 <div class="row g-3">
 <?php
 $topic='';
+$topicArchived=false;
+$topicId=0;
 foreach($tests as $t):
     if($topic!==$t['topic_name']):
         $topic=$t['topic_name'];
+        $topicId=(int)$t['topic_id'];
+        $topicArchived=!empty($t['test_date']) && $t['test_date'] < date('Y-m-d');
 ?>
-<div class="col-12"><h2 class="h4 mt-3"><?=e($topic)?></h2></div>
+<div class="col-12 topic-heading mt-3 <?=$topicArchived?'topic-archived':''?>">
+  <div><h2 class="h4 mb-1"><?=e($topic)?></h2><?php if($t['test_date']):?><div class="small text-secondary">Overhoring: <?=e(date('d-m-Y',strtotime($t['test_date'])))?><?=$topicArchived?' · Gearchiveerd':''?></div><?php endif;?></div>
+  <?php if($topicArchived):?><form method="post" class="m-0"><input type="hidden" name="action" value="reactivate_topic"><input type="hidden" name="topic_id" value="<?=$topicId?>"><button class="btn btn-outline-secondary btn-sm" type="submit">Heractiveren</button></form><?php endif;?>
+</div>
 <?php
     endif;
 
@@ -106,8 +121,8 @@ foreach($tests as $t):
         $continueLabel='Start toets';
     }
 ?>
-<div class="col-md-6 col-lg-4">
-<div class="card h-100 shadow-sm">
+<div class="col-md-6 col-lg-4 <?=$topicArchived?'topic-archived':''?>">
+<div class="card h-100 shadow-sm topic-test">
 <div class="card-body">
 <h3 class="h5"><?=e($t['title'])?></h3>
 <?php if($t['description']):?><p><?=e($t['description'])?></p><?php endif;?>
