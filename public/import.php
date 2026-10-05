@@ -87,7 +87,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                             if($existingTest){$testId=(int)$existingTest;$updateTest->execute([$active,$testId]);}
                             else{$createTest->execute([$topicId,$data['sub-test'],'',$active]);$testId=(int)$pdo->lastInsertId();}
                             $sortByTest[$testId]=($sortByTest[$testId]??0)+1;
-                            $q->execute([$testId,$data['vraag'],$data['afbeelding']!==''?$data['afbeelding']:null,$data['type']==='open'?'open':'multiple_choice',$data['uitleg'],$sortByTest[$testId]]);
+                            $imagePath = trim((string)($data['afbeelding'] ?? ''));\n                            $imagePath = str_replace('\\\\', '/', $imagePath);\n                            $q->execute([$testId,$data['vraag'],$imagePath !== '' ? $imagePath : null,$data['type']==='open'?'open':'multiple_choice',$data['uitleg'],$sortByTest[$testId]]);
                             $qid=(int)$pdo->lastInsertId();
                             if($data['type']==='open'){
                                 $answers=array_values(array_filter(array_map('trim',explode('|',$data['juiste_antwoord'])),fn($v)=>$v!==''));
