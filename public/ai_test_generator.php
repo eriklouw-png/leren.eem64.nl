@@ -20,6 +20,19 @@ if($topicId){
 }
 
 $errors=[];$analysis=null;
+
+function ai_cleanup_source_images(array $paths):void{
+    foreach($paths as $path){
+        if(is_string($path) && is_file($path))@unlink($path);
+    }
+}
+
+function ai_cleanup_session():void{
+    if(isset($_SESSION['ai_test_analysis']['images']) && is_array($_SESSION['ai_test_analysis']['images'])){
+        ai_cleanup_source_images($_SESSION['ai_test_analysis']['images']);
+    }
+    unset($_SESSION['ai_test_analysis']);
+}
 if(isset($_SESSION['ai_test_analysis'])&&is_array($_SESSION['ai_test_analysis'])){
     $saved=$_SESSION['ai_test_analysis'];
     if(($saved['subject_id']??null)===$subjectId && ($saved['topic_id']??null)===$topicId){
@@ -30,7 +43,7 @@ if(isset($_SESSION['ai_test_analysis'])&&is_array($_SESSION['ai_test_analysis'])
 if($_SERVER['REQUEST_METHOD']==='POST'){
     $action=$_POST['action']??'';
     if($action==='clear'){
-        unset($_SESSION['ai_test_analysis']);
+        ai_cleanup_session();
         redirect('ai_test_generator.php?'.($topicId?'topic_id='.$topicId:'subject_id='.$subjectId));
     }
 
@@ -64,8 +77,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 if(isset($data['_leren_error']))$errors[]=$data['_leren_error'];
                 else{
                     $generated=openai_output_json($data);
-                    if(!$generated||!isset($generated['subtests']))$errors[]='De AI gaf geen bruikbare vragen terug.';
-                    else $_SESSION['ai_test_analysis']['generated']=$generated;
+                    if(!$generated||!isset($generated['subtests'])||!is_array($generated['subtests'])){
+                        $errors[]='De AI gaf geen bruikbaar JSON-resultaat voor de vragen terug. Probeer dezelfde selectie opnieuw.';
+                    }else{
+                        $_SESSION['ai_test_analysis']['generated']=$generated;
+                    }
                 }
             }
         }
@@ -129,6 +145,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     $oaIns=$pdo->prepare("INSERT INTO open_question_answers(question_id,answer_text,sort_order) VALUES(?,?,?)");
                     $testIns=$pdo->prepare("INSERT INTO tests(topic_id,title,description,test_type,vocab_left_label,vocab_right_label,vocab_direction,is_active) VALUES(?,?,?,?,NULL,NULL,NULL,1)");
                     $savedCount=0;
+                    $createdQuestionImages=[];
                     $questionImageDir=__DIR__.'/uploads/questions';
                     if(!is_dir($questionImageDir)&&!@mkdir($questionImageDir,0755,true))throw new RuntimeException('De map uploads/questions kon niet worden aangemaakt.');
                     foreach($validTests as $test){
@@ -151,6 +168,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                                     $filename='ai_'.bin2hex(random_bytes(12)).'.'.$ext;
                                     if(!@copy($source,$questionImageDir.'/'.$filename))throw new RuntimeException('Afbeelding kon niet aan een vraag worden gekoppeld.');
                                     $imagePath=$filename;
+                                    $createdQuestionImages[]=$questionImageDir.'/'.$filename;
                                 }
                             }
                             $qIns->execute([$testId,$q['question'],$imagePath,$q['type']==='mc'?'multiple_choice':'open',$q['explanation'],$sort+1]);
@@ -164,10 +182,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         $savedCount++;
                     }
                     $pdo->commit();
-                    unset($_SESSION['ai_test_analysis']);
+                    ai_cleanup_session();
                     redirect('subject_manage.php?id='.$subjectId.'&ai_saved='.$savedCount);
                 }catch(Throwable $e){
                     if($pdo->inTransaction())$pdo->rollBack();
+                    foreach($createdQuestionImages as $createdImage)if(is_file($createdImage))@unlink($createdImage);
                     $errors[]='Opslaan mislukt: '.$e->getMessage();
                 }
             }
@@ -213,7 +232,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $errors[]=$data['_leren_error'];
             }else{
                 $analysis=openai_output_json($data);
-                if(!$analysis||!isset($analysis['subtests'])){
+                if(!$analysis||!isset($analysis['subtests'])||!is_array($analysis['subtests'])||count($analysis['subtests'])===0){
                     foreach($valid as $path)@unlink($path);
                     $errors[]='De AI gaf geen bruikbaar analyse-resultaat terug.';
                     $analysis=null;
