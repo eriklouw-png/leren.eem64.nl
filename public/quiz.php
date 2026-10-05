@@ -267,7 +267,7 @@ foreach($questions as &$q){$q['options']=[];if($q['question_type']==='multiple_c
    });
  });
  activity({action:'start',test_id:testId,attempt_id:attemptId});
- fetch('ai_warmup.php',{method:'POST',keepalive:true}).catch(()=>{});
+
  let activeUntil=Date.now()+60000;const touch=()=>{activeUntil=Date.now()+60000;};
  ['mousemove','mousedown','keydown','touchstart','scroll'].forEach(e=>window.addEventListener(e,touch,{passive:true}));
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')touch();});
