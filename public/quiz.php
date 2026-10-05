@@ -50,7 +50,7 @@ if(($test['test_type']??'mixed')==='vocabulary' && $newAttempt && $vocabDirectio
     }
 }
 
-if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='save_answer'){
+if($_SERVER['REQUEST_METHOD']==='POST' && in_array(($_POST['action']??''),['save_answer','save_draft'],true)){
     header('Content-Type: application/json; charset=utf-8');
     $attemptId=filter_var($_POST['attempt_id']??null,FILTER_VALIDATE_INT);
     $questionId=filter_var($_POST['question_id']??null,FILTER_VALIDATE_INT);
