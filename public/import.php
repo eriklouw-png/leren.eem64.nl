@@ -1,10 +1,30 @@
 <?php
 require __DIR__.'/../app/bootstrap.php';require_admin();
-$errors=[];$success=null;$preview=[];
+$errors=[];$success=null;$preview=[];$pastePath=null;
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['csv_text'])){
+    $csvText=(string)$_POST['csv_text'];
+    if(trim($csvText)!==''){
+        if(strlen($csvText)>2*1024*1024){
+            $errors[]='De geplakte CSV mag maximaal 2 MB zijn.';
+        }else{
+            $pastePath=tempnam(sys_get_temp_dir(),'leren_csv_');
+            if($pastePath===false || file_put_contents($pastePath,$csvText)===false){
+                $errors[]='De geplakte CSV kon niet worden verwerkt.';
+            }else{
+                $_FILES['csv']=[
+                    'error'=>UPLOAD_ERR_OK,
+                    'size'=>strlen($csvText),
+                    'tmp_name'=>$pastePath,
+                    'name'=>'geplakte.csv'
+                ];
+                register_shutdown_function(function() use ($pastePath){if(is_file($pastePath))@unlink($pastePath);});
+            }
+        }
+    }
+}
 $expected=['vak','onderwerp','toets','type','vraag','juiste_antwoord','antwoord_b','antwoord_c','antwoord_d','uitleg','actief'];
-if($_SERVER['REQUEST_METHOD']==='POST'&&isset($_FILES['csv'])){
-    if($_FILES['csv']['error']!==UPLOAD_ERR_OK){$errors[]='Het CSV-bestand kon niet worden geüpload.';}
-    elseif($_FILES['csv']['size']>2*1024*1024){$errors[]='Het CSV-bestand mag maximaal 2 MB zijn.';}
+if($_SERVER['REQUEST_METHOD']==='POST'&&isset($_FILES['csv'])&&$_FILES['csv']['error']===UPLOAD_ERR_OK){
+    if($_FILES['csv']['size']>2*1024*1024){$errors[]='Het CSV-bestand mag maximaal 2 MB zijn.';}
     else{
         $fh=fopen($_FILES['csv']['tmp_name'],'rb');
         $header=fgetcsv($fh,0,';');
@@ -68,7 +88,15 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&isset($_FILES['csv'])){
         }
     }
 }
-?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Importeren</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><main class="container py-4" style="max-width:1000px"><a href="admin.php">&larr; Beheer</a><div class="card shadow-sm mt-3"><div class="card-body p-4"><h1>Vragen importeren</h1><p>CSV met <strong>puntkomma's</strong> als scheidingsteken. De import maakt vak, onderwerp en toets automatisch aan als ze nog niet bestaan.</p><div class="alert alert-secondary"><strong>Formaat:</strong> <code>vak;onderwerp;toets;type;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;actief</code><br><strong>type:</strong> <code>mc</code> of <code>open</code>. Bij een open vraag kun je meerdere goede antwoorden opgeven met <code>|</code>.</div><?php foreach($errors as $error):?><div class="alert alert-danger"><?=e($error)?></div><?php endforeach;?><?php if($success):?><div class="alert alert-success"><?=e($success)?></div><?php endif;?><form method="post" enctype="multipart/form-data"><input class="form-control mb-3" type="file" name="csv" accept=".csv,text/csv" required><button class="btn btn-primary">CSV importeren</button></form><hr><h2 class="h5">Voorbeeld voor ChatGPT</h2><pre class="bg-light p-3 border">vak;onderwerp;toets;type;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;actief
+?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Importeren</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><main class="container py-4" style="max-width:1000px"><a href="admin.php">&larr; Beheer</a><div class="card shadow-sm mt-3"><div class="card-body p-4"><h1>Vragen importeren</h1><p>CSV met <strong>puntkomma's</strong> als scheidingsteken. De import maakt vak, onderwerp en toets automatisch aan als ze nog niet bestaan.</p><div class="alert alert-secondary"><strong>Formaat:</strong> <code>vak;onderwerp;toets;type;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;actief</code><br><strong>type:</strong> <code>mc</code> of <code>open</code>. Bij een open vraag kun je meerdere goede antwoorden opgeven met <code>|</code>.</div><?php foreach($errors as $error):?><div class="alert alert-danger"><?=e($error)?></div><?php endforeach;?><?php if($success):?><div class="alert alert-success"><?=e($success)?></div><?php endif;?><form method="post" enctype="multipart/form-data">
+<label class="form-label"><strong>CSV-bestand</strong></label>
+<input class="form-control mb-3" type="file" name="csv" accept=".csv,text/csv">
+<div class="text-center text-secondary mb-3">of</div>
+<label class="form-label"><strong>CSV rechtstreeks plakken</strong></label>
+<textarea class="form-control font-monospace mb-3" name="csv_text" rows="12" placeholder="Plak hier de volledige CSV, inclusief de eerste regel met de kolomnamen..."></textarea>
+<div class="form-text mb-3">Gebruik hetzelfde CSV-formaat met puntkomma's als scheidingsteken. Maximaal 2 MB.</div>
+<button class="btn btn-primary">CSV importeren</button>
+</form><hr><h2 class="h5">Voorbeeld voor ChatGPT</h2><pre class="bg-light p-3 border">vak;onderwerp;toets;type;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;actief
 Geschiedenis;De Republiek;Toets 1;mc;Wie was Willem van Oranje?;De leider van de Opstand;Een Franse koning;Een Romeinse keizer;Een Engelse admiraal;;1
 Geschiedenis;De Republiek;Toets 1;open;In welk jaar begon de Tachtigjarige Oorlog?;1568;;;;;1
 Geschiedenis;De Republiek;Toets 1;open;Wie wordt ook de Vader des Vaderlands genoemd?;Willem van Oranje|Willem de Zwijger;;;;;1</pre></div></div></main></body></html>
