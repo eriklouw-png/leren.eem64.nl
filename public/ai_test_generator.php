@@ -22,8 +22,15 @@ if($topicId){
 $errors=[];$analysis=null;
 
 function ai_cleanup_source_images(array $paths):void{
+    $dirs=[];
     foreach($paths as $path){
-        if(is_string($path) && is_file($path))@unlink($path);
+        if(is_string($path) && is_file($path)){
+            $dirs[]=dirname($path);
+            @unlink($path);
+        }
+    }
+    foreach(array_unique($dirs) as $dir){
+        if(is_dir($dir))@rmdir($dir);
     }
 }
 
@@ -198,8 +205,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         if(!warm_ai())$errors[]='AI is niet beschikbaar. Controleer OPENAI_API_KEY en de AI-instellingen.';
         $files=$_FILES['pages']??null;
         $valid=[];
-        $base=__DIR__.'/../storage/ai_test_pages';
+        $base=sys_get_temp_dir().'/leren_ai_test_pages';
         if(!is_dir($base)&&!@mkdir($base,0700,true))$errors[]='De tijdelijke opslagmap voor AI-pagina’s kon niet worden aangemaakt.';
+        $sessionDir=$base.'/'.bin2hex(random_bytes(16));
+        if(!$errors&&!is_dir($sessionDir)&&!@mkdir($sessionDir,0700,true))$errors[]='De tijdelijke opslagmap voor deze AI-analyse kon niet worden aangemaakt.';
 
         if(!$errors && $files && isset($files['name']) && is_array($files['name'])){
             $allowed=['image/jpeg','image/png','image/webp'];
@@ -215,7 +224,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $mime=(string)($info['mime']??'');
                 if(!$info||!in_array($mime,$allowed,true)){$errors[]='Alleen JPG, PNG en WebP-afbeeldingen zijn toegestaan.';continue;}
                 $ext=$mime==='image/png'?'png':($mime==='image/webp'?'webp':'jpg');
-                $path=$base.'/'.bin2hex(random_bytes(16)).'.'.$ext;
+                $path=$sessionDir.'/'.bin2hex(random_bytes(16)).'.'.$ext;
                 if(!@move_uploaded_file($tmp,$path)){$errors[]='Een afbeelding kon niet veilig worden opgeslagen.';continue;}
                 $valid[]=$path;
             }
@@ -229,11 +238,13 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $data=openai_generate_with_images($prompt,$valid);
             if(isset($data['_leren_error'])){
                 foreach($valid as $path)@unlink($path);
+                @rmdir($sessionDir);
                 $errors[]=$data['_leren_error'];
             }else{
                 $analysis=openai_output_json($data);
                 if(!$analysis||!isset($analysis['subtests'])||!is_array($analysis['subtests'])||count($analysis['subtests'])===0){
                     foreach($valid as $path)@unlink($path);
+                    @rmdir($sessionDir);
                     $errors[]='De AI gaf geen bruikbaar analyse-resultaat terug.';
                     $analysis=null;
                 }else{
@@ -246,6 +257,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     ];
                 }
             }
+        }
+        }elseif(isset($sessionDir)&&is_dir($sessionDir)){
+            @rmdir($sessionDir);
         }
     }
 }
