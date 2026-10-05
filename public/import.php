@@ -23,8 +23,12 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['csv_text'])){
     }
 }
 $expected=['vak','onderwerp','toets','type','vraag','juiste_antwoord','antwoord_b','antwoord_c','antwoord_d','uitleg','actief'];
-if($_SERVER['REQUEST_METHOD']==='POST'&&isset($_FILES['csv'])&&$_FILES['csv']['error']===UPLOAD_ERR_OK){
-    if($_FILES['csv']['size']>2*1024*1024){$errors[]='Het CSV-bestand mag maximaal 2 MB zijn.';}
+if($_SERVER['REQUEST_METHOD']==='POST'){
+    if(!isset($_FILES['csv'])){
+        if(!$errors)$errors[]='Kies een CSV-bestand of plak de CSV-tekst in het invoerveld.';
+    }elseif($_FILES['csv']['error']!==UPLOAD_ERR_OK){
+        $errors[]='Het CSV-bestand kon niet worden geüpload.';
+    }elseif($_FILES['csv']['size']>2*1024*1024){$errors[]='Het CSV-bestand mag maximaal 2 MB zijn.';}
     else{
         $fh=fopen($_FILES['csv']['tmp_name'],'rb');
         $header=fgetcsv($fh,0,';');
