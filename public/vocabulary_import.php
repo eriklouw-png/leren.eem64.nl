@@ -14,7 +14,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $replace=isset($_POST['replace_existing']);
     $test=null;
     foreach($tests as $t)if((int)$t['id']===$testId){$test=$t;break;}
-    if(!$test)$errors[]='Kies een woordjes-toets.';
+    if(!$test)$errors[]='Kies een woordjes-sub-test.';
     if(trim($text)==='')$errors[]='Plak eerst een woordenlijst.';
     if(strlen($text)>2*1024*1024)$errors[]='De woordenlijst mag maximaal 2 MB zijn.';
     if(!$errors){
@@ -56,7 +56,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     }
                 }
                 $pdo->commit();
-                $success=count($pairs).' woordparen geïmporteerd als '.count($preview).' basisparen. De toets bevat nu de ingestelde oefenrichtingen.';
+                $success=count($pairs).' woordparen geïmporteerd als '.count($preview).' basisparen. De sub-test bevat nu de ingestelde oefenrichtingen.';
             }catch(Throwable $e){$pdo->rollBack();$errors[]='Import mislukt: '.$e->getMessage();}
         }
     }
@@ -77,9 +77,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <?php foreach($errors as $error):?><div class="alert alert-danger"><?=e($error)?></div><?php endforeach;?>
 <?php if($success):?><div class="alert alert-success"><?=e($success)?></div><?php endif;?>
 <form method="post" enctype="multipart/form-data">
-<label class="form-label"><strong>Woordjes-toets</strong></label>
+<label class="form-label"><strong>Woordjes-sub-test</strong></label>
 <select class="form-select mb-3" name="test_id" required>
-<option value="">Kies een toets...</option>
+<option value="">Kies een sub-test...</option>
 <?php foreach($tests as $t):?>
 <option value="<?=$t['id']?>" <?=((int)($_POST['test_id']??0)===(int)$t['id'])?'selected':''?>><?=e($t['subject_name'].' — '.$t['topic_name'].' — '.$t['title'])?></option>
 <?php endforeach;?>
@@ -89,7 +89,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <label class="form-label mt-2"><strong>of een tekstbestand kiezen</strong></label>
 <input class="form-control mb-2" type="file" name="wordlist_file" accept=".txt,.csv">
 <div class="form-text mb-3">Maximaal 2 MB. Lege regels en regels die beginnen met # worden overgeslagen.</div>
-<div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="replace_existing" id="replace_existing"><label class="form-check-label" for="replace_existing"><strong>Bestaande woorden van deze toets vervangen</strong><br><span class="text-secondary">Gebruik dit wanneer je een nieuwe volledige woordenlijst importeert.</span></label></div>
+<div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="replace_existing" id="replace_existing"><label class="form-check-label" for="replace_existing"><strong>Bestaande woorden van deze sub-test vervangen</strong><br><span class="text-secondary">Gebruik dit wanneer je een nieuwe volledige woordenlijst importeert.</span></label></div>
 <button class="btn btn-primary" type="submit">Woordenlijst importeren</button>
 </form>
 </div></div></main></body></html>
