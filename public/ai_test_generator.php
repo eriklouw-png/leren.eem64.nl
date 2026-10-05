@@ -258,7 +258,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 }
             }
         }
-        }elseif(isset($sessionDir)&&is_dir($sessionDir)){
+        if($errors && isset($sessionDir)&&is_dir($sessionDir)){
+            foreach($valid as $path)if(is_file($path))@unlink($path);
             @rmdir($sessionDir);
         }
     }
