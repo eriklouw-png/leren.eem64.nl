@@ -30,7 +30,7 @@ $s=$pdo->prepare("SELECT id,name,description,image_mime FROM subjects WHERE id=?
 if(!$subject){http_response_code(404);exit('Taal niet gevonden.');}
 $tx=$pdo->prepare("SELECT id,name,test_date,is_active FROM topics WHERE subject_id=? AND is_active=1 ORDER BY test_date DESC, created_at DESC, name");
 $tx->execute([$id]);$topics=$tx->fetchAll();
-$x=$pdo->prepare("SELECT t.id,t.topic_id,t.title,t.description,t.test_type,t.is_active,COUNT(q.id) question_count FROM tests t JOIN topics tp ON tp.id=t.topic_id LEFT JOIN questions q ON q.test_id=t.id WHERE tp.subject_id=? GROUP BY t.id ORDER BY tp.name,t.created_at DESC");
+$x=$pdo->prepare("SELECT t.id,t.topic_id,t.title,t.description,t.test_type,t.is_active,COUNT(q.id) question_count FROM tests t JOIN topics tp ON tp.id=t.topic_id LEFT JOIN questions q ON q.test_id=t.id WHERE tp.subject_id=? AND t.is_active=1 GROUP BY t.id ORDER BY tp.name,t.created_at DESC");
 $x->execute([$id]);$tests=$x->fetchAll();
 $testIds=array_map('intval',array_column($tests,'id'));
 $sessionGroups=[];
