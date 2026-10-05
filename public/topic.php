@@ -100,20 +100,22 @@ $browserToken=$_SESSION['learner_token'];
 <?php else:?>
 <div class="list-group shadow-sm">
 <?php foreach($tests as $t):?>
-<div class="list-group-item p-3">
-<div class="d-flex justify-content-between align-items-center gap-3">
+<div class="list-group-item p-3 p-md-4">
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
 <div class="min-w-0">
 <strong class="fs-5"><?=e($t['title'])?></strong>
 <div class="small text-secondary"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=((($t['test_type']??'mixed')==='vocabulary' && ($t['vocab_direction']??'both')==='both') ? (int)ceil(((int)$t['question_count'])/2) : (int)$t['question_count'])?> <?=($t['test_type']??'mixed')==='vocabulary'?'woorden':'vragen'?></div>
 <?php if($t['description']):?><div class="text-secondary mt-1"><?=e($t['description'])?></div><?php endif;?>
 </div>
-<div class="d-flex align-items-center gap-2 flex-shrink-0">
+
+<div class="d-flex flex-wrap gap-2 flex-shrink-0">
 <?php if($t['in_progress_attempt_id']):?>
-<a class="btn btn-primary btn-sm" href="quiz.php?id=<?=(int)$t['id']?>">Ga Verder</a>
+<a class="btn btn-success btn-sm" href="quiz.php?id=<?=(int)$t['id']?>">Ga Verder</a>
 <a class="btn btn-outline-secondary btn-sm" href="quiz.php?id=<?=(int)$t['id']?>&new=1">Start Opnieuw</a>
 <?php else:?>
 <a class="btn btn-outline-primary btn-sm" href="quiz.php?id=<?=(int)$t['id']?>">Start</a>
 <?php endif;?>
+</div>
 </div>
 
 <?php if($t['in_progress_attempt_id']):
@@ -121,26 +123,29 @@ $progressTotal=max(1,(int)$t['in_progress_total_count']);
 $progressAnswered=min($progressTotal,(int)$t['in_progress_answered_count']);
 $progressPercent=(int)round($progressAnswered/$progressTotal*100);
 ?>
-<div class="mt-3">
+<div class="mt-4">
 <div class="d-flex justify-content-between small text-secondary mb-1">
-<span>Voortgang</span><span><?=$progressAnswered?> van <?=$progressTotal?> vragen</span>
+<span>Voortgang</span>
+<span><?=$progressAnswered?> van <?=$progressTotal?> vragen</span>
 </div>
 <div class="progress" role="progressbar" aria-label="Voortgang van sub-test" aria-valuenow="<?=$progressPercent?>" aria-valuemin="0" aria-valuemax="100" style="height:10px">
-<div class="progress-bar" style="width:<?=$progressPercent?>%"></div>
+<div class="progress-bar bg-success" style="width:<?=$progressPercent?>%"></div>
 </div>
 </div>
 <?php endif;?>
 
 <?php $history=$historyByTest[(int)$t['id']]??[]; ?>
 <?php if($history):?>
-<div class="mt-3 pt-3 border-top">
+<div class="mt-4 pt-3 border-top">
 <div class="small fw-semibold text-secondary mb-2">Eerdere resultaten</div>
 <div class="d-flex flex-column gap-2">
 <?php foreach($history as $attempt):?>
 <a href="result.php?id=<?=(int)$attempt['id']?>" class="text-decoration-none">
-<div class="d-flex justify-content-between align-items-center">
+<div class="d-flex justify-content-between align-items-center py-1">
 <span class="text-secondary small"><?=e(date('d-m-Y H:i',strtotime((string)$attempt['finished_at'])))?></span>
-<strong class="<?=((float)$attempt['score']>=70?'text-success':((float)$attempt['score']>=50?'text-warning':'text-danger'))?>"><?=e(rtrim(rtrim(number_format((float)$attempt['score'],2,',','.'),'0'),','))?>%</strong>
+<strong class="<?=((float)$attempt['score']>=70?'text-success':((float)$attempt['score']>=50?'text-warning':'text-danger'))?>">
+<?=e(rtrim(rtrim(number_format((float)$attempt['score'],2,',','.'),'0'),','))?>%
+</strong>
 </div>
 </a>
 <?php endforeach;?>
@@ -148,11 +153,8 @@ $progressPercent=(int)round($progressAnswered/$progressTotal*100);
 </div>
 <?php endif;?>
 </div>
-</div>
-</div>
 <?php endforeach;?>
-</div>
-<?php endif;?>
+</div><?php endif;?>
 </main>
 </body>
 </html>
