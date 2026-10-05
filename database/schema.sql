@@ -35,6 +35,7 @@ CREATE TABLE topics (
  subject_id INT UNSIGNED NOT NULL,
  name VARCHAR(150) NOT NULL,
  test_date DATE NULL,
+ is_active TINYINT(1) NOT NULL DEFAULT 1,
  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
  UNIQUE KEY uq_topics_subject_name(subject_id,name),
  CONSTRAINT fk_topics_subject FOREIGN KEY(subject_id) REFERENCES subjects(id) ON DELETE CASCADE ON UPDATE CASCADE
