@@ -56,7 +56,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
             if(trim($importText)!==''){
                 $lines=preg_split('/\R/u',$importText);
-                $q=$pdo->prepare("INSERT INTO questions(test_id,question_text,question_type,explanation,sort_order) VALUES(?,?,?,?,?)");
+                $q=$pdo->prepare("INSERT INTO questions(test_id,question_text,image_path,question_type,explanation,sort_order) VALUES(?,?,?,?,?,?)");
                 $opt=$pdo->prepare("INSERT INTO question_options(question_id,option_text,is_correct,sort_order) VALUES(?,?,?,?)");
                 $oa=$pdo->prepare("INSERT INTO open_question_answers(question_id,answer_text,sort_order) VALUES(?,?,?)");
                 $sort=0;
@@ -78,19 +78,27 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         $row=str_getcsv($line,';');
                         if($testType==='multiple_choice'){
                             if(count($row)<6)throw new RuntimeException('Regel '.($lineNo+1).' heeft te weinig kolommen.');
-                            [$question,$correct,$b,$c,$d,$explanation]=array_pad(array_map('trim',$row),6,'');
+                            [$question,$correct,$b,$c,$d,$explanation,$imagePath]=array_pad(array_map('trim',$row),7,'');
+                            if($imagePath!==''){
+                                $imagePath=str_replace('\\\\','/',$imagePath);
+                                if($imagePath[0]==='/' || str_contains($imagePath,'..') || !preg_match('/^[A-Za-z0-9._\\/-]+$/',$imagePath) || !preg_match('/\\.(?:jpe?g|png|webp|gif)$/i',$imagePath) || !is_file(__DIR__.'/uploads/questions/'.$imagePath))throw new RuntimeException('Regel '.($lineNo+1).': afbeelding '.$imagePath.' bestaat niet in uploads/questions/.');
+                            }
                             if($question===''||$correct===''||$b===''||$c===''||$d==='')throw new RuntimeException('Regel '.($lineNo+1).' mist een verplicht veld.');
-                            $sort++;$q->execute([$testId,$question,'multiple_choice',$explanation,$sort]);$qid=(int)$pdo->lastInsertId();
+                            $sort++;$q->execute([$testId,$question,$imagePath!==''?$imagePath:null,'multiple_choice',$explanation,$sort]);$qid=(int)$pdo->lastInsertId();
                             foreach([$correct,$b,$c,$d] as $i=>$answer)$opt->execute([$qid,$answer,$i===0?1:0,$i+1]);
                         }else{
                             if(count($row)<7)throw new RuntimeException('Regel '.($lineNo+1).' heeft te weinig kolommen.');
-                            [$type,$question,$correct,$b,$c,$d,$explanation]=array_pad(array_map('trim',$row),7,'');
+                            [$type,$question,$correct,$b,$c,$d,$explanation,$imagePath]=array_pad(array_map('trim',$row),8,'');
+                            if($imagePath!==''){
+                                $imagePath=str_replace('\\\\','/',$imagePath);
+                                if($imagePath[0]==='/' || str_contains($imagePath,'..') || !preg_match('/^[A-Za-z0-9._\\/-]+$/',$imagePath) || !preg_match('/\\.(?:jpe?g|png|webp|gif)$/i',$imagePath) || !is_file(__DIR__.'/uploads/questions/'.$imagePath))throw new RuntimeException('Regel '.($lineNo+1).': afbeelding '.$imagePath.' bestaat niet in uploads/questions/.');
+                            }
                             if(!in_array(strtolower($type),['mc','open'],true))throw new RuntimeException('Regel '.($lineNo+1).': type moet mc of open zijn.');
                             if($question===''||$correct==='')throw new RuntimeException('Regel '.($lineNo+1).' mist vraag of juiste antwoord.');
                             $qt=strtolower($type)==='mc'?'multiple_choice':'open';
                             if($qt==='multiple_choice'&&($b===''||$c===''||$d===''))throw new RuntimeException('Regel '.($lineNo+1).': bij mc zijn B, C en D verplicht.');
                             if($qt==='open'&&($b!==''||$c!==''||$d!==''))throw new RuntimeException('Regel '.($lineNo+1).': bij open moeten B, C en D leeg zijn.');
-                            $sort++;$q->execute([$testId,$question,$qt,$explanation,$sort]);$qid=(int)$pdo->lastInsertId();
+                            $sort++;$q->execute([$testId,$question,$imagePath!==''?$imagePath:null,$qt,$explanation,$sort]);$qid=(int)$pdo->lastInsertId();
                             if($qt==='open'){
                                 foreach(array_values(array_filter(array_map('trim',explode('|',$correct)),fn($v)=>$v!=='')) as $i=>$answer)$oa->execute([$qid,$answer,$i+1]);
                             }else{
@@ -128,8 +136,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <option value="mixed" <?=$testType==='mixed'?'selected':''?>>Combinatie</option>
 </select>
 <div id="vocabHelp" class="alert alert-secondary import-help"><strong>Importformaat:</strong> één woordpaar per regel met <code>=</code>.<br><span class="mono"><?=e($leftLabel)?> = <?=e($rightLabel)?></span><br><span class="text-secondary">Er worden beide richtingen aangemaakt.</span></div>
-<div id="mcHelp" class="alert alert-secondary import-help d-none"><strong>Importformaat:</strong> één vraag per regel, met <code>;</code> als scheidingsteken:<br><span class="mono">vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg</span></div>
-<div id="mixedHelp" class="alert alert-secondary import-help d-none"><strong>Importformaat:</strong> één vraag per regel, met <code>;</code> als scheidingsteken:<br><span class="mono">type;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg</span><br><code>type</code> is <code>mc</code> of <code>open</code>. Bij open laat je B/C/D leeg.</div>
+<div id="mcHelp" class="alert alert-secondary import-help d-none"><strong>Importformaat:</strong> één vraag per regel, met <code>;</code> als scheidingsteken:<br><span class="mono">vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;afbeelding</span></div>
+<div id="mixedHelp" class="alert alert-secondary import-help d-none"><strong>Importformaat:</strong> één vraag per regel, met <code>;</code> als scheidingsteken:<br><span class="mono">type;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;afbeelding</span><br><code>type</code> is <code>mc</code> of <code>open</code>. Bij open laat je B/C/D leeg.</div>
 <label class="form-label"><strong>Gegevens importeren</strong></label>
 <textarea class="form-control mono" name="import_text" id="importText" rows="14" placeholder=""></textarea>
 <div class="form-text mb-3">Lege regels en regels die beginnen met # worden overgeslagen.</div>
@@ -142,7 +150,7 @@ const vocabHelp=document.getElementById('vocabHelp'),mcHelp=document.getElementB
 function updateImport(){
  const t=sel.value;
  vocabHelp.classList.toggle('d-none',t!=='vocabulary');mcHelp.classList.toggle('d-none',t!=='multiple_choice');mixedHelp.classList.toggle('d-none',t!=='mixed');
- text.placeholder=t==='vocabulary'?'<?=e($leftLabel)?> = <?=e($rightLabel)?>\n<?=e($leftLabel)?> = <?=e($rightLabel)?>':t==='multiple_choice'?'Vraag;juiste antwoord;antwoord B;antwoord C;antwoord D;uitleg':'mc;Vraag;juiste antwoord;antwoord B;antwoord C;antwoord D;uitleg';
+ text.placeholder=t==='vocabulary'?'<?=e($leftLabel)?> = <?=e($rightLabel)?>\n<?=e($leftLabel)?> = <?=e($rightLabel)?>':t==='multiple_choice'?'Vraag;juiste antwoord;antwoord B;antwoord C;antwoord D;uitleg;afbeelding':'mc;Vraag;juiste antwoord;antwoord B;antwoord C;antwoord D;uitleg;afbeelding';
 }
 sel.addEventListener('change',updateImport);updateImport();
 </script></body></html>
