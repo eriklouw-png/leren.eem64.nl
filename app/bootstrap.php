@@ -30,7 +30,7 @@ ob_start(static function(string $html): string{
         $script=basename((string)($_SERVER['SCRIPT_NAME']??''));
         $adminPages=[
             'admin.php','subject_manage.php','subject_edit.php','topic_edit.php',
-            'test_new.php','test_edit.php','import.php','vocabulary_import.php',
+            'test_new.php','ai_test_generator.php','test_edit.php','import.php','vocabulary_import.php',
             'system_update.php','debug_question.php'
         ];
         $area=in_array($script,$adminPages,true)?'admin':'website';
