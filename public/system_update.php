@@ -134,6 +134,7 @@ async function poll(){
      }
    }catch(e){}
  }catch(e){}
+}
 
 btn.addEventListener('click',async()=>{
  if(!confirm('Website bijwerken? De website kan tijdens het bouwen kort niet beschikbaar zijn.'))return;
