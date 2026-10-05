@@ -52,6 +52,16 @@ function open_answer_matches(string $answer,array $acceptedAnswers):bool{
         $accepted=normalize_open_answer((string)$accepted);
         if($accepted==='')continue;
         if($answer===$accepted)return true;
+
+        // Een numeriek antwoord met een onschuldige eenheid/omschrijving accepteren.
+        // Bijvoorbeeld: "500 burgers" voor het juiste antwoord "500".
+        if(preg_match('/^[-+]?\d+(?:[.,]\d+)?$/u',$accepted)){
+            $numberPattern=preg_quote($accepted,'/');
+            if(preg_match('/(?<![\d.,])'.$numberPattern.'(?![\d.,])/u',$answer)){
+                return true;
+            }
+        }
+
         $distance=levenshtein($answer,$accepted);
         $tolerance=min(open_answer_tolerance($answer),open_answer_tolerance($accepted));
         if($distance<=$tolerance)return true;
