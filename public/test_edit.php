@@ -16,6 +16,38 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
    $s->execute([$active,$id]);
    redirect('test_edit.php?id='.$id);
  }
+ $importText=(string)($_POST['import_text']??'');
+ if($action==='import'){
+   if(trim($importText)===''){$error='Plak eerst gegevens om te importeren.';}
+   else{
+     $lines=preg_split('/\R/u',$importText);$pdo->beginTransaction();
+     try{
+       $q=$pdo->prepare("INSERT INTO questions(test_id,question_text,question_type,explanation,sort_order) VALUES(?,?,?,?,?)");
+       $opt=$pdo->prepare("INSERT INTO question_options(question_id,option_text,is_correct,sort_order) VALUES(?,?,?,?)");
+       $oa=$pdo->prepare("INSERT INTO open_question_answers(question_id,answer_text,sort_order) VALUES(?,?,?)");
+       $sort=(int)$pdo->query("SELECT COALESCE(MAX(sort_order),0) FROM questions WHERE test_id=".(int)$id)->fetchColumn();
+       $count=0;$direction=$test['vocab_direction']??'both';$leftLabel=$test['vocab_left_label']?:'Eerste taal';$rightLabel=$test['vocab_right_label']?:'Nederlands';
+       foreach($lines as $lineNo=>$line){
+         $line=trim($line);if($line===''||str_starts_with($line,'#'))continue;
+         if($test['test_type']==='vocabulary'){
+           $pos=strpos($line,'=');if($pos===false)throw new RuntimeException('Regel '.($lineNo+1).' bevat geen = teken.');
+           $l=trim(substr($line,0,$pos));$r=trim(substr($line,$pos+1));if($l===''||$r==='')throw new RuntimeException('Regel '.($lineNo+1).' moet aan beide kanten tekst bevatten.');
+           $dirs=[];if($direction==='both'||$direction==='left_to_right')$dirs[]=['p'=>$l,'a'=>$r,'to'=>$rightLabel];if($direction==='both'||$direction==='right_to_left')$dirs[]=['p'=>$r,'a'=>$l,'to'=>$leftLabel];
+           foreach($dirs as $d){$sort++;$q->execute([$id,$d['p'],'open','Vertaal naar '.$d['to'].'.',$sort]);$oa->execute([(int)$pdo->lastInsertId(),$d['a'],1]);$count++;}
+         }elseif($test['test_type']==='multiple_choice'){
+           $row=array_map('trim',str_getcsv($line,';'));if(count($row)<6)throw new RuntimeException('Regel '.($lineNo+1).' heeft te weinig kolommen.');
+           [$question,$correct,$b,$c,$d,$explanation]=array_pad($row,6,'');if($question===''||$correct===''||$b===''||$c===''||$d==='')throw new RuntimeException('Regel '.($lineNo+1).' mist een verplicht veld.');
+           $sort++;$q->execute([$id,$question,'multiple_choice',$explanation,$sort]);$qid=(int)$pdo->lastInsertId();foreach([$correct,$b,$c,$d] as $i=>$answer)$opt->execute([$qid,$answer,$i===0?1:0,$i+1]);$count++;
+         }else{
+           $row=array_map('trim',str_getcsv($line,';'));if(count($row)<7)throw new RuntimeException('Regel '.($lineNo+1).' heeft te weinig kolommen.');
+           [$type,$question,$correct,$b,$c,$d,$explanation]=array_pad($row,7,'');$qt=strtolower($type)==='mc'?'multiple_choice':(strtolower($type)==='open'?'open':null);if(!$qt)throw new RuntimeException('Regel '.($lineNo+1).': type moet mc of open zijn.');if($question===''||$correct==='')throw new RuntimeException('Regel '.($lineNo+1).' mist vraag of juiste antwoord.');
+           $sort++;$q->execute([$id,$question,$qt,$explanation,$sort]);$qid=(int)$pdo->lastInsertId();if($qt==='open'){if($b!==''||$c!==''||$d!=='')throw new RuntimeException('Regel '.($lineNo+1).': bij open moeten B/C/D leeg zijn.');foreach(array_values(array_filter(array_map('trim',explode('|',$correct)),fn($v)=>$v!=='')) as $i=>$answer)$oa->execute([$qid,$answer,$i+1]);}else{if($b===''||$c===''||$d==='')throw new RuntimeException('Regel '.($lineNo+1).': bij mc zijn B, C en D verplicht.');foreach([$correct,$b,$c,$d] as $i=>$answer)$opt->execute([$qid,$answer,$i===0?1:0,$i+1]);}$count++;
+         }
+       }
+       $pdo->commit();redirect('questions.php?test_id='.$id);
+     }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();$error='Import mislukt: '.$e->getMessage();}
+   }
+ } 
  $title=trim($_POST['title']??'');$description=trim($_POST['description']??'');$topicId=filter_input(INPUT_POST,'topic_id',FILTER_VALIDATE_INT);$testType=$_POST['test_type']??'mixed';$vocabDirection=$_POST['vocab_direction']??($test['vocab_direction']??'both');
  if(!in_array($testType,['vocabulary','multiple_choice','mixed'],true))$testType='mixed';
  if(!in_array($vocabDirection,['both','left_to_right','right_to_left'],true))$vocabDirection='both';
@@ -45,10 +77,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <label class="form-label">Oefenrichting</label><select class="form-select" name="vocab_direction"><option value="both" <?=($test['vocab_direction']??'both')==='both'?'selected':''?>>Beide richtingen</option><option value="left_to_right" <?=($test['vocab_direction']??'both')==='left_to_right'?'selected':''?>>Alleen eerste → tweede</option><option value="right_to_left" <?=($test['vocab_direction']??'both')==='right_to_left'?'selected':''?>>Alleen tweede → eerste</option></select>
 </div>
 <label class="form-label">Overhoring</label><select class="form-select mb-3" name="topic_id" required><option value="">Kies een overhoring...</option><?php foreach($topics as $topic):?><option value="<?=$topic['id']?>" <?=isset($test['topic_id'])&&(int)$test['topic_id']===(int)$topic['id']?'selected':''?>><?php $subjectName='';foreach($subjects as $subject)if((int)$subject['id']===(int)$topic['subject_id']){$subjectName=$subject['name'];break;}?><?=e($subjectName.' — '.$topic['name'])?></option><?php endforeach;?></select>
-<div class="d-flex justify-content-between align-items-center gap-2 mt-4"><button class="btn btn-primary" type="submit">Opslaan</button><?php if($id):?><?php if((int)$test['is_active']):?><button class="btn btn-outline-danger" type="submit" name="action" value="hide" onclick="return confirm('Deze Sub-Test verbergen? De gegevens blijven bewaard.')">Verbergen</button><?php else:?><button class="btn btn-outline-success" type="submit" name="action" value="restore">Herstellen</button><?php endif;?><?php endif;?></div>
+<div class="border rounded p-3 mt-4 mb-3"><label class="form-label"><strong>Gegevens importeren</strong></label><div id="vocabHelp" class="small text-secondary mb-2">Woordjes: één woordpaar per regel met <code>=</code>.</div><div id="mcHelp" class="small text-secondary mb-2 d-none">Multiple choice: <code>vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg</code></div><div id="mixedHelp" class="small text-secondary mb-2 d-none">Combinatie: <code>mc;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg</code> of <code>open;vraag;juiste_antwoord;;; ;uitleg</code>.</div><textarea class="form-control font-monospace mb-2" name="import_text" rows="8" placeholder=""></textarea><button class="btn btn-outline-primary" type="submit" name="action" value="import">Importeren</button></div>
+<div class="d-flex justify-content-between align-items-center gap-2 mt-4"><button class="btn btn-primary" type="submit" name="action" value="save">Opslaan</button><?php if($id):?><?php if((int)$test['is_active']):?><button class="btn btn-outline-danger" type="submit" name="action" value="hide" onclick="return confirm('Deze Sub-Test verwijderen? De gegevens blijven bewaard.')">Verwijderen</button><?php else:?><button class="btn btn-outline-success" type="submit" name="action" value="restore">Herstellen</button><?php endif;?><?php endif;?></div>
 <?php if($id && !(int)$test['is_active']):?><div class="alert alert-warning mt-3 mb-0">Deze Sub-Test is verborgen voor leerlingen.</div><?php endif;?>
 </form></div></div></main><script>
-const typeSelect=document.querySelector('[name="test_type"]'),vocabSettings=document.getElementById('vocab-settings');
+const typeSelect=document.querySelector('[name="test_type"]'),vocabSettings=document.getElementById('vocab-settings');const vocabHelp=document.getElementById('vocabHelp'),mcHelp=document.getElementById('mcHelp'),mixedHelp=document.getElementById('mixedHelp');
 function toggleVocab(){vocabSettings.classList.toggle('d-none',typeSelect.value!=='vocabulary')}
-typeSelect.addEventListener('change',toggleVocab);
+typeSelect.addEventListener('change',toggleVocab);function toggleImport(){const t=typeSelect.value;vocabHelp.classList.toggle('d-none',t!=='vocabulary');mcHelp.classList.toggle('d-none',t!=='multiple_choice');mixedHelp.classList.toggle('d-none',t!=='mixed')}typeSelect.addEventListener('change',toggleImport);toggleImport();
 </script></body></html>
