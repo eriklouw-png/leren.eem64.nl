@@ -22,7 +22,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['csv_text'])){
         }
     }
 }
-$expected=['vak','overhoring','sub-test','type','vraag','juiste_antwoord','antwoord_b','antwoord_c','antwoord_d','uitleg','actief'];
+$expected=['vak','overhoring','sub-test','type','vraag','juiste_antwoord','antwoord_b','antwoord_c','antwoord_d','uitleg','afbeelding','actief'];
 if($_SERVER['REQUEST_METHOD']==='POST'){
     if(!isset($_FILES['csv'])){
         if(!$errors)$errors[]='Kies een CSV-bestand of plak de CSV-tekst in het invoerveld.';
@@ -48,6 +48,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     $type=strtolower($data['type']);
                     if(!in_array($type,['mc','open'],true)){$errors[]="Regel $line: type moet mc of open zijn.";continue;}
                     foreach(['vak','overhoring','sub-test','vraag','juiste_antwoord'] as $field)if($data[$field]==='')$errors[]="Regel $line: '$field' is verplicht.";
+                    if($data['afbeelding']!==''){
+                        $imagePath=str_replace('\\\\','/',trim($data['afbeelding']));
+                        if($imagePath[0]==='/' || str_contains($imagePath,'..') || !preg_match('/^[A-Za-z0-9._\\/-]+$/',$imagePath) || !preg_match('/\\.(?:jpe?g|png|webp|gif)$/i',$imagePath))$errors[]="Regel $line: ongeldige afbeelding. Gebruik bijvoorbeeld grieken/tempel.jpg.";
+                        elseif(!is_file(__DIR__.'/uploads/questions/'.$imagePath))$errors[]="Regel $line: afbeelding '$imagePath' bestaat niet in uploads/questions/.";
+                    }
                     if($type==='mc'&&($data['antwoord_b']===''||$data['antwoord_c']===''||$data['antwoord_d']===''))$errors[]="Regel $line: bij mc zijn antwoord_b, antwoord_c en antwoord_d verplicht.";
                     if($type==='open'&&($data['antwoord_b']!==''||$data['antwoord_c']!==''||$data['antwoord_d']!==''))$errors[]="Regel $line: bij open mogen antwoord_b/c/d leeg blijven.";
                     $preview[]=['line'=>$line,'type'=>$type,'vak'=>$data['vak'],'overhoring'=>$data['overhoring'],'sub-test'=>$data['sub-test'],'vraag'=>$data['vraag']];
@@ -62,7 +67,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         $findTest=$pdo->prepare("SELECT id FROM tests WHERE topic_id=? AND title=? LIMIT 1");
                         $createTest=$pdo->prepare("INSERT INTO tests(topic_id,title,description,is_active) VALUES(?,?,?,?)");
                         $updateTest=$pdo->prepare("UPDATE tests SET is_active=? WHERE id=?");
-                        $q=$pdo->prepare("INSERT INTO questions(test_id,question_text,question_type,explanation,sort_order) VALUES(?,?,?,?,?)");
+                        $q=$pdo->prepare("INSERT INTO questions(test_id,question_text,image_path,question_type,explanation,sort_order) VALUES(?,?,?,?,?,?)");
                         $opt=$pdo->prepare("INSERT INTO question_options(question_id,option_text,is_correct,sort_order) VALUES(?,?,?,?)");
                         $oa=$pdo->prepare("INSERT INTO open_question_answers(question_id,answer_text,sort_order) VALUES(?,?,?)");
                         $sortByTest=[];
@@ -75,7 +80,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                             if($existingTest){$testId=(int)$existingTest;$updateTest->execute([$active,$testId]);}
                             else{$createTest->execute([$topicId,$data['sub-test'],'',$active]);$testId=(int)$pdo->lastInsertId();}
                             $sortByTest[$testId]=($sortByTest[$testId]??0)+1;
-                            $q->execute([$testId,$data['vraag'],$data['type']==='open'?'open':'multiple_choice',$data['uitleg'],$sortByTest[$testId]]);
+                            $q->execute([$testId,$data['vraag'],$data['afbeelding']!==''?$data['afbeelding']:null,$data['type']==='open'?'open':'multiple_choice',$data['uitleg'],$sortByTest[$testId]]);
                             $qid=(int)$pdo->lastInsertId();
                             if($data['type']==='open'){
                                 $answers=array_values(array_filter(array_map('trim',explode('|',$data['juiste_antwoord'])),fn($v)=>$v!==''));
@@ -92,7 +97,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         }
     }
 }
-?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Importeren</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><main class="container py-4" style="max-width:1000px"><a href="admin.php">&larr; Beheer</a><div class="card shadow-sm mt-3"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-center"><h1 class="mb-0">Vragen importeren</h1><a class="btn btn-outline-primary" href="vocabulary_import.php">Woordenlijst importeren</a></div><p class="mt-3">CSV met <strong>puntkomma's</strong> als scheidingsteken. De import maakt vak, overhoring en sub-test automatisch aan als ze nog niet bestaan.</p><div class="alert alert-secondary"><strong>Formaat:</strong> <code>vak;overhoring;sub-test;type;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;actief</code><br><strong>type:</strong> <code>mc</code> of <code>open</code>. Bij een open vraag kun je meerdere goede antwoorden opgeven met <code>|</code>.</div><?php foreach($errors as $error):?><div class="alert alert-danger"><?=e($error)?></div><?php endforeach;?><?php if($success):?><div class="alert alert-success"><?=e($success)?></div><?php endif;?><form method="post" enctype="multipart/form-data">
+?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Importeren</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><main class="container py-4" style="max-width:1000px"><a href="admin.php">&larr; Beheer</a><div class="card shadow-sm mt-3"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-center"><h1 class="mb-0">Vragen importeren</h1><a class="btn btn-outline-primary" href="vocabulary_import.php">Woordenlijst importeren</a></div><p class="mt-3">CSV met <strong>puntkomma's</strong> als scheidingsteken. De import maakt vak, overhoring en sub-test automatisch aan als ze nog niet bestaan.</p><div class="alert alert-secondary"><strong>Formaat:</strong> <code>vak;overhoring;sub-test;type;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;afbeelding;actief</code><br><strong>type:</strong> <code>mc</code> of <code>open</code>. Bij een open vraag kun je meerdere goede antwoorden opgeven met <code>|</code>.</div><?php foreach($errors as $error):?><div class="alert alert-danger"><?=e($error)?></div><?php endforeach;?><?php if($success):?><div class="alert alert-success"><?=e($success)?></div><?php endif;?><form method="post" enctype="multipart/form-data">
 <label class="form-label"><strong>CSV-bestand</strong></label>
 <input class="form-control mb-3" type="file" name="csv" accept=".csv,text/csv">
 <div class="text-center text-secondary mb-3">of</div>
@@ -101,6 +106,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <div class="form-text mb-3">Gebruik hetzelfde CSV-formaat met puntkomma's als scheidingsteken. Maximaal 2 MB.</div>
 <button class="btn btn-primary">CSV importeren</button>
 </form><hr><h2 class="h5">Voorbeeld voor ChatGPT</h2><pre class="bg-light p-3 border">vak;overhoring;sub-test;type;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;actief
-Geschiedenis;De Republiek;Sub-Test 1;mc;Wie was Willem van Oranje?;De leider van de Opstand;Een Franse koning;Een Romeinse keizer;Een Engelse admiraal;;1
-Geschiedenis;De Republiek;Sub-Test 1;open;In welk jaar begon de Tachtigjarige Oorlog?;1568;;;;;1
-Geschiedenis;De Republiek;Sub-Test 1;open;Wie wordt ook de Vader des Vaderlands genoemd?;Willem van Oranje|Willem de Zwijger;;;;;1</pre></div></div></main></body></html>
+Geschiedenis;De Republiek;Sub-Test 1;mc;Wie was Willem van Oranje?;De leider van de Opstand;Een Franse koning;Een Romeinse keizer;Een Engelse admiraal;;grieken/tempel.jpg;1
+Geschiedenis;De Republiek;Sub-Test 1;open;In welk jaar begon de Tachtigjarige Oorlog?;1568;;;;;;1
+Geschiedenis;De Republiek;Sub-Test 1;open;Wie wordt ook de Vader des Vaderlands genoemd?;Willem van Oranje|Willem de Zwijger;;;;;;1</pre></div></div></main></body></html>
