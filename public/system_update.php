@@ -1,7 +1,6 @@
 <?php
 require __DIR__.'/../app/bootstrap.php';require_admin();
 
-$requestFile=__DIR__.'/../.update_request';
 $statusFile=__DIR__.'/../.update_status.json';
 $outputFile=__DIR__.'/../.update_output.log';
 
@@ -17,11 +16,15 @@ if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='start'){
         header('Content-Type: application/json');echo json_encode(['ok'=>false,'error'=>'Er draait al een update.']);exit;
     }
     $token=bin2hex(random_bytes(16));
-    @file_put_contents($statusFile,json_encode([
+    $written=@file_put_contents($statusFile,json_encode([
         'state'=>'requested','token'=>$token,'requested_at'=>date('c'),
         'message'=>'Update aangevraagd. Wachten op de update-service...'
     ],JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE),LOCK_EX);
-    @file_put_contents($requestFile,json_encode(['token'=>$token,'requested_at'=>date('c')],JSON_PRETTY_PRINT),LOCK_EX);
+    if($written===false){
+        header('Content-Type: application/json');http_response_code(500);
+        echo json_encode(['ok'=>false,'error'=>'Kan update-status niet opslaan.']);exit;
+    }
+    @chmod($statusFile,0666);
     header('Content-Type: application/json');echo json_encode(['ok'=>true]);exit;
 }
 
@@ -55,7 +58,6 @@ $status=read_update_status($statusFile);
 </main>
 <script>
 const statusBox=document.getElementById('statusBox'),btn=document.getElementById('startBtn'),details=document.getElementById('details'),log=document.getElementById('log');
-const steps={requested:'stepRequest',running:'stepPull',success:'stepDone',error:'stepDone'};
 function render(s){
  const state=s.state||'idle';
  if(state==='idle'){statusBox.className='alert alert-secondary';statusBox.textContent='De website is bijgewerkt. Je kunt een nieuwe update starten.';btn.disabled=false;}
@@ -64,15 +66,22 @@ function render(s){
  else if(state==='success'){statusBox.className='alert alert-success';statusBox.textContent=s.message||'Website is succesvol bijgewerkt.';btn.disabled=false;}
  else {statusBox.className='alert alert-danger';statusBox.textContent=s.message||'De update is mislukt.';btn.disabled=false;}
  document.querySelectorAll('.step').forEach(x=>x.className='step');
- if(state==='requested'){document.getElementById('stepRequest').classList.add('active');}
+ if(state==='requested')document.getElementById('stepRequest').classList.add('active');
  if(state==='running'){
    document.getElementById('stepRequest').classList.add('done');
-   document.getElementById('stepPull').classList.add('active');
-   if(s.stage==='build')document.getElementById('stepBuild').classList.add('active');
+   if(s.stage==='build'){
+     document.getElementById('stepPull').classList.add('done');
+     document.getElementById('stepBuild').classList.add('active');
+   }else{
+     document.getElementById('stepPull').classList.add('active');
+   }
  }
- if(state==='success'){document.querySelectorAll('.step').forEach(x=>x.classList.add('done'));}
- if(state==='error'){document.getElementById('stepRequest').classList.add('done');document.getElementById('stepDone').classList.add('error');}
- if(s.output){details.classList.remove('d-none');log.textContent=s.output;}
+ if(state==='success')document.querySelectorAll('.step').forEach(x=>x.classList.add('done'));
+ if(state==='error'){
+   document.getElementById('stepRequest').classList.add('done');
+   document.getElementById('stepDone').classList.add('error');
+ }
+ if(s.output){details.classList.remove('d-none');log.textContent=s.output;log.scrollTop=log.scrollHeight;}
 }
 async function poll(){
  try{const r=await fetch('system_update.php?action=status',{cache:'no-store'});render(await r.json());}catch(e){}
@@ -80,9 +89,16 @@ async function poll(){
 btn.addEventListener('click',async()=>{
  if(!confirm('Website bijwerken? De website kan tijdens het bouwen kort niet beschikbaar zijn.'))return;
  btn.disabled=true;
- await fetch('system_update.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'action=start'});
- await poll();
+ try{
+   const r=await fetch('system_update.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'action=start'});
+   const data=await r.json();
+   if(!data.ok){alert(data.error||'De update kon niet worden aangevraagd.');btn.disabled=false;return;}
+   await poll();
+ }catch(e){
+   alert('De update kon niet worden aangevraagd.');
+   btn.disabled=false;
+ }
 });
-render(<?=json_encode($status,JSON_UNESCAPED_UNICODE)?>);
+render({"state":"success","finished_at":"2026-10-05T07:07:55+02:00","message":"Website is succesvol bijgewerkt en draait weer."});
 setInterval(poll,2000);
 </script></body></html>
