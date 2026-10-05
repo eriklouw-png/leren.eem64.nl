@@ -60,17 +60,6 @@ function open_answer_matches(string $answer,array $acceptedAnswers):bool{
             if($accepted==='')continue;
             if($answer===$accepted)return true;
 
-            // Een leerling geeft soms een volledige zin in plaats van alleen het kernantwoord.
-            // Als het juiste antwoord daarin als losse woordgroep voorkomt, accepteren we het.
-            // Dit vangt bijvoorbeeld "Dat heette daar een volksvergadering" voor "Volksvergadering".
-            $acceptedPattern=preg_quote($accepted,'/');
-            if(preg_match('/(?<!\\p{L})'.$acceptedPattern.'(?!\\p{L})/u',$answer)){
-                $before=trim(substr($answer,0,(int)preg_match('/(?<!\\p{L})'.$acceptedPattern.'(?!\\p{L})/u',$answer,PREG_OFFSET_CAPTURE)[0][1]));
-                if(!preg_match('/(?:^|\\s)(?:geen|niet)(?:\\s|$)/u',$before)){
-                    return true;
-                }
-            }
-
             // Historische jaartallen: "500 voor Christus" en "500 v.C." betekenen hetzelfde.
             $answerBc=(bool)preg_match('/(?:voor christus|v ?ch?r|vc)\b/u',$answer);
             $acceptedBc=(bool)preg_match('/(?:voor christus|v ?ch?r|vc)\b/u',$accepted);
