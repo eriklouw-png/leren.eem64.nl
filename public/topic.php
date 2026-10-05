@@ -20,6 +20,15 @@ $x->execute([$topicId]);
 $tests=$x->fetchAll();
 
 $labels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Multiple choice','mixed'=>'Combinatie'];
+if(!isset($_SESSION['learner_token']))$_SESSION['learner_token']=bin2hex(random_bytes(32));
+$browserToken=$_SESSION['learner_token'];
+$inProgress=[];
+$rx=$pdo->prepare("SELECT id FROM attempts WHERE test_id=? AND browser_token=? AND status='in_progress' AND mode='normal' ORDER BY started_at DESC LIMIT 1");
+foreach($tests as &$testRow){
+    $rx->execute([(int)$testRow['id'],$browserToken]);
+    $testRow['in_progress_attempt_id']=$rx->fetchColumn()?:null;
+}
+unset($testRow);
 ?><!doctype html>
 <html lang="nl">
 <head>
@@ -59,7 +68,23 @@ $labels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Multiple choice','
 <?php else:?>
 <div class="list-group shadow-sm">
 <?php foreach($tests as $t):?>
-<a class="list-group-item list-group-item-action p-3 text-decoration-none" href="quiz.php?id=<?=(int)$t['id']?>">
+<div class="list-group-item p-3">
+<div class="d-flex justify-content-between align-items-center gap-3">
+<div class="min-w-0">
+<strong class="fs-5"><?=e($t['title'])?></strong>
+<div class="small text-secondary"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=((($t['test_type']??'mixed')==='vocabulary' && ($t['vocab_direction']??'both')==='both') ? (int)ceil(((int)$t['question_count'])/2) : (int)$t['question_count'])?> <?=($t['test_type']??'mixed')==='vocabulary'?'woorden':'vragen'?></div>
+<?php if($t['description']):?><div class="text-secondary mt-1"><?=e($t['description'])?></div><?php endif;?>
+</div>
+<div class="d-flex align-items-center gap-2 flex-shrink-0">
+<?php if($t['in_progress_attempt_id']):?>
+<a class="btn btn-primary btn-sm" href="quiz.php?id=<?=(int)$t['id']?>">Ga Verder</a>
+<a class="btn btn-outline-secondary btn-sm" href="quiz.php?id=<?=(int)$t['id']?>&new=1">Start Opnieuw</a>
+<?php else:?>
+<a class="btn btn-outline-primary btn-sm" href="quiz.php?id=<?=(int)$t['id']?>">Start</a>
+<?php endif;?>
+</div>
+</div>
+</div>
 <div class="d-flex justify-content-between align-items-center gap-3">
 <div>
 <strong class="fs-5"><?=e($t['title'])?></strong>
