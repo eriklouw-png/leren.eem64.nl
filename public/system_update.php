@@ -19,6 +19,20 @@ function read_update_status(string $file):array{
  *
  * Only non-sensitive status fields are exposed without authentication.
  */
+if(($_GET['action']??'')==='output'){
+    header('Content-Type: application/json; charset=utf-8');
+    $output='';
+    if(is_file($outputFile)){
+        $raw=@file_get_contents($outputFile);
+        if($raw!==false){
+            $max=120000;
+            $output=strlen($raw)>$max?substr($raw,-$max):$raw;
+        }
+    }
+    echo json_encode(['output'=>$output],JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 if(($_GET['action']??'')==='status'){
     header('Content-Type: application/json; charset=utf-8');
     $s=read_update_status($statusFile);
@@ -108,8 +122,18 @@ async function poll(){
    const r=await fetch('system_update.php?action=status',{cache:'no-store'});
    if(!r.ok)return;
    render(await r.json());
+   try{
+     const lr=await fetch('system_update.php?action=output',{cache:'no-store'});
+     if(lr.ok){
+       const ld=await lr.json();
+       if(ld.output){
+         details.classList.remove('d-none');
+         log.textContent=ld.output;
+         log.scrollTop=log.scrollHeight;
+       }
+     }
+   }catch(e){}
  }catch(e){}
-}
 
 btn.addEventListener('click',async()=>{
  if(!confirm('Website bijwerken? De website kan tijdens het bouwen kort niet beschikbaar zijn.'))return;
