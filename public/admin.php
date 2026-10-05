@@ -100,7 +100,7 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
 ?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Beheer - Leren</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><style>details .chevron{display:inline-block;transition:transform .15s ease;font-size:1.5rem;line-height:1}details[open] .chevron{transform:rotate(180deg)}</style></head><body class="bg-light"><nav class="navbar navbar-dark bg-dark"><div class="container"><a class="navbar-brand" href="admin.php">Leren beheer</a><div><span class="text-white me-3"><?=e($_SESSION['user']['name'])?></span><a class="btn btn-outline-light btn-sm" href="index.php">Website</a> <a class="btn btn-outline-light btn-sm" href="logout.php">Uitloggen</a></div></div></nav><main class="container py-4">
 <div class="d-flex justify-content-between align-items-center mb-3">
 <h1 class="mb-0">Talen en vakken</h1>
-<a class="btn btn-outline-primary" href="subject_edit.php">Nieuw vak</a>
+<div><a class="btn btn-outline-primary" href="system_update.php">Website bijwerken</a> <a class="btn btn-outline-primary" href="subject_edit.php">Nieuw vak</a></div>
 </div>
 
 <div class="row g-3 mb-5">
