@@ -7,6 +7,10 @@ $errors=[];$success=null;$preview=[];
 if($_SERVER['REQUEST_METHOD']==='POST'){
     $testId=filter_var($_POST['test_id']??null,FILTER_VALIDATE_INT);
     $text=(string)($_POST['wordlist']??'');
+    if(isset($_FILES['wordlist_file']) && $_FILES['wordlist_file']['error']===UPLOAD_ERR_OK){
+        if((int)$_FILES['wordlist_file']['size']>2*1024*1024)$errors[]='Het woordenlijstbestand mag maximaal 2 MB zijn.';
+        else{$uploaded=file_get_contents($_FILES['wordlist_file']['tmp_name']);if($uploaded!==false)$text=$uploaded;else$errors[]='Het woordenlijstbestand kon niet worden gelezen.';}
+    }
     $replace=isset($_POST['replace_existing']);
     $test=null;
     foreach($tests as $t)if((int)$t['id']===$testId){$test=$t;break;}
@@ -72,7 +76,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 </div>
 <?php foreach($errors as $error):?><div class="alert alert-danger"><?=e($error)?></div><?php endforeach;?>
 <?php if($success):?><div class="alert alert-success"><?=e($success)?></div><?php endif;?>
-<form method="post">
+<form method="post" enctype="multipart/form-data">
 <label class="form-label"><strong>Woordjes-toets</strong></label>
 <select class="form-select mb-3" name="test_id" required>
 <option value="">Kies een toets...</option>
@@ -80,8 +84,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <option value="<?=$t['id']?>" <?=((int)($_POST['test_id']??0)===(int)$t['id'])?'selected':''?>><?=e($t['subject_name'].' — '.$t['topic_name'].' — '.$t['title'])?></option>
 <?php endforeach;?>
 </select>
-<label class="form-label"><strong>Woordenlijst</strong></label>
+<label class="form-label"><strong>Woordenlijst plakken</strong></label>
 <textarea class="form-control font-monospace mb-3" name="wordlist" rows="16" placeholder="de tafel = der Tisch&#10;de stoel = der Stuhl&#10;het huis = das Haus" required><?=e($_POST['wordlist']??'')?></textarea>
+<label class="form-label mt-2"><strong>of een tekstbestand kiezen</strong></label>
+<input class="form-control mb-2" type="file" name="wordlist_file" accept=".txt,.csv">
 <div class="form-text mb-3">Maximaal 2 MB. Lege regels en regels die beginnen met # worden overgeslagen.</div>
 <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="replace_existing" id="replace_existing"><label class="form-check-label" for="replace_existing"><strong>Bestaande woorden van deze toets vervangen</strong><br><span class="text-secondary">Gebruik dit wanneer je een nieuwe volledige woordenlijst importeert.</span></label></div>
 <button class="btn btn-primary" type="submit">Woordenlijst importeren</button>
