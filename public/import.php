@@ -23,6 +23,8 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['csv_text'])){
     }
 }
 $expected=['vak','overhoring','sub-test','type','vraag','juiste_antwoord','antwoord_b','antwoord_c','antwoord_d','uitleg','afbeelding','actief'];
+$shortExpected=['vraag','juiste_antwoord','antwoord_b','antwoord_c','antwoord_d','uitleg','afbeelding'];
+$shortImportDefaults=['vak'=>'Algemeen','overhoring'=>'Algemeen','sub-test'=>'Nieuwe toets','type'=>'mc','actief'=>'1'];
 if($_SERVER['REQUEST_METHOD']==='POST'){
     if(!isset($_FILES['csv'])){
         if(!$errors)$errors[]='Kies een CSV-bestand of plak de CSV-tekst in het invoerveld.';
@@ -37,7 +39,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         if(!$header){$errors[]='Het CSV-bestand is leeg.';}
         else{
             $header=array_map(fn($v)=>strtolower(trim((string)$v)),$header);
-            if($header!==$expected)$errors[]='De kolomvolgorde is ongeldig. Gebruik exact de meegeleverde template.';
+            if($header!==$expected && $header!==$shortExpected)$errors[]='De kolomvolgorde is ongeldig. Gebruik het volledige formaat of het korte formaat: vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;afbeelding.';
+            elseif($header===$shortExpected){
+                $expected=$shortExpected;
+            }
             else{
                 $line=1;
                 while(($row=fgetcsv($fh,0,';'))!==false){
@@ -45,6 +50,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     if(count($row)===1&&trim((string)$row[0])==='')continue;
                     if(count($row)!==count($expected)){$errors[]="Regel $line heeft ".count($row)." kolommen; verwacht ".count($expected).".";continue;}
                     $row=array_map(fn($v)=>trim((string)$v),$row);$data=array_combine($expected,$row);
+                    if($expected===$shortExpected){$data=array_merge($shortImportDefaults,$data);}
                     $type=strtolower($data['type']);
                     if(!in_array($type,['mc','open'],true)){$errors[]="Regel $line: type moet mc of open zijn.";continue;}
                     foreach(['vak','overhoring','sub-test','vraag','juiste_antwoord'] as $field)if($data[$field]==='')$errors[]="Regel $line: '$field' is verplicht.";
@@ -73,6 +79,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         $sortByTest=[];
                         while(($row=fgetcsv($fh,0,';'))!==false){
                             if(count($row)!==count($expected))continue;$data=array_combine($expected,array_map(fn($v)=>trim((string)$v),$row));
+                            if($expected===$shortExpected){$data=array_merge($shortImportDefaults,$data);}
                             $subject->execute([$data['vak']]);$subjectId=(int)$pdo->lastInsertId();
                             $topic->execute([$subjectId,$data['overhoring']]);$topicId=(int)$pdo->lastInsertId();
                             $active=$data['actief']===''?1:(int)in_array(strtolower($data['actief']),['1','ja','yes','true'],true);
@@ -97,7 +104,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         }
     }
 }
-?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Importeren</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><main class="container py-4" style="max-width:1000px"><a href="admin.php">&larr; Beheer</a><div class="card shadow-sm mt-3"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-center"><h1 class="mb-0">Vragen importeren</h1><a class="btn btn-outline-primary" href="vocabulary_import.php">Woordenlijst importeren</a></div><p class="mt-3">CSV met <strong>puntkomma's</strong> als scheidingsteken. De import maakt vak, overhoring en sub-test automatisch aan als ze nog niet bestaan.</p><div class="alert alert-secondary"><strong>Formaat:</strong> <code>vak;overhoring;sub-test;type;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;afbeelding;actief</code><br><strong>type:</strong> <code>mc</code> of <code>open</code>. Bij een open vraag kun je meerdere goede antwoorden opgeven met <code>|</code>.</div><?php foreach($errors as $error):?><div class="alert alert-danger"><?=e($error)?></div><?php endforeach;?><?php if($success):?><div class="alert alert-success"><?=e($success)?></div><?php endif;?><form method="post" enctype="multipart/form-data">
+?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Importeren</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><main class="container py-4" style="max-width:1000px"><a href="admin.php">&larr; Beheer</a><div class="card shadow-sm mt-3"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-center"><h1 class="mb-0">Vragen importeren</h1><a class="btn btn-outline-primary" href="vocabulary_import.php">Woordenlijst importeren</a></div><p class="mt-3">CSV met <strong>puntkomma's</strong> als scheidingsteken. De import maakt vak, overhoring en sub-test automatisch aan als ze nog niet bestaan.</p><div class="alert alert-secondary"><strong>Volledig formaat:</strong> <code>vak;overhoring;sub-test;type;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;afbeelding;actief</code><br><strong>Kort formaat:</strong> <code>vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;afbeelding</code><br><strong>type:</strong> <code>mc</code> of <code>open</code>. Bij een open vraag kun je meerdere goede antwoorden opgeven met <code>|</code>.</div><?php foreach($errors as $error):?><div class="alert alert-danger"><?=e($error)?></div><?php endforeach;?><?php if($success):?><div class="alert alert-success"><?=e($success)?></div><?php endif;?><form method="post" enctype="multipart/form-data">
 <label class="form-label"><strong>CSV-bestand</strong></label>
 <input class="form-control mb-3" type="file" name="csv" accept=".csv,text/csv">
 <div class="text-center text-secondary mb-3">of</div>
@@ -105,7 +112,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <textarea class="form-control font-monospace mb-3" name="csv_text" rows="12" placeholder="Plak hier de volledige CSV, inclusief de eerste regel met de kolomnamen..."></textarea>
 <div class="form-text mb-3">Gebruik hetzelfde CSV-formaat met puntkomma's als scheidingsteken. Maximaal 2 MB.</div>
 <button class="btn btn-primary">CSV importeren</button>
-</form><hr><h2 class="h5">Voorbeeld voor ChatGPT</h2><pre class="bg-light p-3 border">vak;overhoring;sub-test;type;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;actief
+</form><hr><h2 class="h5">Voorbeeld voor ChatGPT</h2><p class="text-secondary">Bij het korte formaat worden vak, overhoring, sub-test en type automatisch ingevuld. Voor jouw klokvragen wordt dus automatisch een multiple-choice toets gemaakt.</p><pre class="bg-light p-3 border">vak;overhoring;sub-test;type;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;actief
 Geschiedenis;De Republiek;Sub-Test 1;mc;Wie was Willem van Oranje?;De leider van de Opstand;Een Franse koning;Een Romeinse keizer;Een Engelse admiraal;;grieken/tempel.jpg;1
 Geschiedenis;De Republiek;Sub-Test 1;open;In welk jaar begon de Tachtigjarige Oorlog?;1568;;;;;;1
 Geschiedenis;De Republiek;Sub-Test 1;open;Wie wordt ook de Vader des Vaderlands genoemd?;Willem van Oranje|Willem de Zwijger;;;;;;1</pre></div></div></main></body></html>
