@@ -15,3 +15,14 @@ Gebruik puntkomma's als scheidingsteken. De kolomvolgorde is vast:
 Voor ChatGPT kun je bijvoorbeeld vragen:
 
 > Maak een CSV voor leren.eem64.nl met puntkomma als delimiter. Gebruik exact de kolommen vak, onderwerp, toets, type, vraag, juiste_antwoord, antwoord_b, antwoord_c, antwoord_d, uitleg, actief. Gebruik type=mc voor meerkeuze en type=open voor open vragen. Geef bij open vragen meerdere geldige formuleringen in juiste_antwoord, gescheiden door |. Zet actief op 1.
+
+
+## Afbeeldingen bij vragen
+
+De CSV-import ondersteunt een extra kolom **afbeelding** vóór **actief**:
+
+```
+vak;overhoring;sub-test;type;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;afbeelding;actief
+```
+
+Laat de kolom leeg als de vraag geen afbeelding heeft. Een afbeelding kan bijvoorbeeld worden opgegeven als `grieken/tempel.jpg`. Het bestand moet vooraf in `public/uploads/questions/grieken/tempel.jpg` staan. Via het scherm **Vraag bewerken** kan ook rechtstreeks een afbeelding worden geüpload (JPG, PNG, WebP of GIF, maximaal 10 MB).
