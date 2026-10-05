@@ -156,7 +156,6 @@ foreach($questions as &$q){$q['options']=[];if($q['question_type']==='multiple_c
 (function(){
  const attemptId='<?= (int)$attemptId ?>',testId='<?= (int)$testId ?>';
  const cards=[...document.querySelectorAll('.question-card')],bar=document.getElementById('progressBar'),form=document.getElementById('quizForm');
- cards.forEach(setupSpecialChars);
  let current=0,checking=false;
  function activity(data){fetch('activity.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data),keepalive:true}).catch(()=>{});}
  function save(questionId,value){return fetch('quiz.php?id='+testId,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({action:'save_answer',attempt_id:attemptId,question_id:questionId,answer:value})}).then(r=>r.json());}
@@ -194,6 +193,7 @@ foreach($questions as &$q){$q['options']=[];if($q['question_type']==='multiple_c
      grid.appendChild(btn);
    });
  }
+ cards.forEach(setupSpecialChars);
  function feedback(card,data){
    const box=card.querySelector('.feedback');
    box.className='feedback mt-4 alert '+(data.is_correct?'alert-success':'alert-danger');
