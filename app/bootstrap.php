@@ -15,8 +15,8 @@ function leren_navbar_html(string $area): string{
 
     return '<nav class="navbar navbar-dark bg-dark mb-4"><div class="container">'
         .'<a class="navbar-brand" href="index.php">Leren</a>'
-        .'<span class="text-white me-3">'.$name.'</span>'
-        .'<div><a class="btn btn-outline-light btn-sm me-2" href="logout.php">Uitloggen</a>'.$right.'</div>'
+        .'<div><span class="text-white me-3">'.$name.'</span>'
+        .'<a class="btn btn-outline-light btn-sm me-2" href="logout.php">Uitloggen</a>'.$right.'</div>'
         .'</div></nav>';
 }
 
