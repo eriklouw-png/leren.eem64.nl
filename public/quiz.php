@@ -200,7 +200,16 @@ if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='finish'){
 }
 
 $x=$pdo->prepare("SELECT q.id,q.question_text,q.question_type,q.explanation,aq.sort_order,aa.selected_option_id,aa.answer_text FROM attempt_questions aq JOIN questions q ON q.id=aq.question_id LEFT JOIN attempt_answers aa ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id WHERE aq.attempt_id=? ORDER BY aq.sort_order,q.id");
+
 $x->execute([$attemptId]);$questions=$x->fetchAll();
+$resumeIndex=0;
+foreach($questions as $questionIndex=>$resumeQuestion){
+    $hasAnswer=($resumeQuestion['selected_option_id']!==null && $resumeQuestion['selected_option_id']!=='')
+        || ($resumeQuestion['answer_text']!==null && trim((string)$resumeQuestion['answer_text'])!=='');
+    if(!$hasAnswer){$resumeIndex=$questionIndex;break;}
+    $resumeIndex=$questionIndex+1;
+}
+if($resumeIndex>=count($questions) && count($questions)>0)$resumeIndex=count($questions)-1;
 $o=$pdo->prepare("SELECT id,option_text FROM question_options WHERE question_id=? ORDER BY sort_order,id");
 foreach($questions as &$q){$q['options']=[];if($q['question_type']==='multiple_choice'){$o->execute([$q['id']]);$q['options']=$o->fetchAll();}}unset($q);
 ?>
@@ -208,7 +217,7 @@ foreach($questions as &$q){$q['options']=[];if($q['question_type']==='multiple_c
 (function(){
  const attemptId='<?= (int)$attemptId ?>',testId='<?= (int)$testId ?>';
  const cards=[...document.querySelectorAll('.question-card')],bar=document.getElementById('progressBar'),form=document.getElementById('quizForm');
- let current=0,checking=false;
+ let current=<?= (int)$resumeIndex ?>,checking=false;
  function activity(data){fetch('activity.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data),keepalive:true}).catch(()=>{});}
  function save(questionId,value){return fetch('quiz.php?id='+testId,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({action:'save_answer',attempt_id:attemptId,question_id:questionId,answer:value})}).then(r=>r.json());}
  function saveDraft(questionId,value){return fetch('quiz.php?id='+testId,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({action:'save_draft',attempt_id:attemptId,question_id:questionId,answer:value})}).then(r=>r.json());}
@@ -285,7 +294,7 @@ foreach($questions as &$q){$q['options']=[];if($q['question_type']==='multiple_c
      if(el.tagName==='TEXTAREA'){let timer;el.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>saveDraft(el.dataset.question,el.value).catch(()=>{}),500);});}
    });
  });
- activity({action:'start',test_id:testId,attempt_id:attemptId});
+ show(current);\n activity({action:'start',test_id:testId,attempt_id:attemptId});
 
  let activeUntil=Date.now()+60000;const touch=()=>{activeUntil=Date.now()+60000;};
  ['mousemove','mousedown','keydown','touchstart','scroll'].forEach(e=>window.addEventListener(e,touch,{passive:true}));
