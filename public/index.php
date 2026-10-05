@@ -6,7 +6,7 @@ $subjects=$pdo->query("SELECT s.id,s.name,s.description,s.image_mime,COUNT(DISTI
 <div class="col-md-6 col-lg-4">
 <a class="text-decoration-none text-dark" href="subject.php?id=<?=$s['id']?>">
 <div class="card h-100 shadow-sm overflow-hidden">
-<div class="subject-card-image" style="background-image:<?=($s['image_mime']?'url(\\'subject_image.php?id='.(int)$s['id'].'\\')':'none')?>;">
+<div class="subject-card-image" style="background-image:<?=($s['image_mime']?'url(\'subject_image.php?id='.(int)$s['id'].'\')':'none')?>;">
 <div class="subject-card-overlay"></div>
 <div class="card-body position-relative d-flex flex-column justify-content-end" style="min-height:180px;">
 <h2 class="h4 text-white mb-1"><?=e($s['name'])?></h2>
