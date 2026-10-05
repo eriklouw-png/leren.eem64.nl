@@ -15,24 +15,52 @@ if(!$topic || !(int)$topic['is_active']){http_response_code(404);exit('Overhorin
 
 $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d');
 
-$x=$pdo->prepare("SELECT t.id,t.title,t.description,t.test_type,t.vocab_direction,COUNT(q.id) question_count
-FROM tests t LEFT JOIN questions q ON q.test_id=t.id
+$x=$pdo->prepare("
+SELECT
+    t.id,t.title,t.description,t.test_type,t.vocab_direction,
+    COUNT(DISTINCT q.id) question_count,
+    ip.id in_progress_attempt_id,
+    COALESCE(ip.answered_count,0) in_progress_answered_count,
+    COALESCE(ip.total_count,COUNT(DISTINCT q.id)) in_progress_total_count
+FROM tests t
+LEFT JOIN questions q ON q.test_id=t.id
+LEFT JOIN (
+    SELECT
+        a.id,a.test_id,
+        COUNT(aq.question_id) total_count,
+        COUNT(CASE
+            WHEN aa.id IS NOT NULL
+             AND ((aa.answer_text IS NOT NULL AND TRIM(aa.answer_text) <> '') OR aa.selected_option_id IS NOT NULL)
+            THEN 1 END) answered_count
+    FROM attempts a
+    JOIN attempt_questions aq ON aq.attempt_id=a.id
+    LEFT JOIN attempt_answers aa
+        ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id
+    WHERE a.student_id=? AND a.status='in_progress' AND a.mode='normal'
+    GROUP BY a.id,a.test_id
+) ip ON ip.test_id=t.id
 WHERE t.topic_id=? AND t.is_active=1
-GROUP BY t.id
-ORDER BY t.created_at,t.title");
-$x->execute([$topicId]);
+GROUP BY t.id,t.title,t.description,t.test_type,t.vocab_direction,ip.id,ip.answered_count,ip.total_count
+ORDER BY t.created_at,t.title
+");
+$x->execute([$studentId,$topicId]);
 $tests=$x->fetchAll();
+
+$historyStmt=$pdo->prepare("
+    SELECT id,score,finished_at
+    FROM attempts
+    WHERE test_id=? AND student_id=? AND status='finished' AND mode='normal'
+    ORDER BY finished_at DESC,id DESC
+");
+$historyByTest=[];
+foreach($tests as $testRow){
+    $historyStmt->execute([(int)$testRow['id'],$studentId]);
+    $historyByTest[(int)$testRow['id']]=$historyStmt->fetchAll();
+}
 
 $labels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Multiple choice','mixed'=>'Combinatie'];
 if(!isset($_SESSION['learner_token']))$_SESSION['learner_token']=bin2hex(random_bytes(32));
 $browserToken=$_SESSION['learner_token'];
-$inProgress=[];
-$rx=$pdo->prepare("SELECT id FROM attempts WHERE test_id=? AND student_id=? AND status='in_progress' AND mode='normal' ORDER BY started_at DESC LIMIT 1");
-foreach($tests as &$testRow){
-    $rx->execute([(int)$testRow['id'],$studentId]);
-    $testRow['in_progress_attempt_id']=$rx->fetchColumn()?:null;
-}
-unset($testRow);
 ?><!doctype html>
 <html lang="nl">
 <head>
@@ -85,6 +113,39 @@ unset($testRow);
 <a class="btn btn-outline-secondary btn-sm" href="quiz.php?id=<?=(int)$t['id']?>&new=1">Start Opnieuw</a>
 <?php else:?>
 <a class="btn btn-outline-primary btn-sm" href="quiz.php?id=<?=(int)$t['id']?>">Start</a>
+<?php endif;?>
+</div>
+
+<?php if($t['in_progress_attempt_id']):
+$progressTotal=max(1,(int)$t['in_progress_total_count']);
+$progressAnswered=min($progressTotal,(int)$t['in_progress_answered_count']);
+$progressPercent=(int)round($progressAnswered/$progressTotal*100);
+?>
+<div class="mt-3">
+<div class="d-flex justify-content-between small text-secondary mb-1">
+<span>Voortgang</span><span><?=$progressAnswered?> van <?=$progressTotal?> vragen</span>
+</div>
+<div class="progress" role="progressbar" aria-label="Voortgang van sub-test" aria-valuenow="<?=$progressPercent?>" aria-valuemin="0" aria-valuemax="100" style="height:10px">
+<div class="progress-bar" style="width:<?=$progressPercent?>%"></div>
+</div>
+</div>
+<?php endif;?>
+
+<?php $history=$historyByTest[(int)$t['id']]??[]; ?>
+<?php if($history):?>
+<div class="mt-3 pt-3 border-top">
+<div class="small fw-semibold text-secondary mb-2">Eerdere resultaten</div>
+<div class="d-flex flex-column gap-2">
+<?php foreach($history as $attempt):?>
+<a href="result.php?id=<?=(int)$attempt['id']?>" class="text-decoration-none">
+<div class="d-flex justify-content-between align-items-center">
+<span class="text-secondary small"><?=e(date('d-m-Y H:i',strtotime((string)$attempt['finished_at'])))?></span>
+<strong class="<?=((float)$attempt['score']>=70?'text-success':((float)$attempt['score']>=50?'text-warning':'text-danger'))?>"><?=e(rtrim(rtrim(number_format((float)$attempt['score'],2,',','.'),'0'),','))?>%</strong>
+</div>
+</a>
+<?php endforeach;?>
+</div>
+</div>
 <?php endif;?>
 </div>
 </div>
