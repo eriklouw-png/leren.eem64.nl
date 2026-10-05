@@ -44,6 +44,7 @@ CREATE TABLE tests (
  topic_id INT UNSIGNED NULL,
  title VARCHAR(200) NOT NULL,
  description TEXT NULL,
+ test_type ENUM('vocabulary','multiple_choice','mixed') NOT NULL DEFAULT 'mixed',
  is_active TINYINT(1) NOT NULL DEFAULT 1,
  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
  KEY idx_tests_topic(topic_id),
