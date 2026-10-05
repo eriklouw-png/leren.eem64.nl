@@ -78,7 +78,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     http_response_code(400);exit('Ongeldige actie.');
 }
 $subjects=$pdo->query("SELECT id,name,description,image_mime FROM subjects ORDER BY name")->fetchAll();
-$tests=$pdo->query("SELECT t.id,t.title,t.is_active,COUNT(q.id) question_count,s.name subject_name,tp.name topic_name FROM tests t LEFT JOIN topics tp ON tp.id=t.topic_id LEFT JOIN subjects s ON s.id=tp.subject_id LEFT JOIN questions q ON q.test_id=t.id GROUP BY t.id ORDER BY t.created_at DESC")->fetchAll();
+$tests=$pdo->query("SELECT t.id,t.title,t.is_active,t.test_type,COUNT(q.id) question_count,s.name subject_name,tp.name topic_name FROM tests t LEFT JOIN topics tp ON tp.id=t.topic_id LEFT JOIN subjects s ON s.id=tp.subject_id LEFT JOIN questions q ON q.test_id=t.id GROUP BY t.id ORDER BY t.created_at DESC")->fetchAll();
 $attempts=$pdo->query("SELECT a.id,a.score,a.finished_at,t.title FROM attempts a JOIN tests t ON t.id=a.test_id WHERE a.finished_at IS NOT NULL ORDER BY a.finished_at DESC LIMIT 10")->fetchAll();
 $sessions=$pdo->query("SELECT ss.id,ss.test_id,ss.attempt_id,ss.started_at,ss.ended_at,ss.active_seconds,t.title,a.score FROM study_sessions ss LEFT JOIN attempts a ON a.id=ss.attempt_id LEFT JOIN tests t ON t.id=ss.test_id ORDER BY ss.started_at DESC")->fetchAll();
 $answeredRows=$pdo->query("SELECT ss.test_id,aa.question_id FROM study_sessions ss JOIN attempt_answers aa ON aa.attempt_id=ss.attempt_id GROUP BY ss.test_id,aa.question_id")->fetchAll();
@@ -157,12 +157,13 @@ ksort($testsBySubject);
 <div class="accordion-body p-0">
 <div class="table-responsive">
 <table class="table table-hover mb-0">
-<thead><tr><th>Toets</th><th>Onderwerp</th><th>Vragen</th><th>Status</th><th></th></tr></thead>
+<thead><tr><th>Toets</th><th>Onderwerp</th><th>Type</th><th>Vragen</th><th>Status</th><th></th></tr></thead>
 <tbody>
 <?php foreach($subjectTests as $t):?>
 <tr>
 <td><?=e($t['title'])?></td>
 <td><?=e($t['topic_name']??'')?></td>
+<td><?php $typeLabels=['vocabulary'=>'Woordjes','multiple_choice'=>'Multiple choice','mixed'=>'Combinatie'];?><span class="badge text-bg-light border"><?=e($typeLabels[$t['test_type']??'mixed']??'Combinatie')?></span></td>
 <td><?=$t['question_count']?></td>
 <td><?=((int)$t['is_active']?'Actief':'Inactief')?></td>
 <td class="text-nowrap">
