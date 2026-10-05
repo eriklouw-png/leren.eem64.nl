@@ -17,7 +17,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='reactivate_t
     redirect('subject.php?id='.$subjectId);
 }
 
-$x=$pdo->prepare("SELECT id,name,test_date FROM topics WHERE subject_id=? ORDER BY
+$x=$pdo->prepare("SELECT id,name,test_date FROM topics WHERE subject_id=? AND is_active=1 ORDER BY
     CASE WHEN test_date IS NULL THEN 1 ELSE 0 END,
     test_date,name");
 $x->execute([$subjectId]);
