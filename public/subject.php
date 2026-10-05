@@ -123,7 +123,11 @@ foreach($tests as $t):
 <div class="small text-secondary mb-3"><?=$progressText?></div>
 
 <div class="d-grid gap-2">
+<?php if($active):?>
     <a class="btn btn-primary" href="<?=$continueUrl?>"><?=e($continueLabel)?></a>
+<?php endif;?>
+
+    <a class="btn btn-outline-primary" href="quiz.php?id=<?=$testId?>&new=1">Start toets</a>
 
 <?php if($finished):?>
     <a class="btn btn-outline-secondary" href="result.php?id=<?=(int)$finished['id']?>">Resultaat bekijken<?php if($finished['score']!==null):?> (<?=e((string)$finished['score'])?>%)<?php endif;?></a>
