@@ -107,10 +107,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         foreach($rawOptions as $option)$options[]=trim((string)$option);
                         if(in_array('', $options,true)){$errors[]='Een antwoordoptie is leeg in "'.$title.'".';continue;}
                         $correctOption=(int)($q['correct_option']??-1);
-                        if($correctOption<0||$correctOption>3||$options[$correctOption]!==$correct){$errors[]='Het juiste antwoord van vraag '.($qi+1).' in "'.$title.'" klopt niet met de opties.';continue;}
+                        if($correctOption<0||$correctOption>3){$errors[]='Het juiste antwoord van vraag '.($qi+1).' in "'.$title.'" is ongeldig.';continue;}
+                        $correct=$options[$correctOption];
                     }else{
-                        $accepted=$q['accepted_answers']??[];
-                        if(!is_array($accepted))$accepted=[];
+                        $acceptedRaw=$q['accepted_answers']??'';
+                        $accepted=is_array($acceptedRaw)?$acceptedRaw:preg_split('/\s*\|\s*/u',(string)$acceptedRaw,-1,PREG_SPLIT_NO_EMPTY);
                         $accepted=array_values(array_filter(array_map(fn($v)=>trim((string)$v),$accepted),fn($v)=>$v!==''));
                         if(!$accepted)$accepted=[$correct];
                         $correct=implode(' | ',$accepted);
