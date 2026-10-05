@@ -106,24 +106,25 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
 
 <div class="row g-3 mb-5">
 <?php foreach($subjects as $subject):?>
-<div class="col-md-6 col-lg-4">
-<div class="card shadow-sm h-100 overflow-hidden">
+<div class="col-12 col-md-6 col-lg-4">
+<a href="subject_manage.php?id=<?=(int)$subject['id']?>" class="text-decoration-none text-dark">
+<div class="card shadow-sm h-100">
+<div class="card-body p-3">
+<div class="d-flex align-items-center gap-3">
 <?php if($subject['image_mime']):?>
-<img src="subject_image.php?id=<?=(int)$subject['id']?>" class="card-img-top" style="height:150px;object-fit:cover" alt="<?=e($subject['name'])?>">
+<img src="subject_image.php?id=<?=(int)$subject['id']?>" class="rounded flex-shrink-0" style="width:86px;height:86px;object-fit:cover" alt="<?=e($subject['name'])?>">
+<?php else:?>
+<div class="rounded bg-secondary-subtle d-flex align-items-center justify-content-center flex-shrink-0" style="width:86px;height:86px;font-size:2rem">📚</div>
 <?php endif;?>
-<div class="card-body">
-<div class="d-flex justify-content-between align-items-start gap-2">
-<h2 class="h5 mb-0"><a href="subject_manage.php?id=<?=(int)$subject['id']?>" class="text-decoration-none"><?=e($subject['name'])?></a></h2>
-<a class="btn btn-sm btn-outline-primary" href="subject_edit.php?id=<?=(int)$subject['id']?>">Bewerken</a>
-</div>
-<?php if($subject['description']):?><p class="text-secondary mt-2 mb-3"><?=e($subject['description'])?></p><?php endif;?>
-<form method="post" class="mt-3" onsubmit="return confirm('Weet je zeker dat je vak &quot;<?=e($subject['name'])?>&quot; wilt verwijderen? Alle onderwerpen, toetsen, vragen, resultaten en oefentijd van dit vak worden verwijderd.');">
-<input type="hidden" name="action" value="delete_subject">
-<input type="hidden" name="id" value="<?=(int)$subject['id']?>">
-<button class="btn btn-sm btn-outline-danger" type="submit">Verwijderen</button>
-</form>
+<div class="min-w-0">
+<h2 class="h4 mb-1"><?=e($subject['name'])?></h2>
+<?php if($subject['description']):?><p class="text-secondary mb-0 small"><?=e($subject['description'])?></p><?php endif;?>
 </div>
 </div>
+<div class="btn btn-primary w-100 mt-3">Naar <?=e($subject['name'])?> →</div>
+</div>
+</div>
+</a>
 </div>
 <?php endforeach;?>
 </div>
