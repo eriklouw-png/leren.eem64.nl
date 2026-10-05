@@ -150,7 +150,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     $qIns=$pdo->prepare("INSERT INTO questions(test_id,question_text,image_path,question_type,explanation,sort_order) VALUES(?,?,?,?,?,?)");
                     $optIns=$pdo->prepare("INSERT INTO question_options(question_id,option_text,is_correct,sort_order) VALUES(?,?,?,?)");
                     $oaIns=$pdo->prepare("INSERT INTO open_question_answers(question_id,answer_text,sort_order) VALUES(?,?,?)");
-                    $testIns=$pdo->prepare("INSERT INTO tests(topic_id,title,description,test_type,vocab_left_label,vocab_right_label,vocab_direction,is_active) VALUES(?,?,?,?,NULL,NULL,NULL,1)");
+                    $testIns=$pdo->prepare("INSERT INTO tests(topic_id,title,description,test_type,vocab_left_label,vocab_right_label,vocab_direction,is_active) VALUES(?,?,?,?,?,?,?,1)");
                     $savedCount=0;
                     $createdQuestionImages=[];
                     $questionImageDir=__DIR__.'/uploads/questions';
@@ -163,7 +163,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         $check=$pdo->prepare("SELECT id FROM tests WHERE topic_id=? AND title=? LIMIT 1");
                         $check->execute([$topicId,$test['title']]);
                         if($check->fetchColumn())throw new RuntimeException('Er bestaat al een sub-test met de titel "'.$test['title'].'". Pas de titel aan voordat je opslaat.');
-                        $testIns->execute([$topicId,$test['title'],$test['description'],$testType]);
+                        $testIns->execute([$topicId,$test['title'],$test['description'],$testType,null,null,'both']);
                         $testId=(int)$pdo->lastInsertId();
                         foreach($test['questions'] as $sort=>$q){
                             $imagePath=null;
