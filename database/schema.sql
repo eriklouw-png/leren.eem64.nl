@@ -61,6 +61,7 @@ CREATE TABLE questions (
  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
  test_id INT UNSIGNED NOT NULL,
  question_text TEXT NOT NULL,
+ image_path VARCHAR(500) NULL,
  question_type ENUM('multiple_choice','open') NOT NULL DEFAULT 'multiple_choice',
  explanation TEXT NULL,
  sort_order INT UNSIGNED NOT NULL DEFAULT 0,
