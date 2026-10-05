@@ -49,34 +49,41 @@ function open_answer_matches(string $answer,array $acceptedAnswers):bool{
     $answer=normalize_open_answer($answer);
     if($answer==='')return false;
 
-    foreach($acceptedAnswers as $accepted){
-        $accepted=normalize_open_answer((string)$accepted);
-        if($accepted==='')continue;
-        if($answer===$accepted)return true;
+    foreach($acceptedAnswers as $acceptedRaw){
+        // Eén invoerveld mag meerdere geldige antwoorden bevatten, bijvoorbeeld:
+        // "Vrije mannen / Vrije mannen met burgerrechten".
+        $alternatives=preg_split('/\s*(?:\||\/)\s*/u',(string)$acceptedRaw,-1,PREG_SPLIT_NO_EMPTY);
+        if(!$alternatives)$alternatives=[(string)$acceptedRaw];
 
-        // Historische jaartallen: "500 voor Christus" en "500 v.C." betekenen hetzelfde.
-        $answerBc=(bool)preg_match('/(?:voor christus|v ?ch?r|vc)\\b/u',$answer);
-        $acceptedBc=(bool)preg_match('/(?:voor christus|v ?ch?r|vc)\\b/u',$accepted);
-        $answerAd=(bool)preg_match('/(?:na christus|n ?ch?r|nc)\\b/u',$answer);
-        $acceptedAd=(bool)preg_match('/(?:na christus|n ?ch?r|nc)\\b/u',$accepted);
-        if(($answerBc&&$acceptedBc)||($answerAd&&$acceptedAd)){
-            preg_match('/\\b(\\d{1,4})\\b/u',$answer,$am);
-            preg_match('/\\b(\\d{1,4})\\b/u',$accepted,$cm);
-            if(isset($am[1],$cm[1])&&$am[1]===$cm[1])return true;
-        }
+        foreach($alternatives as $acceptedRawAlternative){
+            $accepted=normalize_open_answer($acceptedRawAlternative);
+            if($accepted==='')continue;
+            if($answer===$accepted)return true;
 
-        // Een numeriek antwoord met een onschuldige eenheid/omschrijving accepteren.
-        // Bijvoorbeeld: "500 burgers" voor het juiste antwoord "500".
-        if(preg_match('/^[-+]?\\d+(?:[.,]\\d+)?$/u',$accepted)){
-            $numberPattern=preg_quote($accepted,'/');
-            if(preg_match('/(?<![\\d.,])'.$numberPattern.'(?![\\d.,])/u',$answer)){
-                return true;
+            // Historische jaartallen: "500 voor Christus" en "500 v.C." betekenen hetzelfde.
+            $answerBc=(bool)preg_match('/(?:voor christus|v ?ch?r|vc)\b/u',$answer);
+            $acceptedBc=(bool)preg_match('/(?:voor christus|v ?ch?r|vc)\b/u',$accepted);
+            $answerAd=(bool)preg_match('/(?:na christus|n ?ch?r|nc)\b/u',$answer);
+            $acceptedAd=(bool)preg_match('/(?:na christus|n ?ch?r|nc)\b/u',$accepted);
+            if(($answerBc&&$acceptedBc)||($answerAd&&$acceptedAd)){
+                preg_match('/\b(\d{1,4})\b/u',$answer,$am);
+                preg_match('/\b(\d{1,4})\b/u',$accepted,$cm);
+                if(isset($am[1],$cm[1])&&$am[1]===$cm[1])return true;
             }
-        }
 
-        $distance=levenshtein($answer,$accepted);
-        $tolerance=min(open_answer_tolerance($answer),open_answer_tolerance($accepted));
-        if($distance<=$tolerance)return true;
+            // Een numeriek antwoord met een onschuldige eenheid/omschrijving accepteren.
+            // Bijvoorbeeld: "500 burgers" voor het juiste antwoord "500".
+            if(preg_match('/^[-+]?\d+(?:[.,]\d+)?$/u',$accepted)){
+                $numberPattern=preg_quote($accepted,'/');
+                if(preg_match('/(?<![\d.,])'.$numberPattern.'(?![\d.,])/u',$answer)){
+                    return true;
+                }
+            }
+
+            $distance=levenshtein($answer,$accepted);
+            $tolerance=min(open_answer_tolerance($answer),open_answer_tolerance($accepted));
+            if($distance<=$tolerance)return true;
+        }
     }
     return false;
 }
