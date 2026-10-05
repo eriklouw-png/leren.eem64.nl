@@ -33,10 +33,15 @@ LEFT JOIN (
              AND ((aa.answer_text IS NOT NULL AND TRIM(aa.answer_text) <> '') OR aa.selected_option_id IS NOT NULL)
             THEN 1 END) answered_count
     FROM attempts a
+    JOIN (
+        SELECT test_id,MAX(id) id
+        FROM attempts
+        WHERE student_id=? AND status='in_progress' AND mode='normal'
+        GROUP BY test_id
+    ) latest ON latest.id=a.id
     JOIN attempt_questions aq ON aq.attempt_id=a.id
     LEFT JOIN attempt_answers aa
         ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id
-    WHERE a.student_id=? AND a.status='in_progress' AND a.mode='normal'
     GROUP BY a.id,a.test_id
 ) ip ON ip.test_id=t.id
 WHERE t.topic_id=? AND t.is_active=1
@@ -75,6 +80,10 @@ $browserToken=$_SESSION['learner_token'];
 .subject-header-content{position:relative;z-index:1;min-height:220px;display:flex;flex-direction:column;justify-content:end;padding:2rem;color:#fff}
 .subject-header-content h1{font-size:clamp(2rem,7vw,3.5rem);margin:0}
 .subject-header-content p{margin:.35rem 0 0;color:rgba(255,255,255,.8)}
+.subtest-history summary{cursor:pointer;list-style:none}
+.subtest-history summary::-webkit-details-marker{display:none}
+.history-chevron{width:10px;height:10px;border-right:2px solid #6c757d;border-bottom:2px solid #6c757d;transform:rotate(45deg);transition:transform .15s ease;margin-right:4px;margin-top:-5px}
+.subtest-history[open] .history-chevron{transform:rotate(225deg);margin-top:5px}
 </style>
 </head>
 <body class="bg-light">
@@ -136,9 +145,12 @@ $progressPercent=(int)round($progressAnswered/$progressTotal*100);
 
 <?php $history=$historyByTest[(int)$t['id']]??[]; ?>
 <?php if($history):?>
-<div class="mt-4 pt-3 border-top">
-<div class="small fw-semibold text-secondary mb-2">Eerdere resultaten</div>
-<div class="d-flex flex-column gap-2">
+<details class="mt-4 pt-3 border-top subtest-history">
+<summary class="d-flex justify-content-between align-items-center list-unstyled">
+<span class="small fw-semibold text-secondary">Eerdere resultaten</span>
+<span class="history-chevron" aria-hidden="true"></span>
+</summary>
+<div class="d-flex flex-column gap-2 mt-2">
 <?php foreach($history as $attempt):?>
 <a href="result.php?id=<?=(int)$attempt['id']?>" class="text-decoration-none">
 <div class="d-flex justify-content-between align-items-center py-1">
@@ -150,7 +162,7 @@ $progressPercent=(int)round($progressAnswered/$progressTotal*100);
 </a>
 <?php endforeach;?>
 </div>
-</div>
+</details>
 <?php endif;?>
 </div>
 <?php endforeach;?>
