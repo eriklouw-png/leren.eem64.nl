@@ -74,14 +74,14 @@ foreach($sessions as $s){
 ksort($sessionGroups);
 function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds%60;return $m.' min '.str_pad((string)$s,2,'0',STR_PAD_LEFT).' sec';}
 ?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Beheer - Leren</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><style>details .chevron{display:inline-block;transition:transform .15s ease;font-size:1.5rem;line-height:1}details[open] .chevron{transform:rotate(180deg)}</style></head><body class="bg-light"><nav class="navbar navbar-dark bg-dark"><div class="container"><a class="navbar-brand" href="admin.php">Leren beheer</a><div><span class="text-white me-3"><?=e($_SESSION['user']['name'])?></span><a class="btn btn-outline-light btn-sm" href="index.php">Website</a> <a class="btn btn-outline-light btn-sm" href="import.php">Importeren</a> <a class="btn btn-outline-light btn-sm" href="logout.php">Uitloggen</a></div></div></nav><main class="container py-4">
-<h1 class="mb-3">Vakken</h1>
+<div class="d-flex justify-content-between align-items-center mb-3"><h1 class="mb-0">Vakken</h1><a class="btn btn-primary" href="subject_edit.php">Nieuw vak</a></div>
 <div class="row g-3 mb-5">
 <?php foreach($subjects as $subject):?>
 <div class="col-md-6 col-lg-4">
 <div class="card shadow-sm h-100">
 <?php if($subject['image_mime']):?><img src="subject_image.php?id=<?=(int)$subject['id']?>" class="card-img-top" style="height:140px;object-fit:cover" alt="<?=e($subject['name'])?>"><?php endif;?>
 <div class="card-body">
-<h2 class="h5"><?=e($subject['name'])?></h2>
+<div class="d-flex justify-content-between align-items-center"><h2 class="h5 mb-0"><?=e($subject['name'])?></h2><a class="btn btn-sm btn-outline-primary" href="subject_edit.php?id=<?=(int)$subject['id']?>">Bewerken</a></div>
 <form method="post" enctype="multipart/form-data">
 <input type="hidden" name="action" value="upload_subject_image">
 <input type="hidden" name="id" value="<?=(int)$subject['id']?>">
