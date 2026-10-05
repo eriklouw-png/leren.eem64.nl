@@ -82,12 +82,4 @@ $labels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Multiple choice','
 </details>
 <?php endforeach;?>
 <?php endif;?>
-<div class="card border-danger mt-4"><div class="card-body">
-<h2 class="h5 text-danger">Taal verwijderen</h2>
-<p class="text-secondary">Hiermee worden ook alle onderwerpen, toetsen, vragen, resultaten en oefentijd van deze taal verwijderd.</p>
-<form method="post" onsubmit="return confirm('Weet je zeker dat je deze taal wilt verwijderen? Dit verwijdert ook alle toetsen, vragen, resultaten en oefentijd.');">
-<input type="hidden" name="action" value="delete_subject"><input type="hidden" name="id" value="<?=$id?>">
-<button class="btn btn-outline-danger" type="submit">Taal verwijderen</button>
-</form>
-</div></div>
 </main></body></html>
