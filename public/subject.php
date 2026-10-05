@@ -11,7 +11,7 @@ if(!$subject){http_response_code(404);exit('Vak niet gevonden.');}
 
 if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='reactivate_topic'){
     $topicId=filter_var($_POST['topic_id']??null,FILTER_VALIDATE_INT);
-    if(!$topicId){http_response_code(400);exit('Ongeldig onderwerp.');}
+    if(!$topicId){http_response_code(400);exit('Ongeldig overhoring.');}
     $x=$pdo->prepare("UPDATE topics SET test_date=NULL WHERE id=? AND subject_id=?");
     $x->execute([$topicId,$subjectId]);
     redirect('subject.php?id='.$subjectId);
@@ -104,7 +104,7 @@ foreach($tests as $t):
         $progress=$total>0?min(100,(int)round($answered/$total*100)):0;
         $progressText=$answered.' / '.$total.' vragen';
         $continueUrl='quiz.php?id='.$testId;
-        $continueLabel=$active['mode']==='mistakes'?'Verder met fouten oefenen':'Verder met toets';
+        $continueLabel=$active['mode']==='mistakes'?'Verder met fouten oefenen':'Verder met sub-test';
     }elseif($finished){
         $total=(int)$finished['total_questions'];
         $answered=$total;
@@ -118,7 +118,7 @@ foreach($tests as $t):
         $progress=0;
         $progressText='0 / '.$total.' vragen';
         $continueUrl='quiz.php?id='.$testId;
-        $continueLabel='Start toets';
+        $continueLabel='Start sub-test';
     }
 ?>
 <div class="col-md-6 col-lg-4 <?=$topicArchived?'topic-archived':''?>">
@@ -141,7 +141,7 @@ foreach($tests as $t):
     <a class="btn btn-primary" href="<?=$continueUrl?>"><?=e($continueLabel)?></a>
 <?php endif;?>
 
-    <a class="btn btn-outline-primary" href="quiz.php?id=<?=$testId?>&new=1">Start toets</a>
+    <a class="btn btn-outline-primary" href="quiz.php?id=<?=$testId?>&new=1">Start sub-test</a>
 
 <?php if($finished):?>
     <a class="btn btn-outline-secondary" href="result.php?id=<?=(int)$finished['id']?>">Resultaat bekijken<?php if($finished['score']!==null):?> (<?=e((string)$finished['score'])?>%)<?php endif;?></a>
@@ -158,7 +158,7 @@ foreach($tests as $t):
 </div>
 
 <?php if(!$tests):?>
-<div class="alert alert-info">Er zijn nog geen actieve toetsen voor dit vak.</div>
+<div class="alert alert-info">Er zijn nog geen actieve sub-testen voor dit vak.</div>
 <?php endif;?>
 </main>
 </body>
