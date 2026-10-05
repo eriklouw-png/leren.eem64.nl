@@ -11,7 +11,7 @@ ob_start(static function(string $html): string{
     }
     if(isset($_SESSION['user']) && is_array($_SESSION['user']) && ($_SESSION['user']['role']??'')==='student' && stripos($html,'<nav')!==false){
         $name=htmlspecialchars((string)($_SESSION['user']['name']??''),ENT_QUOTES,'UTF-8');
-        $links='<span class="text-white me-3">'.$name.'</span><a class="btn btn-outline-light btn-sm me-2" href="index.php">Website</a><a class="btn btn-outline-light btn-sm" href="logout.php">Uitloggen</a>';
+        $links='<span class="text-white me-3">'.$name.'</span><a class="btn btn-outline-light btn-sm me-2" href="logout.php">Uitloggen</a><a class="btn btn-outline-light btn-sm" href="index.php">Website</a>';
         $pattern='~(<a class="btn btn-outline-light btn-sm" href="admin\\.php">Beheer</a>)~i';
         if(preg_match($pattern,$html)){
             $html=preg_replace($pattern,$links.' $1',$html,1)??$html;
