@@ -34,6 +34,44 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         redirect('ai_test_generator.php?'.($topicId?'topic_id='.$topicId:'subject_id='.$subjectId));
     }
 
+    if($action==='generate'){
+        $saved=$_SESSION['ai_test_analysis']??null;
+        $selected=$_POST['subtests']??[];
+        if(!is_array($saved)||($saved['subject_id']??null)!==$subjectId||($saved['topic_id']??null)!==$topicId){
+            $errors[]='De eerdere AI-analyse is verlopen. Analyseer de pagina’s opnieuw.';
+        }elseif(!is_array($selected)||!$selected){
+            $errors[]='Selecteer minimaal één sub-test.';
+        }else{
+            $available=$saved['analysis']['subtests']??[];
+            $chosen=[];
+            foreach($selected as $index){
+                if(!ctype_digit((string)$index))continue;
+                $index=(int)$index;
+                if(isset($available[$index]))$chosen[]=$available[$index];
+            }
+            if(!$chosen)$errors[]='De geselecteerde sub-tests zijn ongeldig.';
+            if(count($chosen)>3)$errors[]='Je kunt maximaal drie sub-tests tegelijk genereren.';
+            if(!$errors){
+                $requested=[];
+                foreach($chosen as $sub){
+                    $count=max(1,min(15,(int)($sub['question_count']??10)));
+                    $types=array_values(array_intersect((array)($sub['recommended_types']??[]),['mc','open']));
+                    if(!$types)$types=['mc','open'];
+                    $requested[]=['title'=>(string)$sub['title'],'description'=>(string)$sub['description'],'question_count'=>$count,'types'=>$types];
+                }
+                $prompt='Maak nu concrete oefentoetsvragen voor de geselecteerde sub-tests. Gebruik uitsluitend de informatie uit de schoolboekpagina’s. De voorgestelde leerstof en sub-tests zijn: '.json_encode($requested,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'. Maak per sub-test precies het gevraagde aantal vragen. Verdeel MC en open zo logisch mogelijk binnen de voorgestelde types. Bij mc moeten options exact vier antwoorden bevatten en correct_option de index van het juiste antwoord zijn; correct_answer moet exact gelijk zijn aan die optie. Bij open moet options leeg zijn, correct_option 0 zijn en accepted_answers minimaal één geldig antwoord bevatten. source_page is de pagina uit de geüploade set waarop de vraag het duidelijkst gebaseerd is. Zet use_image alleen op true als een afbeelding, kaart, schema of foto op die pagina echt relevant is voor het beantwoorden van de vraag.';
+                $data=openai_generate_test_questions($prompt,(array)($saved['images']??[]));
+                if(isset($data['_leren_error']))$errors[]=$data['_leren_error'];
+                else{
+                    $generated=openai_output_json($data);
+                    if(!$generated||!isset($generated['subtests']))$errors[]='De AI gaf geen bruikbare vragen terug.';
+                    else $_SESSION['ai_test_analysis']['generated']=$generated;
+                }
+            }
+        }
+        $analysis=$_SESSION['ai_test_analysis']['analysis']??$analysis;
+    }
+
     if($action==='analyze'){
         if(!warm_ai())$errors[]='AI is niet beschikbaar. Controleer OPENAI_API_KEY en de AI-instellingen.';
         $files=$_FILES['pages']??null;
@@ -122,13 +160,41 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <h3 class="h5 mt-4">Belangrijkste leerpunten</h3>
 <ul><?php foreach(($analysis['learning_points']??[]) as $point):?><li><?=e($point)?></li><?php endforeach;?></ul>
 <h3 class="h5 mt-4">Voorgestelde sub-tests</h3>
+<form method="post">
+<input type="hidden" name="action" value="generate">
 <?php foreach(($analysis['subtests']??[]) as $i=>$sub):?>
-<div class="card analysis-card mb-3"><div class="card-body">
-<div class="d-flex justify-content-between gap-3"><div><h4 class="h6 mb-1"><?=e($sub['title'])?></h4><p class="mb-2"><?=e($sub['description'])?></p></div><span class="badge text-bg-light align-self-start"><?=e((string)$sub['question_count'])?> vragen</span></div>
-<div class="small text-secondary">Voorgestelde vraagtypes: <?=e(implode(', ',(array)($sub['recommended_types']??[])))?></div>
+<label class="card analysis-card mb-3"><div class="card-body">
+<div class="form-check">
+<input class="form-check-input" type="checkbox" name="subtests[]" value="<?=$i?>" id="subtest<?=$i?>" checked>
+<span class="form-check-label d-block" for="subtest<?=$i?>">
+<span class="d-flex justify-content-between gap-3"><span><strong><?=e($sub['title'])?></strong><br><span class="text-secondary"><?=e($sub['description'])?></span></span><span class="badge text-bg-light align-self-start"><?=e((string)$sub['question_count'])?> vragen</span></span>
+<span class="small text-secondary">Voorgestelde vraagtypes: <?=e(implode(', ',(array)($sub['recommended_types']??[])))?></span>
+</span>
+</div>
+</div></label>
+<?php endforeach;?>
+<button class="btn btn-primary" type="submit">Genereer geselecteerde vragen met AI</button>
+</form>
+<?php if(isset($_SESSION['ai_test_analysis']['generated']['subtests'])):?>
+<hr class="my-4">
+<h3 class="h5">Gegenereerde vragen</h3>
+<div class="alert alert-warning">Controleer deze vragen eerst. Er is nog niets in de database opgeslagen.</div>
+<?php foreach($_SESSION['ai_test_analysis']['generated']['subtests'] as $generatedSub):?>
+<div class="card mb-3"><div class="card-body">
+<h4 class="h6"><?=e($generatedSub['title'])?></h4>
+<?php foreach(($generatedSub['questions']??[]) as $qi=>$q):?>
+<div class="border-top pt-3 mt-3">
+<div><strong><?=($qi+1)?>. <?=e($q['question'])?></strong> <span class="badge text-bg-light"><?=e(strtoupper($q['type']))?></span></div>
+<?php if($q['type']==='mc'):?>
+<ol class="mb-1" type="A"><?php foreach(($q['options']??[]) as $oi=>$option):?><li class="<?=$oi===(int)$q['correct_option']?'fw-bold':''?>"><?=e($option)?><?=$oi===(int)$q['correct_option']?' ✓':''?></li><?php endforeach;?></ol>
+<?php else:?><div class="small text-secondary mt-1">Juiste antwoord: <?=e($q['correct_answer'])?></div><?php endif;?>
+<div class="small text-secondary">Uitleg: <?=e($q['explanation'])?> · Bronpagina: <?=e((string)$q['source_page'])?><?=!empty($q['use_image'])?' · afbeelding gebruiken':''?></div>
+</div>
+<?php endforeach;?>
 </div></div>
 <?php endforeach;?>
-<div class="alert alert-success mt-4 mb-0"><strong>Volgende stap:</strong> de analyse is nu opgeslagen in deze sessie. In de volgende stap kunnen we de gewenste sub-tests selecteren en daarna de vragen laten genereren. Er is nog niets in de database gewijzigd.</div>
+<?php endif;?>
+<div class="alert alert-success mt-4 mb-0"><strong>Veilige tussenstap:</strong> de analyse en gegenereerde vragen staan alleen in deze sessie. De volgende stap kan de geselecteerde vragen laten aanpassen en pas daarna een nieuwe sub-test in de database aanmaken.</div>
 <?php endif;?>
 </div></div></main>
 <script>
