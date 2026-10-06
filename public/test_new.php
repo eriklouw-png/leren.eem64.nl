@@ -39,6 +39,7 @@ $description=trim($_POST['description']??'');
 $testType=$_POST['test_type']??'vocabulary';
 $importText=(string)($_POST['import_text']??'');
 $replaceExisting=!empty($_POST['replace_existing']);
+$shuffleQuestions=isset($_POST['shuffle_questions'])?1:1;
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
     if(!in_array($testType,['vocabulary','multiple_choice','open','mixed'],true))$testType='vocabulary';
@@ -68,8 +69,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 }
 
                 $testId=(int)$existingTest;
-                $upd=$pdo->prepare("UPDATE tests SET description=?,test_type=?,vocab_left_label=?,vocab_right_label=?,vocab_direction=?,is_active=1 WHERE id=?");
-                $upd->execute([$description,$testType,$testType==='vocabulary'?$leftLabel:null,$testType==='vocabulary'?$rightLabel:null,'both',$testId]);
+                $upd=$pdo->prepare("UPDATE tests SET description=?,test_type=?,vocab_left_label=?,vocab_right_label=?,vocab_direction=?,shuffle_questions=?,is_active=1 WHERE id=?");
+                $upd->execute([$description,$testType,$testType==='vocabulary'?$leftLabel:null,$testType==='vocabulary'?$rightLabel:null,'both',$shuffleQuestions,$testId]);
 
                 $del=$pdo->prepare("DELETE FROM questions WHERE test_id=?");
                 $del->execute([$testId]);
@@ -161,6 +162,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <option value="open" <?=$testType==='open'?'selected':''?>>Open vragen</option>
 <option value="mixed" <?=$testType==='mixed'?'selected':''?>>Combinatie</option>
 </select>
+<div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="shuffle_questions" value="1" id="shuffleQuestions" checked><label class="form-check-label" for="shuffleQuestions"><strong>Vragen husselen</strong><br><span class="text-secondary">De vragen worden bij een nieuwe poging in willekeurige volgorde getoond.</span></label></div>
 <div class="form-check mb-3">
 <input class="form-check-input" type="checkbox" name="replace_existing" value="1" id="replaceExisting" <?=$replaceExisting?'checked':''?>>
 <label class="form-check-label" for="replaceExisting"><strong>Bestaande toets met dezelfde titel vervangen</strong><br><span class="text-secondary">De huidige vragen worden vervangen door de geïmporteerde vragen. Dit kan alleen als er nog geen pogingen voor deze toets zijn.</span></label>
