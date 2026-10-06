@@ -50,10 +50,12 @@ LEFT JOIN (
 ) ip ON ip.test_id=t.id
 WHERE t.topic_id=? AND t.is_active=1
 GROUP BY t.id,t.title,t.description,t.test_type,t.vocab_direction,ip.id,ip.answered_count,ip.total_count
-ORDER BY t.created_at,t.title
-");
+undefined");
 $x->execute([$studentId,$topicId]);
 $tests=$x->fetchAll();
+usort($tests,function(array $a,array $b):int{
+    return strnatcasecmp((string)$a['title'],(string)$b['title']);
+});
 
 $historyStmt=$pdo->prepare("
     SELECT id,score,finished_at
@@ -108,20 +110,24 @@ $browserToken=$_SESSION['learner_token'];
 </div>
 
 <?php if($topicSummaries):?>
-<div class="card shadow-sm mt-4 border-0">
-<div class="card-body p-4">
+<div class="mt-4 mb-4">
 <div class="d-flex justify-content-between align-items-center mb-3">
-<h2 class="h4 mb-0">Samenvattingen</h2>
+<h2 class="h3 mb-0">Samenvattingen</h2>
 <span class="small text-secondary"><?=count($topicSummaries)?> beschikbaar</span>
 </div>
-<div class="list-group">
+<div class="list-group shadow-sm">
 <?php foreach($topicSummaries as $summary):?>
-<div class="list-group-item d-flex justify-content-between align-items-center gap-3">
-<strong><?=e($summary['name'])?></strong>
-<a class="btn btn-outline-primary btn-sm flex-shrink-0" href="summary.php?id=<?=(int)$summary['id']?>">Lees</a>
+<div class="list-group-item p-3 p-md-4">
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
+<div class="min-w-0">
+<strong class="fs-5"><?=e($summary['name'])?></strong>
+</div>
+<div class="d-flex flex-wrap gap-2 flex-shrink-0">
+<a class="btn btn-outline-primary btn-sm" href="summary.php?id=<?=(int)$summary['id']?>">Lees</a>
+</div>
+</div>
 </div>
 <?php endforeach;?>
-</div>
 </div>
 </div>
 <?php endif;?>
