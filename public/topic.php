@@ -218,7 +218,7 @@ $browserToken=$_SESSION['learner_token'];
 <p class="text-secondary mb-0">Alle <?=e((string)$reviewWrongCount)?> vragen die je in de laatste pogingen fout had, verzameld in één oefentoets.</p>
 <?php endif;?>
 </div>
-<a class="btn btn-success flex-shrink-0" href="quiz.php?review=1&topic_id=<?=(int)$topicId?>&attempt=<?=(int)$reviewInProgressId?>"><?= $reviewInProgressId?'Ga verder':'Start fouten oefenen' ?></a>
+<a class="btn btn-success flex-shrink-0" href="quiz.php?review=1&topic_id=<?=(int)$topicId?>&attempt=<?=(int)$reviewInProgressId?>"><?= $reviewInProgressId?'Ga verder':'Start' ?></a>
 </div>
 </div>
 </div>
