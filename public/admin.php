@@ -152,8 +152,18 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
 <div class="col-12 col-md-6 col-lg-4">
 <div class="card shadow-sm h-100">
 <div class="card-body">
-<h3 class="h5 mb-1"><?=e($student['name'])?></h3>
-<div class="small text-secondary mb-3"><?=e($student['email'])?></div>
+<div class="d-flex align-items-center gap-3 mb-3">
+<?php if($student['image_mime']):?>
+<img src="student_image.php?id=<?=(int)$student['id']?>" class="rounded-circle flex-shrink-0" style="width:64px;height:64px;object-fit:cover" alt="<?=e($student['name'])?>">
+<?php else:?>
+<div class="rounded-circle bg-secondary-subtle d-flex align-items-center justify-content-center flex-shrink-0" style="width:64px;height:64px;font-size:1.5rem">👤</div>
+<?php endif;?>
+<div class="min-w-0"><h3 class="h5 mb-1"><?=e($student['name'])?></h3><div class="small text-secondary"><?=e($student['email'])?></div></div>
+</div>
+<form method="post" enctype="multipart/form-data" class="mb-2">
+<input type="hidden" name="action" value="upload_user_image"><input type="hidden" name="id" value="<?=(int)$student['id']?>">
+<div class="input-group input-group-sm"><input type="file" name="image" class="form-control" accept="image/jpeg,image/png,image/webp" required><button class="btn btn-outline-secondary" type="submit">Afbeelding</button></div>
+</form>
 <a class="btn btn-outline-primary w-100" href="student.php?id=<?=(int)$student['id']?>">Bekijk voortgang</a>
 </div>
 </div>
