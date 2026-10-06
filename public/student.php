@@ -139,7 +139,10 @@ function mastery_label(?float $score):string{
 <title><?=e($student['name'])?> - Beheer</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
-.student-progress{height:12px}
+.student-progress{height:10px;border-radius:999px}
+.mastery-card{padding:0}
+.mastery-score{font-size:1.45rem;font-weight:700;line-height:1}
+
 </style>
 </head>
 <body class="bg-light">
@@ -251,16 +254,21 @@ foreach($topics as $topic){
 </h3>
 <div id="<?=$topicPanelId?>" class="accordion-collapse collapse <?=$topicIndex===0?'show':''?>" aria-labelledby="<?=$topicHeadingId?>" data-bs-parent="#subjectTopics<?=$subjectIndex?>">
 <div class="accordion-body">
-<div class="mb-3">
-<div class="d-flex justify-content-between small text-secondary mb-1">
-<span>Kennisniveau</span>
-<span><?=$completed?> van <?=$total?> sub-testen afgerond · <?=$label?></span>
+<div class="mastery-card mb-4">
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-2">
+<div>
+<div class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em">Kennisniveau</div>
+<div class="small text-secondary"><?=$completed?> van <?=$total?> sub-testen afgerond · <?=e($label)?></div>
 </div>
 <?php if($mastery===null):?>
-<div class="progress student-progress"><div class="progress-bar bg-secondary" style="width:0%"></div></div>
+<div class="mastery-score text-secondary">—</div>
 <?php else:?>
-<div class="progress student-progress"><div class="progress-bar bg-<?=$barClass?>" style="width:<?=e((string)$mastery)?>%"></div></div>
+<div class="mastery-score text-<?=$barClass?>"><?=e(rtrim(rtrim(number_format($mastery,1,',','.'),'0'),','))?>%</div>
 <?php endif;?>
+</div>
+<div class="progress student-progress" role="progressbar" aria-label="Kennisniveau" aria-valuenow="<?=e((string)($mastery??0))?>" aria-valuemin="0" aria-valuemax="100">
+<div class="progress-bar bg-<?=$barClass?>" style="width:<?=e((string)($mastery??0))?>%"></div>
+</div>
 </div>
 
 <?php $topicSummaries=$summaryByTopic[(int)$topic['id']]??[]; ?>
