@@ -4,7 +4,7 @@ require __DIR__.'/../app/bootstrap.php';
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if(!$id)redirect('index.php');
 
-$s=$pdo->prepare("SELECT a.id,a.score,a.mode,a.source_attempt_id,a.test_id,t.title,t.test_type FROM attempts a JOIN tests t ON t.id=a.test_id WHERE a.id=?");
+$s=$pdo->prepare("SELECT a.id,a.score,a.mode,a.source_attempt_id,a.test_id,t.title,t.test_type,t.topic_id,tp.subject_id FROM attempts a JOIN tests t ON t.id=a.test_id JOIN topics tp ON tp.id=t.topic_id WHERE a.id=?");
 $s->execute([$id]);$r=$s->fetch();
 if(!$r){http_response_code(404);exit('Resultaat niet gevonden.');}
 
@@ -55,7 +55,7 @@ $doneMistakes=$correct<$total;
 <!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Resultaat</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head>
 <body class="bg-light">
 <main class="container py-4" style="max-width:850px">
-<a href="index.php">&larr; Terug naar sub-testen</a>
+<a href="topic.php?id=<?=(int)$r['topic_id']?>">&larr; Terug naar <?=e($r['title'])?></a>
 <div class="card shadow-sm mt-3 mb-4 text-center">
   <div class="card-body p-4">
     <h1>Resultaat</h1>
