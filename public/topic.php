@@ -16,6 +16,9 @@ if(!$topic || !(int)$topic['is_active']){http_response_code(404);exit('Overhorin
 $summaryStmt=$pdo->prepare("SELECT id,name,summary,updated_at,created_at FROM topic_summaries WHERE topic_id=? AND is_active=1 ORDER BY created_at,id");
 $summaryStmt->execute([$topicId]);
 $topicSummaries=$summaryStmt->fetchAll();
+usort($topicSummaries,function(array $a,array $b):int{
+    return strnatcasecmp((string)$a['name'],(string)$b['name']);
+});
 
 $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d');
 
