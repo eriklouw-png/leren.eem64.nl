@@ -180,7 +180,7 @@ $attempt=$attempt??null;
 if(!$attempt && (($mode==='normal' && !$newAttempt) || $reviewMode)){
     $resumeMode=$reviewMode?'mistakes':'normal';
     if($reviewMode){
-        $x=$pdo->prepare("SELECT a.*, (SELECT COUNT(*) FROM attempt_answers aa WHERE aa.attempt_id=a.id AND ((aa.answer_text IS NOT NULL AND TRIM(aa.answer_text)<>'') OR aa.selected_option_id IS NOT NULL)) AS answered_count FROM attempts a WHERE a.test_id=? AND a.student_id=? AND a.status='in_progress' AND a.mode=? ORDER BY answered_count DESC, a.id DESC LIMIT 1");
+        $x=$pdo->prepare("SELECT a.*, (SELECT COUNT(*) FROM attempt_answers aa WHERE aa.attempt_id=a.id AND ((aa.answer_text IS NOT NULL AND TRIM(aa.answer_text)<>'') OR aa.selected_option_id IS NOT NULL)) AS answered_count FROM attempts a WHERE a.test_id=? AND a.student_id=? AND a.status='in_progress' AND a.mode=? AND (SELECT COUNT(*) FROM attempt_answers aa0 WHERE aa0.attempt_id=a.id AND ((aa0.answer_text IS NOT NULL AND TRIM(aa0.answer_text)<>'') OR aa0.selected_option_id IS NOT NULL)) > 0 ORDER BY answered_count DESC, a.id DESC LIMIT 1");
     }else{
         $x=$pdo->prepare("SELECT * FROM attempts WHERE test_id=? AND student_id=? AND status='in_progress' AND mode=? ORDER BY started_at DESC LIMIT 1");
     }
