@@ -84,6 +84,14 @@ $labels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Multiple choice','
 ?>
 <!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($subject['name'])?> - Beheer</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
+.topic-header{background:#cfe2ff!important}
+.topic-header-inner{display:flex;align-items:center;width:100%;min-height:52px}
+.topic-header-title{flex:1;min-width:0}
+.topic-collapse-button{border:0;background:transparent;width:100%;text-align:left;padding:.75rem 1rem;color:inherit}
+.topic-header-actions{display:flex;align-items:center;gap:.5rem;padding-right:.5rem;flex-shrink:0}
+.topic-chevron{border:0;background:transparent;width:38px;height:38px;display:flex;align-items:center;justify-content:center;padding:0}
+.topic-chevron span{width:11px;height:11px;border-right:2px solid #0d3b66;border-bottom:2px solid #0d3b66;transform:rotate(225deg);transition:transform .15s ease}
+.topic-chevron.collapsed span{transform:rotate(45deg)}
 .admin-test-results summary::-webkit-details-marker{display:none}
 .admin-result-chevron{width:10px;height:10px;border-right:2px solid #6c757d;border-bottom:2px solid #6c757d;transform:rotate(45deg);transition:transform .15s ease;margin-right:4px;margin-top:-5px}
 .admin-test-results[open] .admin-result-chevron{transform:rotate(225deg);margin-top:5px}
@@ -112,15 +120,18 @@ unset($topicTestList);
 ?>
 <?php foreach($topics as $topic): $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d'); $topicTests=$testsByTopic[(int)$topic['id']]??[]; $topicSummaries=$summariesByTopic[(int)$topic['id']]??[];?>
 <div class="accordion-item">
-<h2 class="accordion-header" id="heading<?=$topic['id']?>">
-<div class="d-flex align-items-center w-100 pe-2">
-<button class="accordion-button <?=$archived?'collapsed':''?> flex-grow-1" type="button" data-bs-toggle="collapse" data-bs-target="#collapse<?=$topic['id']?>" aria-expanded="<?=$archived?'false':'true'?>" aria-controls="collapse<?=$topic['id']?>">
+<h2 class="accordion-header topic-header" id="heading<?=$topic['id']?>">
+<div class="topic-header-inner">
+<div class="topic-header-title">
+<button class="topic-collapse-button <?=$archived?'collapsed':''?>" type="button" data-bs-toggle="collapse" data-bs-target="#collapse<?=$topic['id']?>" aria-expanded="<?=$archived?'false':'true'?>" aria-controls="collapse<?=$topic['id']?>">
 <span class="<?=$archived?'text-secondary':''?>"><strong><?=e($topic['name'])?></strong>
 <span class="small text-secondary ms-2"><?php if($topic['test_date']):?><?=e(date('d-m-Y',strtotime($topic['test_date'])))?> · <?= $archived?'Gearchiveerd':'Actief'?><?php else:?>Geen overhoringsdatum<?php endif;?></span></span>
 </button>
-<div class="d-flex gap-2 ms-2 flex-shrink-0">
+</div>
+<div class="topic-header-actions">
 <a class="btn btn-sm btn-outline-success" href="ai_test_generator.php?topic_id=<?=$topic['id']?>">AI toets maken</a>
 <a class="btn btn-sm btn-outline-secondary" href="topic_edit.php?id=<?=$topic['id']?>">Overhoring bewerken</a>
+<button class="topic-chevron <?=$archived?'collapsed':''?>" type="button" data-bs-toggle="collapse" data-bs-target="#collapse<?=$topic['id']?>" aria-expanded="<?=$archived?'false':'true'?>" aria-controls="collapse<?=$topic['id']?>" aria-label="Inhoud tonen/verbergen"><span></span></button>
 </div>
 </div>
 </h2>
@@ -130,7 +141,9 @@ unset($topicTestList);
 <div class="mb-4">
 <div class="d-flex justify-content-between align-items-center mb-2">
 <strong>Samenvattingen</strong>
-<span class="small text-secondary"><?=count($topicSummaries)?> totaal</span>
+<div class="d-flex align-items-center gap-2">
+<a class="btn btn-sm btn-primary" href="summary_edit.php?topic_id=<?=$topic['id']?>">Nieuwe samenvatting</a>
+</div>
 </div>
 <div class="list-group">
 <?php foreach($topicSummaries as $summary):?>
