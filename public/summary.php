@@ -39,7 +39,50 @@ if(!$summary){http_response_code(404);exit('Samenvatting niet gevonden.');}
 <?php if(!empty($summary['updated_at']) || !empty($summary['created_at'])):?>
 <div class="small text-secondary mb-4">Bijgewerkt <?=e(date('d-m-Y',strtotime((string)($summary['updated_at']?:$summary['created_at']))))?></div>
 <?php endif;?>
-<div class="lh-lg"><?=nl2br(e((string)$summary['summary']))?></div>
+<?php
+$rawSummary=(string)$summary['summary'];
+$lines=preg_split("/\\r\\n|\\r|\\n/",$rawSummary);
+$sections=[];
+$currentTitle=null;
+$currentLines=[];
+foreach($lines as $line){
+    if(preg_match('/^##\\s+(.+)$/',trim($line),$m)){
+        if($currentTitle!==null || $currentLines){
+            $sections[]=['title'=>$currentTitle,'content'=>trim(implode("\n",$currentLines))];
+        }
+        $currentTitle=trim($m[1]);
+        $currentLines=[];
+    }else{
+        $currentLines[]=$line;
+    }
+}
+if($currentTitle!==null || $currentLines){
+    $sections[]=['title'=>$currentTitle,'content'=>trim(implode("\n",$currentLines))];
+}
+if(!$sections)$sections=[['title'=>null,'content'=>trim($rawSummary)]];
+?>
+<div id="summarySections">
+<?php foreach($sections as $i=>$section):?>
+<section class="summary-section <?=$i===0?'':'d-none'?>" data-index="<?=$i?>">
+<?php if($section['title']!==null):?>
+<h2 class="h3 mb-4"><?=e($section['title'])?></h2>
+<?php endif;?>
+<div class="lh-lg"><?=nl2br(e($section['content']))?></div>
+</section>
+<?php endforeach;?>
+</div>
+
+<?php if(count($sections)>1):?>
+<div class="d-flex justify-content-between align-items-center mt-5 pt-3 border-top gap-3">
+<a class="btn btn-outline-secondary" href="topic.php?id=<?=(int)$summary['topic_id']?>">Terug</a>
+<div class="small text-secondary text-center" id="sectionCounter">Kopje 1 van <?=count($sections)?></div>
+<button type="button" class="btn btn-primary" id="nextSection">Volgende</button>
+</div>
+<?php else:?>
+<div class="mt-5 pt-3 border-top">
+<a class="btn btn-outline-secondary" href="topic.php?id=<?=(int)$summary['topic_id']?>">Terug</a>
+</div>
+<?php endif;?>
 </div>
 </div>
 </main>
@@ -50,6 +93,34 @@ if(!$summary){http_response_code(404);exit('Samenvatting niet gevonden.');}
    fetch('activity.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data),keepalive:true}).catch(()=>{});
  }
  activity({action:'start',summary_id:summaryId});
+
+ const sections=[...document.querySelectorAll('.summary-section')];
+ const nextButton=document.getElementById('nextSection');
+ const counter=document.getElementById('sectionCounter');
+ let current=0;
+ function showSection(index){
+   current=index;
+   sections.forEach((section,i)=>section.classList.toggle('d-none',i!==current));
+   if(counter)counter.textContent='Kopje '+(current+1)+' van '+sections.length;
+   if(nextButton){
+     nextButton.textContent=current===sections.length-1?'Klaar':'Volgende';
+     if(current===sections.length-1){
+       nextButton.classList.remove('btn-primary');
+       nextButton.classList.add('btn-success');
+     }else{
+       nextButton.classList.remove('btn-success');
+       nextButton.classList.add('btn-primary');
+     }
+   }
+   window.scrollTo({top:0,behavior:'smooth'});
+ }
+ if(nextButton){
+   nextButton.addEventListener('click',()=>{
+     if(current<sections.length-1)showSection(current+1);
+     else window.location.href='topic.php?id=<?= (int)$summary['topic_id'] ?>';
+   });
+   showSection(0);
+ }
  let activeUntil=Date.now()+60000;
  const touch=()=>{activeUntil=Date.now()+60000;};
  ['mousemove','mousedown','keydown','touchstart','scroll'].forEach(e=>window.addEventListener(e,touch,{passive:true}));
