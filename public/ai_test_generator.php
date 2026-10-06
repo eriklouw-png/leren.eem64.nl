@@ -226,8 +226,15 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         foreach($test['questions'] as $q){$hasOpen=$hasOpen||$q['type']==='open';$hasMc=$hasMc||$q['type']==='mc';}
                         if($hasOpen&&$hasMc)$testType='mixed';elseif($hasOpen)$testType='open';
                         $check=$pdo->prepare("SELECT id FROM tests WHERE topic_id=? AND title=? LIMIT 1");
-                        $check->execute([$topicId,$test['title']]);
-                        if($check->fetchColumn())throw new RuntimeException('Er bestaat al een sub-test met de titel "'.$test['title'].'". Pas de titel aan voordat je opslaat.');
+                        $baseTitle=$test['title'];
+                        $title=$baseTitle;
+                        $suffix=2;
+                        while(true){
+                            $check->execute([$topicId,$title]);
+                            if(!$check->fetchColumn())break;
+                            $title=$baseTitle.' ('.$suffix.')';
+                            $suffix++;
+                        }
                         $testIns->execute([$topicId,$title,$test['description'],$testType,null,null,'both']);
                         $testId=(int)$pdo->lastInsertId();
                         foreach($test['questions'] as $sort=>$q){
