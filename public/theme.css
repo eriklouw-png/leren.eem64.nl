@@ -69,27 +69,27 @@ body.bg-light{background:#f4f8f5!important}
 
 /* Beheeromgeving: bewust visueel anders dan de leerlingomgeving. */
 /* Herken de beheeromgeving via de "Website"-knop in de donkere beheer-navbar. */
-body:has(nav.navbar.bg-dark a[href="index.php"]){
+body:has(nav.navbar.bg-dark a.btn[href="index.php"]){
   background:#d3d7dc !important;
   color:#fff;
 }
-body:has(nav.navbar.bg-dark a[href="index.php"]) .card{
+body:has(nav.navbar.bg-dark a.btn[href="index.php"]) .card{
   border-color:#d8dee6;
   color:#212529;
 }
-body:has(nav.navbar.bg-dark a[href="index.php"]) a{
+body:has(nav.navbar.bg-dark a.btn[href="index.php"]) a{
   color:#fff;
 }
-body:has(nav.navbar.bg-dark a[href="index.php"]) a:hover{
+body:has(nav.navbar.bg-dark a.btn[href="index.php"]) a:hover{
   color:#f1f1f1;
 }
-body:has(nav.navbar.bg-dark a[href="index.php"]) .card a{
+body:has(nav.navbar.bg-dark a.btn[href="index.php"]) .card a{
   color:#2f7d4a;
 }
-body:has(nav.navbar.bg-dark a[href="index.php"]) .card a:hover{
+body:has(nav.navbar.bg-dark a.btn[href="index.php"]) .card a:hover{
   color:#235d37;
 }
-body:has(nav.navbar.bg-dark a[href="index.php"]) .navbar.bg-dark{
+body:has(nav.navbar.bg-dark a.btn[href="index.php"]) .navbar.bg-dark{
   background:#263238 !important;
 }
 
