@@ -163,37 +163,32 @@ function mastery_label(?float $score):string{
 <?php endif;?>
 <div class="card-body p-4">
 <div class="d-flex align-items-center gap-3">
-<?php if($student['image_mime']):?>
-<img src="student_image.php?id=<?=(int)$student['id']?>" class="rounded-circle flex-shrink-0" style="width:76px;height:76px;object-fit:cover;margin-top:-58px;border:4px solid #fff" alt="">
-<?php else:?>
-<div class="rounded-circle bg-secondary-subtle d-flex align-items-center justify-content-center flex-shrink-0" style="width:76px;height:76px;font-size:2rem">👤</div>
-<?php endif;?>
-<div class="flex-grow-1">
+<div class="flex-grow-1 min-w-0">
 <h1 class="h2 mb-1"><?=e($student['name'])?></h1>
-<div class="text-secondary"><?=e($student['email'])?></div>
+<div class="text-secondary text-truncate"><?=e($student['email'])?></div>
 </div>
-<a class="btn btn-outline-primary" href="user_edit.php?id=<?=(int)$student['id']?>">Gebruiker bewerken</a>
+<a class="btn btn-outline-primary flex-shrink-0" href="user_edit.php?id=<?=(int)$student['id']?>">Bewerken</a>
 </div>
 </div>
 </div>
 
-<div class="row g-3 mb-5">
+<div class="row g-2 mb-4">
 <div class="col-12 col-md-4">
-<div class="card shadow-sm h-100"><div class="card-body">
+<div class="card shadow-sm h-100"><div class="card-body py-2 px-3 d-flex justify-content-between align-items-center gap-3">
 <div class="small text-secondary">Totale leertijd</div>
-<div class="display-6 fw-semibold"><?=e(format_duration_student($totalSeconds))?></div>
+<div class="fw-semibold"><?=e(format_duration_student($totalSeconds))?></div>
 </div></div>
 </div>
 <div class="col-12 col-md-4">
-<div class="card shadow-sm h-100"><div class="card-body">
-<div class="small text-secondary">Tijd aan sub-testen</div>
-<div class="display-6 fw-semibold"><?=e(format_duration_student($testSeconds))?></div>
+<div class="card shadow-sm h-100"><div class="card-body py-2 px-3 d-flex justify-content-between align-items-center gap-3">
+<div class="small text-secondary">Sub-testen</div>
+<div class="fw-semibold"><?=e(format_duration_student($testSeconds))?></div>
 </div></div>
 </div>
 <div class="col-12 col-md-4">
-<div class="card shadow-sm h-100"><div class="card-body">
-<div class="small text-secondary">Tijd aan samenvattingen</div>
-<div class="display-6 fw-semibold"><?=e(format_duration_student($summarySeconds))?></div>
+<div class="card shadow-sm h-100"><div class="card-body py-2 px-3 d-flex justify-content-between align-items-center gap-3">
+<div class="small text-secondary">Samenvattingen</div>
+<div class="fw-semibold"><?=e(format_duration_student($summarySeconds))?></div>
 </div></div>
 </div>
 </div>
