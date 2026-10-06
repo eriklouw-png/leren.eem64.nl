@@ -50,7 +50,7 @@ LEFT JOIN (
 ) ip ON ip.test_id=t.id
 WHERE t.topic_id=? AND t.is_active=1
 GROUP BY t.id,t.title,t.description,t.test_type,t.vocab_direction,ip.id,ip.answered_count,ip.total_count
-undefined");
+");
 $x->execute([$studentId,$topicId]);
 $tests=$x->fetchAll();
 usort($tests,function(array $a,array $b):int{
