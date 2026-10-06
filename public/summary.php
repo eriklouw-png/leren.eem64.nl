@@ -43,5 +43,20 @@ if(!$summary){http_response_code(404);exit('Samenvatting niet gevonden.');}
 </div>
 </div>
 </main>
+<script>
+(function(){
+ const summaryId='<?= (int)$summary['id'] ?>';
+ function activity(data){
+   fetch('activity.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data),keepalive:true}).catch(()=>{});
+ }
+ activity({action:'start',summary_id:summaryId});
+ let activeUntil=Date.now()+60000;
+ const touch=()=>{activeUntil=Date.now()+60000;};
+ ['mousemove','mousedown','keydown','touchstart','scroll'].forEach(e=>window.addEventListener(e,touch,{passive:true}));
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')touch();});
+ setInterval(()=>activity({action:'heartbeat',active:(document.visibilityState==='visible'&&Date.now()<activeUntil)?'1':'0'}),15000);
+ window.addEventListener('beforeunload',()=>activity({action:'end'}));
+})();
+</script>
 </body>
 </html>
