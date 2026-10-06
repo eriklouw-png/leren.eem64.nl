@@ -39,7 +39,12 @@ ob_start(static function(string $html): string{
 
         if($navbar!==''){
             if($area==='admin'){
-                $html=preg_replace('~(<body\\b[^>]*)(>)~i','$1 class="leren-admin"$2',$html,1)??$html;
+                if(preg_match('~<body\\b[^>]*\\bclass="([^"]*)"~i',$html,$bodyClass)){
+                    $classes=trim($bodyClass[1].' leren-admin');
+                    $html=preg_replace('~(<body\\b[^>]*\\bclass=")[^"]*(")~i','$1'.$classes.'$2',$html,1)??$html;
+                }else{
+                    $html=preg_replace('~(<body\\b[^>]*)(>)~i','$1 class="leren-admin"$2',$html,1)??$html;
+                }
             }
             if(preg_match('~<nav\\b[^>]*>.*?</nav>~is',$html)){
                 $html=preg_replace('~<nav\\b[^>]*>.*?</nav>~is',$navbar,$html,1)??$html;
