@@ -421,7 +421,7 @@ $stage=$hasGenerated?3:($analysis?2:1);
 </label>
 <div id="fileList" class="upload-file-list mb-4"></div>
 <div class="d-flex flex-column flex-sm-row gap-2">
-<button class="btn btn-primary btn-lg" type="submit" id="analyzeButton" disabled>Ga naar instellingen</button>
+<button class="btn btn-primary btn-lg" type="submit" id="analyzeButton" disabled>Start met verwerken</button>
 <a class="btn btn-outline-secondary btn-lg" href="subject_manage.php?id=<?=$subjectId?>">Annuleren</a>
 </div>
 </form>
