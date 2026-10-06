@@ -33,7 +33,7 @@ $tx->execute([$id]);$topics=$tx->fetchAll();
 $x=$pdo->prepare("SELECT t.id,t.topic_id,t.title,t.description,t.test_type,t.vocab_direction,t.is_active,COUNT(q.id) question_count FROM tests t JOIN topics tp ON tp.id=t.topic_id LEFT JOIN questions q ON q.test_id=t.id WHERE tp.subject_id=? AND t.is_active=1 GROUP BY t.id ORDER BY tp.name,t.created_at DESC");
 $x->execute([$id]);$tests=$x->fetchAll();
 
-$x=$pdo->prepare("SELECT ts.id,ts.topic_id,ts.name,ts.is_active,ts.updated_at,ts.created_at FROM topic_summaries ts JOIN topics tp ON tp.id=ts.topic_id WHERE tp.subject_id=? ORDER BY ts.topic_id,ts.created_at,ts.id");
+$x=$pdo->prepare("SELECT ts.id,ts.topic_id,ts.name,ts.is_active,ts.updated_at,ts.created_at FROM topic_summaries ts JOIN topics tp ON tp.id=ts.topic_id WHERE tp.subject_id=? AND ts.is_active=1 ORDER BY ts.topic_id,ts.created_at,ts.id");
 $x->execute([$id]);$summaries=$x->fetchAll();
 $summariesByTopic=[];
 foreach($summaries as $summary)$summariesByTopic[(int)$summary['topic_id']][]=$summary;
@@ -141,19 +141,13 @@ unset($topicTestList);
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
 <div>
 <strong><?=e($summary['name'])?></strong>
-<div class="small text-secondary"><?=((int)$summary['is_active']?'Actief voor leerlingen':'Verwijderd voor leerlingen')?> · <?=e(date('d-m-Y',strtotime((string)($summary['updated_at']?:$summary['created_at']))))?></div>
+<div class="small text-secondary"><?=e(date('d-m-Y',strtotime((string)($summary['updated_at']?:$summary['created_at']))))?></div>
 </div>
 <div class="text-nowrap">
 <a class="btn btn-sm btn-outline-primary" href="summary_edit.php?id=<?=$summary['id']?>">Bewerken</a>
-<?php if((int)$summary['is_active']):?>
 <form method="post" action="summary_edit.php?id=<?=$summary['id']?>" class="d-inline">
-<button class="btn btn-sm btn-outline-danger ms-1" type="submit" name="action" value="delete" onclick="return confirm('Deze samenvatting verbergen voor leerlingen? De tekst blijft in de database bewaard.');">Verwijderen</button>
+<button class="btn btn-sm btn-outline-danger ms-1" type="submit" name="action" value="delete" onclick="return confirm('Weet u zeker dat u deze samenvatting wilt verwijderen? De samenvatting verdwijnt uit de website, maar blijft in de database bewaard.');">Verwijderen</button>
 </form>
-<?php else:?>
-<form method="post" action="summary_edit.php?id=<?=$summary['id']?>" class="d-inline">
-<button class="btn btn-sm btn-outline-success ms-1" type="submit" name="action" value="restore">Herstellen</button>
-</form>
-<?php endif;?>
 </div>
 </div>
 </div>
