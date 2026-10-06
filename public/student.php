@@ -24,6 +24,27 @@ $summarySeconds=(int)$x->fetchColumn();
 
 $x=$pdo->prepare("
     SELECT
+        ts.id,
+        ts.name,
+        ts.is_active,
+        tp.name AS topic_name,
+        s.name AS subject_name,
+        COALESCE(SUM(ss.active_seconds),0) AS active_seconds
+    FROM topic_summaries ts
+    JOIN topics tp ON tp.id=ts.topic_id
+    JOIN subjects s ON s.id=tp.subject_id
+    LEFT JOIN study_sessions ss
+        ON ss.summary_id=ts.id
+       AND ss.student_id=?
+       AND ss.activity_type='summary'
+    GROUP BY ts.id,ts.name,ts.is_active,tp.name,s.name
+    ORDER BY s.name,tp.name,ts.name
+");
+$x->execute([$studentId]);
+$summaryRows=$x->fetchAll();
+
+$x=$pdo->prepare("
+    SELECT
         tp.id topic_id,tp.name topic_name,tp.test_date,
         s.id subject_id,s.name subject_name,
         t.id test_id,t.title,t.test_type,
@@ -156,6 +177,28 @@ function mastery_label(?float $score):string{
 </div></div>
 </div>
 </div>
+
+<h2 class="h4 mb-3">Tijd per samenvatting</h2>
+<?php if(!$summaryRows):?>
+<div class="alert alert-secondary mb-5">Er zijn nog geen samenvattingen.</div>
+<?php else:?>
+<div class="card shadow-sm mb-5">
+<div class="list-group list-group-flush">
+<?php foreach($summaryRows as $summary):?>
+<div class="list-group-item py-3">
+<div class="d-flex justify-content-between align-items-center gap-3">
+<div>
+<div class="small text-secondary"><?=e($summary['subject_name'])?> · <?=e($summary['topic_name'])?></div>
+<strong><?=e($summary['name'])?></strong>
+<?php if(!(int)$summary['is_active']):?><span class="badge text-bg-secondary ms-2">Inactief</span><?php endif;?>
+</div>
+<div class="text-end fw-semibold"><?=e(format_duration_student((int)$summary['active_seconds']))?></div>
+</div>
+</div>
+<?php endforeach;?>
+</div>
+</div>
+<?php endif;?>
 
 <h2 class="h4 mb-3">Actieve overhoringen</h2>
 <?php if(!$topics):?>
