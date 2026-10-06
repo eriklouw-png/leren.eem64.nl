@@ -392,6 +392,71 @@ function openai_generate_test_questions(string $input,array $imagePaths):?array{
     return $data;
 }
 
+function openai_generate_topic_summary(string $input,array $imagePaths):?array{
+    $apiKey=openai_api_key();
+    if($apiKey==='')return ['_leren_error'=>'OPENAI_API_KEY ontbreekt in de container.'];
+
+    $content=[['type'=>'input_text','text'=>$input]];
+    foreach($imagePaths as $imagePath){
+        if(!is_string($imagePath)||!is_file($imagePath))continue;
+        $mime=(string)(@mime_content_type($imagePath)?:'');
+        if(!in_array($mime,['image/jpeg','image/png','image/webp'],true))continue;
+        $bytes=@file_get_contents($imagePath);
+        if($bytes===false)continue;
+        $content[]=[
+            'type'=>'input_image',
+            'image_url'=>'data:'.$mime.';base64,'.base64_encode($bytes),
+            'detail'=>'high'
+        ];
+    }
+    if(count($content)===1)return ['_leren_error'=>'Er zijn geen geldige afbeeldingen beschikbaar voor de samenvatting.'];
+
+    $payload=[
+        'model'=>openai_model(),
+        'instructions'=>'Je maakt een Nederlandse samenvatting van foto’s van schoolboekpagina’s. Gebruik uitsluitend informatie die zichtbaar of leesbaar in de aangeleverde pagina’s staat. Verzin niets en gebruik geen algemene kennis om ontbrekende informatie aan te vullen. De samenvatting is bedoeld voor een leerling van ongeveer 12-15 jaar en moet overzichtelijk, leerbaar en inhoudelijk volledig zijn. Behoud belangrijke begrippen, namen, processen, voorbeelden en jaartallen uit de bron.',
+        'input'=>[['role'=>'user','content'=>$content]],
+        'max_output_tokens'=>3000,
+        'store'=>false,
+        'text'=>[
+            'format'=>[
+                'type'=>'json_schema',
+                'name'=>'topic_summary',
+                'strict'=>true,
+                'schema'=>[
+                    'type'=>'object',
+                    'properties'=>[
+                        'summary'=>['type'=>'string']
+                    ],
+                    'required'=>['summary'],
+                    'additionalProperties'=>false
+                ]
+            ]
+        ]
+    ];
+    $context=stream_context_create([
+        'http'=>[
+            'method'=>'POST',
+            'header'=>"Content-Type: application/json\r\nAccept: application/json\r\nAuthorization: Bearer ".$apiKey."\r\n",
+            'content'=>json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),
+            'timeout'=>120,
+            'ignore_errors'=>true
+        ]
+    ]);
+    $body=@file_get_contents('https://api.openai.com/v1/responses',false,$context);
+    $statusCode=0;
+    foreach(($http_response_header??[]) as $header){
+        if(preg_match('~^HTTP/\\S+\\s+(\\d+)~i',$header,$m)){$statusCode=(int)$m[1];break;}
+    }
+    if($body===false)return ['_leren_error'=>'Kan geen verbinding maken met OpenAI. HTTP-status '.$statusCode.'.'];
+    $data=json_decode($body,true);
+    if(!is_array($data))return ['_leren_error'=>'OpenAI gaf geen geldige JSON terug. HTTP-status '.$statusCode.'.'];
+    if($statusCode<200||$statusCode>=300){
+        $message=(string)($data['error']['message']??'Onbekende OpenAI API-fout.');
+        return ['_leren_error'=>'OpenAI API HTTP '.$statusCode.': '.$message];
+    }
+    return $data;
+}
+
 function openai_output_json(array $data):?array{
     if(isset($data['output_text'])&&is_string($data['output_text'])){
         $result=json_decode($data['output_text'],true);
