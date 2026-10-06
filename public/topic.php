@@ -88,9 +88,6 @@ $browserToken=$_SESSION['learner_token'];
 .subtest-history summary::-webkit-details-marker{display:none}
 .history-chevron{width:10px;height:10px;border-right:2px solid #6c757d;border-bottom:2px solid #6c757d;transform:rotate(45deg);transition:transform .15s ease;margin-right:4px;margin-top:-5px}
 .subtest-history[open] .history-chevron{transform:rotate(225deg);margin-top:5px}
-.topic-summaries summary::-webkit-details-marker{display:none}
-.summary-chevron{width:11px;height:11px;border-right:2px solid #6c757d;border-bottom:2px solid #6c757d;transform:rotate(45deg);transition:transform .15s ease;margin-right:4px;margin-top:-5px;flex-shrink:0}
-.topic-summaries[open] .summary-chevron{transform:rotate(225deg);margin-top:5px}
 </style>
 </head>
 <body class="bg-light">
@@ -111,26 +108,22 @@ $browserToken=$_SESSION['learner_token'];
 </div>
 
 <?php if($topicSummaries):?>
-<details class="card shadow-sm mt-4 border-0 topic-summaries">
-<summary class="card-body p-4 d-flex justify-content-between align-items-center" style="cursor:pointer;list-style:none">
-<div>
-<h2 class="h4 mb-1">Samenvattingen <span class="small text-secondary">· <?=count($topicSummaries)?></span></h2>
-<div class="small text-secondary">Leer de stof voordat je de sub-testen maakt.</div>
+<div class="card shadow-sm mt-4 border-0">
+<div class="card-body p-4">
+<div class="d-flex justify-content-between align-items-center mb-3">
+<h2 class="h4 mb-0">Samenvattingen</h2>
+<span class="small text-secondary"><?=count($topicSummaries)?> beschikbaar</span>
 </div>
-<span class="summary-chevron" aria-hidden="true"></span>
-</summary>
-<div class="card-body pt-0">
+<div class="list-group">
 <?php foreach($topicSummaries as $summary):?>
-<div class="border-top pt-3 mt-3">
-<h3 class="h5 mb-2"><?=e($summary['name'])?></h3>
-<div class="lh-lg"><?=nl2br(e((string)$summary['summary']))?></div>
-<?php if(!empty($summary['updated_at']) || !empty($summary['created_at'])):?>
-<div class="small text-secondary mt-2">Bijgewerkt <?=e(date('d-m-Y',strtotime((string)($summary['updated_at']?:$summary['created_at']))))?></div>
-<?php endif;?>
+<div class="list-group-item d-flex justify-content-between align-items-center gap-3">
+<strong><?=e($summary['name'])?></strong>
+<a class="btn btn-outline-primary btn-sm flex-shrink-0" href="summary.php?id=<?=(int)$summary['id']?>">Lees</a>
 </div>
 <?php endforeach;?>
 </div>
-</details>
+</div>
+</div>
 <?php endif;?>
 
 <h2 class="h3 mt-4 mb-3">Sub-Testen</h2>
