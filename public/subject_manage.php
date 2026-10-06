@@ -97,6 +97,12 @@ $testsByTopic=[];
 foreach($tests as $t){
     $testsByTopic[(int)$t['topic_id']][]=$t;
 }
+foreach($testsByTopic as &$topicTestList){
+    usort($topicTestList,function(array $a,array $b):int{
+        return strnatcasecmp((string)$a['title'],(string)$b['title']);
+    });
+}
+unset($topicTestList);
 ?>
 <?php foreach($topics as $topic): $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d'); $topicTests=$testsByTopic[(int)$topic['id']]??[]; $topicSummaries=$summariesByTopic[(int)$topic['id']]??[];?>
 <div class="accordion-item">
