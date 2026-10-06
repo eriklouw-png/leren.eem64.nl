@@ -6,13 +6,8 @@ if(!$id)redirect('admin.php');
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
     $action=$_POST['action']??'save';
-    if($action==='hide'){
+    if($action==='delete'){
         $x=$pdo->prepare("UPDATE topics SET is_active=0 WHERE id=?");
-        $x->execute([$id]);
-        redirect('subject_manage.php?id='.$_POST['subject_id']);
-    }
-    if($action==='restore'){
-        $x=$pdo->prepare("UPDATE topics SET is_active=1 WHERE id=?");
         $x->execute([$id]);
         redirect('subject_manage.php?id='.$_POST['subject_id']);
     }
@@ -37,7 +32,6 @@ if(!$topic){http_response_code(404);exit('Overhoring niet gevonden.');}
 <a href="subject_manage.php?id=<?=$topic['subject_id']?>">&larr; Terug naar <?=e($topic['subject_name'])?></a>
 <div class="card shadow-sm mt-3"><div class="card-body p-4">
 <h1 class="h3 mb-4">Overhoring bewerken</h1>
-<?php if(!(int)$topic['is_active']):?><div class="alert alert-warning">Deze overhoring is verborgen voor leerlingen.</div><?php endif;?>
 <form method="post">
 <input type="hidden" name="subject_id" value="<?=$topic['subject_id']?>">
 <input type="hidden" name="action" value="save">
@@ -49,11 +43,7 @@ if(!$topic){http_response_code(404);exit('Overhoring niet gevonden.');}
 </div>
 <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
 <div>
-<?php if((int)$topic['is_active']):?>
-<button class="btn btn-outline-danger" type="submit" name="action" value="hide" onclick="return confirm('Deze overhoring verbergen voor leerlingen? De overhoring en alle sub-testen blijven bewaard.');">Verwijderen</button>
-<?php else:?>
-<button class="btn btn-outline-success" type="submit" name="action" value="restore">Herstellen</button>
-<?php endif;?>
+<button class="btn btn-outline-danger" type="submit" name="action" value="delete" onclick="return confirm('Weet u zeker dat u deze overhoring wilt verwijderen? De overhoring verdwijnt uit de website, maar blijft in de database bewaard.');">Verwijderen</button>
 </div>
 <div class="d-flex gap-2"><a class="btn btn-outline-secondary" href="subject_manage.php?id=<?=$topic['subject_id']?>">Annuleren</a><button class="btn btn-primary" type="submit" name="action" value="save">Opslaan</button></div>
 </div>
