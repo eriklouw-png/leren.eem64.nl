@@ -19,15 +19,16 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     if($action==='save'){
         $name=trim((string)($_POST['name']??''));
         $testDate=trim((string)($_POST['test_date']??''));
+        $useSummary=!empty($_POST['use_summary']);
         if($name===''){http_response_code(400);exit('Naam is verplicht.');}
         if($testDate!=='' && !preg_match('/^\d{4}-\d{2}-\d{2}$/',$testDate)){http_response_code(400);exit('Ongeldige datum.');}
-        $x=$pdo->prepare("UPDATE topics SET name=?,test_date=? WHERE id=?");
-        $x->execute([$name,$testDate!==''?$testDate:null,$id]);
+        $x=$pdo->prepare("UPDATE topics SET name=?,test_date=?,use_summary=? WHERE id=?");
+        $x->execute([$name,$testDate!==''?$testDate:null,$useSummary?1:0,$id]);
         redirect('subject_manage.php?id='.$_POST['subject_id']);
     }
 }
 
-$x=$pdo->prepare("SELECT tp.id,tp.name,tp.test_date,tp.is_active,tp.subject_id,s.name subject_name FROM topics tp JOIN subjects s ON s.id=tp.subject_id WHERE tp.id=?");
+$x=$pdo->prepare("SELECT tp.id,tp.name,tp.test_date,tp.is_active,tp.use_summary,tp.summary_updated_at,tp.subject_id,s.name subject_name FROM topics tp JOIN subjects s ON s.id=tp.subject_id WHERE tp.id=?");
 $x->execute([$id]);$topic=$x->fetch();
 if(!$topic){http_response_code(404);exit('Overhoring niet gevonden.');}
 ?>
@@ -41,7 +42,11 @@ if(!$topic){http_response_code(404);exit('Overhoring niet gevonden.');}
 <input type="hidden" name="subject_id" value="<?=$topic['subject_id']?>">
 <input type="hidden" name="action" value="save">
 <div class="mb-3"><label class="form-label">Overhoring</label><input class="form-control" name="name" value="<?=e($topic['name'])?>" required></div>
-<div class="mb-4"><label class="form-label">Overhoringsdatum</label><input class="form-control" type="date" name="test_date" value="<?=e($topic['test_date']??'')?>"><div class="form-text">Na deze datum wordt het overhoring automatisch gearchiveerd. Laat leeg als er geen overhoringsdatum is.</div></div>
+<div class="mb-3"><label class="form-label">Overhoringsdatum</label><input class="form-control" type="date" name="test_date" value="<?=e($topic['test_date']??'')?>"><div class="form-text">Na deze datum wordt het overhoring automatisch gearchiveerd. Laat leeg als er geen overhoringsdatum is.</div></div>
+<div class="form-check mb-4">
+<input class="form-check-input" type="checkbox" name="use_summary" value="1" id="useSummary" <?=!empty($topic['use_summary'])?'checked':''?>>
+<label class="form-check-label" for="useSummary"><strong>Samenvatting gebruiken</strong><br><span class="text-secondary">Je kunt voor deze overhoring meerdere afzonderlijke samenvattingen maken. Elke samenvatting kan bijvoorbeeld de naam 1.3 Samenvatting krijgen.</span></label>
+</div>
 <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
 <div>
 <?php if((int)$topic['is_active']):?>

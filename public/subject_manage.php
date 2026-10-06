@@ -33,6 +33,17 @@ $tx->execute([$id]);$topics=$tx->fetchAll();
 $x=$pdo->prepare("SELECT t.id,t.topic_id,t.title,t.description,t.test_type,t.vocab_direction,t.is_active,COUNT(q.id) question_count FROM tests t JOIN topics tp ON tp.id=t.topic_id LEFT JOIN questions q ON q.test_id=t.id WHERE tp.subject_id=? AND t.is_active=1 GROUP BY t.id ORDER BY tp.name,t.created_at DESC");
 $x->execute([$id]);$tests=$x->fetchAll();
 
+$x=$pdo->prepare("SELECT ts.id,ts.topic_id,ts.name,ts.is_active,ts.updated_at,ts.created_at FROM topic_summaries ts JOIN topics tp ON tp.id=ts.topic_id WHERE tp.subject_id=? ORDER BY ts.topic_id,ts.created_at,ts.id");
+$x->execute([$id]);$summaries=$x->fetchAll();
+$summariesByTopic=[];
+foreach($summaries as $summary)$summariesByTopic[(int)$summary['topic_id']][]=$summary;
+foreach($summariesByTopic as &$topicSummaryList){
+    usort($topicSummaryList,function(array $a,array $b):int{
+        return strnatcasecmp((string)$a['name'],(string)$b['name']);
+    });
+}
+unset($topicSummaryList);
+
 $testIds=array_map('intval',array_column($tests,'id'));
 $resultGroups=[];
 if($testIds){
@@ -69,7 +80,7 @@ if($testIds){
     }
 }
 function format_duration_subject(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds%60;return $m.' min '.str_pad((string)$s,2,'0',STR_PAD_LEFT).' sec';}
-$labels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Multiple choice','mixed'=>'Combinatie'];
+$labels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Multiple choice','open'=>'Open vragen','mixed'=>'Combinatie'];
 ?>
 <!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($subject['name'])?> - Beheer</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
@@ -85,15 +96,21 @@ $labels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Multiple choice','
 <a class="btn btn-outline-secondary" href="subject_edit.php?id=<?=$id?>">Bewerken</a>
 </div></div></div>
 </div>
-<h2 class="h4 mt-4">Overhoringen</h2>
+<div class="d-flex justify-content-between align-items-center gap-2 mt-4 mb-2"><h2 class="h4 mb-0">Overhoringen</h2><a class="btn btn-primary" href="topic_new.php?subject_id=<?=$id?>">Nieuwe overhoring</a></div>
 <?php if(!$topics):?><div class="alert alert-info">Nog geen overhoringen voor dit vak.</div><?php else:?><div class="accordion shadow-sm mb-4" id="overhoringen">
 <?php
 $testsByTopic=[];
 foreach($tests as $t){
     $testsByTopic[(int)$t['topic_id']][]=$t;
 }
+foreach($testsByTopic as &$topicTestList){
+    usort($topicTestList,function(array $a,array $b):int{
+        return strnatcasecmp((string)$a['title'],(string)$b['title']);
+    });
+}
+unset($topicTestList);
 ?>
-<?php foreach($topics as $topic): $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d'); $topicTests=$testsByTopic[(int)$topic['id']]??[];?>
+<?php foreach($topics as $topic): $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d'); $topicTests=$testsByTopic[(int)$topic['id']]??[]; $topicSummaries=$summariesByTopic[(int)$topic['id']]??[];?>
 <div class="accordion-item">
 <h2 class="accordion-header" id="heading<?=$topic['id']?>">
 <button class="accordion-button <?=$archived?'collapsed':''?>" type="button" data-bs-toggle="collapse" data-bs-target="#collapse<?=$topic['id']?>" aria-expanded="<?=$archived?'false':'true'?>" aria-controls="collapse<?=$topic['id']?>">
@@ -107,9 +124,46 @@ foreach($tests as $t){
 <strong>Sub-Testen</strong>
 <div>
 <a class="btn btn-sm btn-primary" href="test_new.php?topic_id=<?=$topic['id']?>">Nieuwe sub-test</a>
+<a class="btn btn-sm btn-outline-success ms-1" href="ai_test_generator.php?topic_id=<?=$topic['id']?>">AI toets maken</a>
 <a class="btn btn-sm btn-outline-secondary ms-1" href="topic_edit.php?id=<?=$topic['id']?>">Overhoring bewerken</a>
 </div>
 </div>
+
+<?php if($topicSummaries):?>
+<div class="mb-4">
+<div class="d-flex justify-content-between align-items-center mb-2">
+<strong>Samenvattingen</strong>
+<span class="small text-secondary"><?=count($topicSummaries)?> totaal</span>
+</div>
+<div class="list-group">
+<?php foreach($topicSummaries as $summary):?>
+<div class="list-group-item p-3">
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
+<div>
+<strong><?=e($summary['name'])?></strong>
+<div class="small text-secondary"><?=((int)$summary['is_active']?'Actief voor leerlingen':'Verwijderd voor leerlingen')?> · <?=e(date('d-m-Y',strtotime((string)($summary['updated_at']?:$summary['created_at']))))?></div>
+</div>
+<div class="text-nowrap">
+<a class="btn btn-sm btn-outline-primary" href="summary_edit.php?id=<?=$summary['id']?>">Bewerken</a>
+<?php if((int)$summary['is_active']):?>
+<form method="post" action="summary_edit.php?id=<?=$summary['id']?>" class="d-inline">
+<button class="btn btn-sm btn-outline-danger ms-1" type="submit" name="action" value="delete" onclick="return confirm('Deze samenvatting verbergen voor leerlingen? De tekst blijft in de database bewaard.');">Verwijderen</button>
+</form>
+<?php else:?>
+<form method="post" action="summary_edit.php?id=<?=$summary['id']?>" class="d-inline">
+<button class="btn btn-sm btn-outline-success ms-1" type="submit" name="action" value="restore">Herstellen</button>
+</form>
+<?php endif;?>
+</div>
+</div>
+</div>
+<?php endforeach;?>
+</div>
+</div>
+<?php else:?>
+<div class="alert alert-secondary">Nog geen samenvattingen voor deze overhoring.</div>
+<?php endif;?>
+
 <?php if(!$topicTests):?>
 <div class="alert alert-info mb-0">Nog geen sub-testen binnen deze overhoring.</div>
 <?php else:?>

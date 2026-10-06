@@ -41,7 +41,7 @@ $importText=(string)($_POST['import_text']??'');
 $replaceExisting=!empty($_POST['replace_existing']);
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
-    if(!in_array($testType,['vocabulary','multiple_choice','mixed'],true))$testType='vocabulary';
+    if(!in_array($testType,['vocabulary','multiple_choice','open','mixed'],true))$testType='vocabulary';
     if($title==='')$errors[]='Een titel is verplicht.';
     if(!$errors){
         $pdo->beginTransaction();
@@ -147,7 +147,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <body class="bg-light"><main class="container py-4" style="max-width:900px">
 <a href="subject_manage.php?id=<?=$subjectId?>">&larr; <?=e($subject['name'])?></a>
 <div class="card shadow-sm mt-3"><div class="card-body p-4">
-<h1 class="h3">Nieuwe sub-test — <?=e($subject['name'])?></h1>
+<div class="d-flex justify-content-between align-items-start gap-3"><h1 class="h3 mb-0">Nieuwe sub-test — <?=e($subject['name'])?></h1><a class="btn btn-outline-primary" href="ai_test_generator.php?<?= $topicId ? 'topic_id='.(int)$topicId : 'subject_id='.(int)$subjectId ?>">AI toets maken</a></div>
 <div class="small text-secondary mb-3">Overhoring: <strong><?=e($topicName)?></strong></div>
 <div class="alert alert-info"><strong>Taal:</strong> <?=e($leftLabel)?> → <?=e($rightLabel)?>. De taal is al bekend en hoeft niet opnieuw te worden ingevuld.</div>
 <?php foreach($errors as $error):?><div class="alert alert-danger"><?=e($error)?></div><?php endforeach;?>
@@ -158,6 +158,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <select class="form-select mb-3" name="test_type" id="testType">
 <option value="vocabulary" <?=$testType==='vocabulary'?'selected':''?>>Woordjes oefenen</option>
 <option value="multiple_choice" <?=$testType==='multiple_choice'?'selected':''?>>Multiple choice</option>
+<option value="open" <?=$testType==='open'?'selected':''?>>Open vragen</option>
 <option value="mixed" <?=$testType==='mixed'?'selected':''?>>Combinatie</option>
 </select>
 <div class="form-check mb-3">

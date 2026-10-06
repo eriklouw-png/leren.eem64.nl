@@ -8,10 +8,17 @@ $studentId=(int)$currentUser['id'];
 $topicId=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if(!$topicId)redirect('index.php');
 
-$x=$pdo->prepare("SELECT tp.id,tp.name,tp.test_date,tp.is_active,s.id subject_id,s.name subject_name,s.description subject_description,s.image_mime FROM topics tp JOIN subjects s ON s.id=tp.subject_id WHERE tp.id=?");
+$x=$pdo->prepare("SELECT tp.id,tp.name,tp.test_date,tp.is_active,tp.use_summary,s.id subject_id,s.name subject_name,s.description subject_description,s.image_mime FROM topics tp JOIN subjects s ON s.id=tp.subject_id WHERE tp.id=?");
 $x->execute([$topicId]);
 $topic=$x->fetch();
 if(!$topic || !(int)$topic['is_active']){http_response_code(404);exit('Overhoring niet gevonden.');}
+
+$summaryStmt=$pdo->prepare("SELECT id,name,summary,updated_at,created_at FROM topic_summaries WHERE topic_id=? AND is_active=1 ORDER BY created_at,id");
+$summaryStmt->execute([$topicId]);
+$topicSummaries=$summaryStmt->fetchAll();
+usort($topicSummaries,function(array $a,array $b):int{
+    return strnatcasecmp((string)$a['name'],(string)$b['name']);
+});
 
 $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d');
 
@@ -46,10 +53,12 @@ LEFT JOIN (
 ) ip ON ip.test_id=t.id
 WHERE t.topic_id=? AND t.is_active=1
 GROUP BY t.id,t.title,t.description,t.test_type,t.vocab_direction,ip.id,ip.answered_count,ip.total_count
-ORDER BY t.created_at,t.title
 ");
 $x->execute([$studentId,$topicId]);
 $tests=$x->fetchAll();
+usort($tests,function(array $a,array $b):int{
+    return strnatcasecmp((string)$a['title'],(string)$b['title']);
+});
 
 $historyStmt=$pdo->prepare("
     SELECT id,score,finished_at
@@ -63,7 +72,7 @@ foreach($tests as $testRow){
     $historyByTest[(int)$testRow['id']]=$historyStmt->fetchAll();
 }
 
-$labels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Multiple choice','mixed'=>'Combinatie'];
+$labels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Multiple choice','open'=>'Open vragen','mixed'=>'Combinatie'];
 if(!isset($_SESSION['learner_token']))$_SESSION['learner_token']=bin2hex(random_bytes(32));
 $browserToken=$_SESSION['learner_token'];
 ?><!doctype html>
@@ -102,6 +111,29 @@ $browserToken=$_SESSION['learner_token'];
 <?php endif;?>
 </div>
 </div>
+
+<?php if($topicSummaries):?>
+<div class="mt-4 mb-4">
+<div class="d-flex justify-content-between align-items-center mb-3">
+<h2 class="h3 mb-0">Samenvattingen</h2>
+<span class="small text-secondary"><?=count($topicSummaries)?> beschikbaar</span>
+</div>
+<div class="list-group shadow-sm">
+<?php foreach($topicSummaries as $summary):?>
+<div class="list-group-item p-3 p-md-4">
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
+<div class="min-w-0">
+<strong class="fs-5"><?=e($summary['name'])?></strong>
+</div>
+<div class="d-flex flex-wrap gap-2 flex-shrink-0">
+<a class="btn btn-outline-primary btn-sm" href="summary.php?id=<?=(int)$summary['id']?>">Lees</a>
+</div>
+</div>
+</div>
+<?php endforeach;?>
+</div>
+</div>
+<?php endif;?>
 
 <h2 class="h3 mt-4 mb-3">Sub-Testen</h2>
 <?php if(!$tests):?>

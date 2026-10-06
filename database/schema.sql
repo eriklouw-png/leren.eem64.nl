@@ -1,6 +1,8 @@
 CREATE DATABASE IF NOT EXISTS leren CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE leren;
 SET FOREIGN_KEY_CHECKS=0;
+DROP TABLE IF EXISTS study_sessions;
+DROP TABLE IF EXISTS topic_summaries;
 DROP TABLE IF EXISTS attempt_answers;
 DROP TABLE IF EXISTS open_question_answers;
 DROP TABLE IF EXISTS attempts;
@@ -36,9 +38,26 @@ CREATE TABLE topics (
  name VARCHAR(150) NOT NULL,
  test_date DATE NULL,
  is_active TINYINT(1) NOT NULL DEFAULT 1,
+ use_summary TINYINT(1) NOT NULL DEFAULT 0,
+ summary TEXT NULL,
+ summary_updated_at DATETIME NULL,
  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
  UNIQUE KEY uq_topics_subject_name(subject_id,name),
  CONSTRAINT fk_topics_subject FOREIGN KEY(subject_id) REFERENCES subjects(id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE topic_summaries (
+ id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ topic_id INT UNSIGNED NOT NULL,
+ name VARCHAR(200) NOT NULL,
+ summary TEXT NOT NULL,
+ is_active TINYINT(1) NOT NULL DEFAULT 1,
+ created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at DATETIME NULL,
+ deleted_at DATETIME NULL,
+ KEY idx_topic_summaries_topic(topic_id),
+ KEY idx_topic_summaries_active(topic_id,is_active),
+ CONSTRAINT fk_topic_summaries_topic FOREIGN KEY(topic_id) REFERENCES topics(id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE tests (
@@ -46,7 +65,7 @@ CREATE TABLE tests (
  topic_id INT UNSIGNED NULL,
  title VARCHAR(200) NOT NULL,
  description TEXT NULL,
- test_type ENUM('vocabulary','multiple_choice','mixed') NOT NULL DEFAULT 'mixed',
+ test_type ENUM('vocabulary','multiple_choice','open','mixed') NOT NULL DEFAULT 'mixed',
  vocab_left_label VARCHAR(80) NULL,
  vocab_right_label VARCHAR(80) NULL,
  vocab_direction ENUM('both','left_to_right','right_to_left') NOT NULL DEFAULT 'both',
@@ -101,6 +120,30 @@ CREATE TABLE attempts (
  KEY idx_attempts_student(student_id),
  CONSTRAINT fk_attempts_test FOREIGN KEY(test_id) REFERENCES tests(id) ON DELETE CASCADE ON UPDATE CASCADE,
  CONSTRAINT fk_attempts_student FOREIGN KEY(student_id) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE study_sessions (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ session_token CHAR(64) NOT NULL UNIQUE,
+ student_id INT UNSIGNED NULL,
+ test_id INT UNSIGNED NULL,
+ activity_type ENUM('test','summary') NOT NULL DEFAULT 'test',
+ summary_id INT UNSIGNED NULL,
+ attempt_id BIGINT UNSIGNED NULL,
+ started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ last_activity_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ active_seconds INT UNSIGNED NOT NULL DEFAULT 0,
+ ended_at DATETIME NULL,
+ KEY idx_study_sessions_started(started_at),
+ KEY idx_study_sessions_test(test_id),
+ KEY idx_study_sessions_attempt(attempt_id),
+ KEY idx_study_sessions_student(student_id),
+ KEY idx_study_sessions_summary(summary_id),
+ KEY idx_study_sessions_student_activity(student_id,activity_type),
+ CONSTRAINT fk_study_sessions_test FOREIGN KEY(test_id) REFERENCES tests(id) ON DELETE CASCADE ON UPDATE CASCADE,
+ CONSTRAINT fk_study_sessions_attempt FOREIGN KEY(attempt_id) REFERENCES attempts(id) ON DELETE SET NULL ON UPDATE CASCADE,
+ CONSTRAINT fk_study_sessions_student FOREIGN KEY(student_id) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
+ CONSTRAINT fk_study_sessions_summary FOREIGN KEY(summary_id) REFERENCES topic_summaries(id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE attempt_answers (
