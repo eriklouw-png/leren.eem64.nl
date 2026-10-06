@@ -165,6 +165,7 @@ $browserToken=$_SESSION['learner_token'];
 .subtest-complete{border:2px solid #198754!important;background:#e9f7ef}
 .subtest-complete .subtest-title{color:#198754}
 .subtest-check{color:#198754;font-size:1.35rem;line-height:1}
+.subtest-progress{max-width:420px}
 </style>
 </head>
 <body class="bg-light">
@@ -257,42 +258,32 @@ $isComplete=$latestScore!==null && $latestScore>=100;
 </div>
 </div>
 
-<?php if($t['in_progress_attempt_id']):
-$progressTotal=max(1,(int)$t['in_progress_total_count']);
-$progressAnswered=min($progressTotal,(int)$t['in_progress_answered_count']);
-$progressPercent=(int)round($progressAnswered/$progressTotal*100);
+<?php
+if($t['in_progress_attempt_id']){
+    $subProgressTotal=max(1,(int)$t['in_progress_total_count']);
+    $subProgressDone=min($subProgressTotal,(int)$t['in_progress_answered_count']);
+    $subProgressPercent=(int)round($subProgressDone/$subProgressTotal*100);
+    $subProgressLabel=$subProgressDone.' van '.$subProgressTotal.' vragen';
+}elseif($latestScore!==null){
+    $subProgressPercent=(int)round($latestScore);
+    $subProgressLabel='Laatste resultaat';
+}else{
+    $subProgressPercent=0;
+    $subProgressLabel='Nog niet begonnen';
+}
 ?>
-<div class="mt-4">
+<div class="subtest-progress mt-4">
 <div class="d-flex justify-content-between small text-secondary mb-1">
 <span>Voortgang</span>
-<span><?=$progressAnswered?> van <?=$progressTotal?> vragen</span>
+<strong><?=$subProgressPercent?>%</strong>
 </div>
-<div class="progress" role="progressbar" aria-label="Voortgang van sub-test" aria-valuenow="<?=$progressPercent?>" aria-valuemin="0" aria-valuemax="100" style="height:10px">
-<div class="progress-bar bg-success" style="width:<?=$progressPercent?>%"></div>
+<div class="progress" role="progressbar" aria-label="Voortgang van sub-test" aria-valuenow="<?=$subProgressPercent?>" aria-valuemin="0" aria-valuemax="100" style="height:10px">
+<div class="progress-bar bg-success" style="width:<?=$subProgressPercent?>%"></div>
 </div>
+<div class="small text-secondary mt-1"><?=$subProgressLabel?></div>
 </div>
-<?php endif;?>
 
-<?php if($history):?>
-<details class="mt-4 pt-3 border-top subtest-history">
-<summary class="d-flex justify-content-between align-items-center list-unstyled">
-<span class="small fw-semibold text-secondary">Eerdere resultaten</span>
-<span class="history-chevron" aria-hidden="true"></span>
-</summary>
-<div class="d-flex flex-column gap-2 mt-2">
-<?php foreach($history as $attempt):?>
-<a href="result.php?id=<?=(int)$attempt['id']?>" class="text-decoration-none">
-<div class="d-flex justify-content-between align-items-center py-1">
-<span class="text-secondary small"><?=e(date('d-m-Y H:i',strtotime((string)$attempt['finished_at'])))?></span>
-<strong class="<?=((float)$attempt['score']>=70?'text-success':((float)$attempt['score']>=50?'text-warning':'text-danger'))?>">
-<?=e(rtrim(rtrim(number_format((float)$attempt['score'],2,',','.'),'0'),','))?>%
-</strong>
-</div>
-</a>
-<?php endforeach;?>
-</div>
-</details>
-<?php endif;?>
+
 </div>
 <?php endforeach;?>
 </div><?php endif;?>
