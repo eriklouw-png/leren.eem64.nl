@@ -4,6 +4,21 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $action=$_POST['action']??'';
     $id=filter_var($_POST['id']??null,FILTER_VALIDATE_INT);
     if(!$id){http_response_code(400);exit('Ongeldig ID.');}
+    if($action==='upload_user_image'){
+        if(!isset($_FILES['image']) || $_FILES['image']['error']!==UPLOAD_ERR_OK){ redirect('admin.php?user_image_error=upload'); }
+        if((int)$_FILES['image']['size']>5*1024*1024){ redirect('admin.php?user_image_error=size'); }
+        $tmp=$_FILES['image']['tmp_name']; $info=@getimagesize($tmp);
+        $allowed=['image/jpeg','image/png','image/webp']; $mime=$info['mime']??'';
+        if(!$info || !in_array($mime,$allowed,true)){ redirect('admin.php?user_image_error=type'); }
+        $data=file_get_contents($tmp);
+        if($data===false){ redirect('admin.php?user_image_error=read'); }
+        $x=$pdo->prepare("UPDATE users SET image_mime=?,image_data=? WHERE id=? AND role='student'");
+        $x->execute([$mime,$data,$id]); redirect('admin.php?user_image_saved=1');
+    }
+    if($action==='delete_user_image'){
+        $x=$pdo->prepare("UPDATE users SET image_mime=NULL,image_data=NULL WHERE id=? AND role='student'");
+        $x->execute([$id]); redirect('admin.php?user_image_deleted=1');
+    }
     if($action==='upload_subject_image'){
         if(!isset($_FILES['image']) || $_FILES['image']['error']!==UPLOAD_ERR_OK){
             redirect('admin.php?image_error=upload');
@@ -128,7 +143,7 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
 </div>
 
 <h2 class="h4 mt-5 mb-3">Studenten</h2>
-<?php $students=$pdo->query("SELECT id,name,email FROM users WHERE role='student' ORDER BY name")->fetchAll(); ?>
+<?php $students=$pdo->query("SELECT id,name,email,image_mime FROM users WHERE role='student' ORDER BY name")->fetchAll(); ?>
 <?php if(!$students):?>
 <div class="alert alert-secondary">Er zijn nog geen studenten.</div>
 <?php else:?>
