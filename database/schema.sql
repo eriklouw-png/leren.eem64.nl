@@ -1,6 +1,7 @@
 CREATE DATABASE IF NOT EXISTS leren CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE leren;
 SET FOREIGN_KEY_CHECKS=0;
+DROP TABLE IF EXISTS study_sessions;
 DROP TABLE IF EXISTS topic_summaries;
 DROP TABLE IF EXISTS attempt_answers;
 DROP TABLE IF EXISTS open_question_answers;
@@ -119,6 +120,30 @@ CREATE TABLE attempts (
  KEY idx_attempts_student(student_id),
  CONSTRAINT fk_attempts_test FOREIGN KEY(test_id) REFERENCES tests(id) ON DELETE CASCADE ON UPDATE CASCADE,
  CONSTRAINT fk_attempts_student FOREIGN KEY(student_id) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE study_sessions (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ session_token CHAR(64) NOT NULL UNIQUE,
+ student_id INT UNSIGNED NULL,
+ test_id INT UNSIGNED NULL,
+ activity_type ENUM('test','summary') NOT NULL DEFAULT 'test',
+ summary_id INT UNSIGNED NULL,
+ attempt_id BIGINT UNSIGNED NULL,
+ started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ last_activity_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ active_seconds INT UNSIGNED NOT NULL DEFAULT 0,
+ ended_at DATETIME NULL,
+ KEY idx_study_sessions_started(started_at),
+ KEY idx_study_sessions_test(test_id),
+ KEY idx_study_sessions_attempt(attempt_id),
+ KEY idx_study_sessions_student(student_id),
+ KEY idx_study_sessions_summary(summary_id),
+ KEY idx_study_sessions_student_activity(student_id,activity_type),
+ CONSTRAINT fk_study_sessions_test FOREIGN KEY(test_id) REFERENCES tests(id) ON DELETE CASCADE ON UPDATE CASCADE,
+ CONSTRAINT fk_study_sessions_attempt FOREIGN KEY(attempt_id) REFERENCES attempts(id) ON DELETE SET NULL ON UPDATE CASCADE,
+ CONSTRAINT fk_study_sessions_student FOREIGN KEY(student_id) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
+ CONSTRAINT fk_study_sessions_summary FOREIGN KEY(summary_id) REFERENCES topic_summaries(id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE attempt_answers (
