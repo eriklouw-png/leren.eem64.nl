@@ -266,10 +266,8 @@ if($t['in_progress_attempt_id']){
     $subProgressLabel=$subProgressDone.' van '.$subProgressTotal.' vragen';
 }elseif($latestScore!==null){
     $subProgressPercent=(int)round($latestScore);
-    $subProgressLabel='Laatste resultaat';
 }else{
     $subProgressPercent=0;
-    $subProgressLabel='Nog niet begonnen';
 }
 ?>
 <div class="subtest-progress mt-4">
@@ -280,7 +278,9 @@ if($t['in_progress_attempt_id']){
 <div class="progress" role="progressbar" aria-label="Voortgang van sub-test" aria-valuenow="<?=$subProgressPercent?>" aria-valuemin="0" aria-valuemax="100" style="height:10px">
 <div class="progress-bar bg-success" style="width:<?=$subProgressPercent?>%"></div>
 </div>
+<?php if($t['in_progress_attempt_id']):?>
 <div class="small text-secondary mt-1"><?=$subProgressLabel?></div>
+<?php endif;?>
 </div>
 
 
