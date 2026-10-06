@@ -20,6 +20,30 @@ if($topicId){
 }
 
 $errors=[];$analysis=null;
+$prefix=trim((string)($_POST['prefix']??''));
+$requestedSpecs=$_POST['specs']??[];
+
+function ai_requested_specs(mixed $input):array{
+    $result=[];
+    if(!is_array($input))return $result;
+    foreach($input as $row){
+        if(!is_array($row))continue;
+        $type=(string)($row['type']??'mixed');
+        if(!in_array($type,['mc','open','mixed'],true))$type='mixed';
+        $count=(int)($row['count']??0);
+        if($count<1)continue;
+        $result[]=['type'=>$type,'count'=>min(100,$count)];
+        if(count($result)>=10)break;
+    }
+    return $result;
+}
+function ai_requested_total(array $specs):int{
+    return array_sum(array_map(fn($spec)=>(int)($spec['count']??0),$specs));
+}
+function ai_type_label(string $type):string{
+    return ['mc'=>'Multiple choice','open'=>'Open vragen','mixed'=>'Combinatie'][$type]??'Combinatie';
+}
+$requestedSpecs=ai_requested_specs($requestedSpecs);
 
 function ai_cleanup_source_images(array $paths):void{
     $dirs=[];
@@ -56,30 +80,31 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
     if($action==='generate'){
         $saved=$_SESSION['ai_test_analysis']??null;
-        $selected=$_POST['subtests']??[];
+        $postedSpecs=ai_requested_specs($_POST['specs']??[]);
+        $postedPrefix=trim((string)($_POST['prefix']??''));
+        if($postedSpecs)$requestedSpecs=$postedSpecs;
+        if($postedPrefix!=='')$prefix=$postedPrefix;
         if(!is_array($saved)||($saved['subject_id']??null)!==$subjectId||($saved['topic_id']??null)!==$topicId){
             $errors[]='De eerdere AI-analyse is verlopen. Analyseer de pagina’s opnieuw.';
-        }elseif(!is_array($selected)||!$selected){
-            $errors[]='Selecteer minimaal één sub-test.';
+        }elseif(!$requestedSpecs){
+            $errors[]='Geef minimaal één sub-test op.';
         }else{
-            $available=$saved['analysis']['subtests']??[];
-            $chosen=[];
-            foreach($selected as $index){
-                if(!ctype_digit((string)$index))continue;
-                $index=(int)$index;
-                if(isset($available[$index]))$chosen[]=$available[$index];
+            $capacity=max(0,(int)($saved['analysis']['max_unique_questions']??0));
+            $requestedTotal=ai_requested_total($requestedSpecs);
+            if($capacity<1){
+                $errors[]='De AI kon geen betrouwbare maximale hoeveelheid vragen bepalen. Analyseer de pagina’s opnieuw.';
+            }elseif($requestedTotal>$capacity){
+                $errors[]='Op basis van deze foto’s kunnen maximaal '.$capacity.' verschillende vragen worden gemaakt. Je hebt '.$requestedTotal.' vragen gevraagd. Verminder het aantal vragen of het aantal sub-testen.';
+            }elseif(count($requestedSpecs)>10){
+                $errors[]='Je kunt maximaal tien sub-testen tegelijk genereren.';
             }
-            if(!$chosen)$errors[]='De geselecteerde sub-tests zijn ongeldig.';
-            if(count($chosen)>3)$errors[]='Je kunt maximaal drie sub-tests tegelijk genereren.';
             if(!$errors){
+                $_SESSION['ai_test_analysis']['request']=['prefix'=>$prefix,'specs'=>$requestedSpecs];
                 $requested=[];
-                foreach($chosen as $sub){
-                    $count=max(1,min(15,(int)($sub['question_count']??10)));
-                    $types=array_values(array_intersect((array)($sub['recommended_types']??[]),['mc','open']));
-                    if(!$types)$types=['mc','open'];
-                    $requested[]=['title'=>(string)$sub['title'],'description'=>(string)$sub['description'],'question_count'=>$count,'types'=>$types];
+                foreach($requestedSpecs as $i=>$spec){
+                    $requested[]=['number'=>$i+1,'type'=>$spec['type'],'type_label'=>ai_type_label($spec['type']),'question_count'=>$spec['count']];
                 }
-                $prompt='Maak nu concrete oefentoetsvragen voor de geselecteerde sub-tests. Gebruik uitsluitend de informatie uit de schoolboekpagina’s. De voorgestelde leerstof en sub-tests zijn: '.json_encode($requested,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'. Maak per sub-test precies het gevraagde aantal vragen. Verdeel MC en open zo logisch mogelijk binnen de voorgestelde types. Bij mc moeten options exact vier antwoorden bevatten en correct_option de index van het juiste antwoord zijn; correct_answer moet exact gelijk zijn aan die optie. Bij open moet options leeg zijn, correct_option 0 zijn en accepted_answers minimaal één geldig antwoord bevatten. source_page is de pagina uit de geüploade set waarop de vraag het duidelijkst gebaseerd is. Zet use_image alleen op true als een afbeelding, kaart, schema of foto op die pagina echt relevant is voor het beantwoorden van de vraag.';
+                $prompt='Maak nu concrete oefentoetsvragen voor precies deze gevraagde sub-tests. Gebruik uitsluitend de informatie uit de schoolboekpagina’s. Maak exact '.count($requested).' sub-tests met in totaal '.$requestedTotal.' vragen. De gewenste opdrachten zijn: '.json_encode($requested,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'. Bepaal per sub-test zelf een korte, duidelijke titel op basis van de leerstof; voeg geen prefix toe en gebruik geen algemene titels zoals "Toets 1" als een inhoudelijke titel mogelijk is. Bij meerdere vergelijkbare sub-tests moeten de titels uniek zijn. Maak per sub-test precies het gevraagde aantal vragen. Bij mc zijn alle vragen multiple choice met exact vier antwoorden en exact één correct antwoord. Bij open zijn alle vragen open en moet accepted_answers minimaal één inhoudelijk geldig antwoord bevatten. Bij combinatie moet je een evenwichtige mix van mc en open maken. Vermijd dubbele of vrijwel identieke vragen, ook tussen verschillende sub-tests. Als de bron een bepaald aantal niet voldoende verschillende vragen ondersteunt, verzin dan niets. source_page is de pagina uit de geüploade set waarop de vraag het duidelijkst gebaseerd is. Zet use_image alleen op true als een afbeelding, kaart, schema of foto op die pagina echt relevant is voor het beantwoorden van de vraag.';
                 $data=openai_generate_test_questions($prompt,(array)($saved['images']??[]));
                 if(isset($data['_leren_error']))$errors[]=$data['_leren_error'];
                 else{
@@ -107,7 +132,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $validTests=[];
             foreach($posted as $si=>$test){
                 if(!isset($generated[$si])||!is_array($test))continue;
-                $title=trim((string)($test['title']??''));
+                $rawTitle=trim((string)($test['title']??''));
+                $prefixToUse=trim((string)(($saved['request']['prefix']??'')??''));
+                $title=$prefixToUse!==''?$prefixToUse.' '.$rawTitle:$rawTitle;
                 $description=trim((string)($test['description']??''));
                 $questions=$test['questions']??[];
                 if($title===''){ $errors[]='Elke sub-test moet een titel hebben.'; continue; }
@@ -161,9 +188,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         foreach($test['questions'] as $q){$hasOpen=$hasOpen||$q['type']==='open';$hasMc=$hasMc||$q['type']==='mc';}
                         if($hasOpen&&$hasMc)$testType='mixed';elseif($hasOpen)$testType='open';
                         $check=$pdo->prepare("SELECT id FROM tests WHERE topic_id=? AND title=? LIMIT 1");
-                        $check->execute([$topicId,$test['title']]);
-                        if($check->fetchColumn())throw new RuntimeException('Er bestaat al een sub-test met de titel "'.$test['title'].'". Pas de titel aan voordat je opslaat.');
-                        $testIns->execute([$topicId,$test['title'],$test['description'],$testType,null,null,'both']);
+                        $check->execute([$topicId,$title]);
+                        if($check->fetchColumn())throw new RuntimeException('Er bestaat al een sub-test met de titel "'.$title.'". Pas de titel aan voordat je opslaat.');
+                        $testIns->execute([$topicId,$title,$test['description'],$testType,null,null,'both']);
                         $testId=(int)$pdo->lastInsertId();
                         foreach($test['questions'] as $sort=>$q){
                             $imagePath=null;
@@ -234,7 +261,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         }
 
         if(!$errors){
-            $prompt='Analyseer de geüploade schoolboekpagina’s en maak een voorstel voor oefentoetsen. Identificeer het vak en onderwerp, vat de stof kort samen, geef de belangrijkste leerpunten en stel logische afzonderlijke sub-tests voor. Gebruik uitsluitend informatie uit de pagina’s. Houd de voorstellen geschikt voor een leerling van ongeveer 12-15 jaar. Een sub-test bevat idealiter 8-15 vragen. Gebruik "mc" voor multiple choice en "open" voor open vragen. Geef alleen JSON volgens het opgegeven schema.';
+            $prompt='Analyseer de geüploade schoolboekpagina’s voor het maken van oefentoetsen. Identificeer het vak en onderwerp, vat de stof kort samen en geef de belangrijkste leerpunten. Gebruik uitsluitend informatie uit de pagina’s. Bepaal daarnaast zo realistisch mogelijk hoeveel verschillende, inhoudelijk zinvolle vragen maximaal uit deze bron kunnen worden gemaakt zonder leerstof te verzinnen of dezelfde vraag opnieuw te formuleren. Wees conservatief: tel alleen vragen mee die echt van elkaar verschillen. Stel ook enkele logische inhoudelijke sub-testtitels voor. Geef alleen JSON volgens het opgegeven schema.';
             $data=openai_generate_with_images($prompt,$valid);
             if(isset($data['_leren_error'])){
                 foreach($valid as $path)@unlink($path);
@@ -253,6 +280,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         'topic_id'=>$topicId,
                         'analysis'=>$analysis,
                         'images'=>$valid,
+                        'request'=>['prefix'=>$prefix,'specs'=>$requestedSpecs],
                         'created_at'=>time()
                     ];
                 }
@@ -264,6 +292,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         }
     }
 }
+$savedRequest=$_SESSION['ai_test_analysis']['request']??['prefix'=>$prefix,'specs'=>$requestedSpecs];
 ?>
 <!doctype html>
 <html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -277,9 +306,17 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <?php foreach($errors as $error):?><div class="alert alert-danger"><?=e($error)?></div><?php endforeach;?>
 
 <?php if(!$analysis):?>
-<div class="alert alert-info">Upload foto’s van de relevante pagina’s uit het boek. De AI leest de pagina’s en maakt eerst een voorstel. Er wordt nog niets in de database opgeslagen.</div>
+<div class="alert alert-info">Upload foto’s van de relevante pagina’s uit het boek. Geef meteen aan welke sub-testen je wilt maken. De AI controleert na het analyseren hoeveel verschillende vragen de bron maximaal ondersteunt.</div>
 <form method="post" enctype="multipart/form-data">
 <input type="hidden" name="action" value="analyze">
+<div class="row g-3 mb-3">
+<div class="col-md-6"><label class="form-label fw-semibold">Prefix voor de Sub-Testnaam</label><input class="form-control" name="prefix" value="<?=e($prefix)?>" placeholder="Bijvoorbeeld 1.1"><div class="form-text">De AI levert de inhoudelijke naam; de app zet de prefix ervoor.</div></div>
+</div>
+<div class="card bg-light border-0 mb-3"><div class="card-body">
+<div class="d-flex justify-content-between align-items-center mb-2"><strong>Gewenste Sub-Testen</strong><button type="button" class="btn btn-outline-secondary btn-sm" id="addSpec">+ Sub-test</button></div>
+<div id="specRows"></div>
+<div class="small text-secondary">Bijvoorbeeld: 1 × 40 Multiple choice en 1 × 14 Open vragen, of 3 × 53 Combinatie.</div>
+</div></div>
 <label class="dropzone d-block mb-3" for="pages">
 <div class="fs-1">📷</div><strong>Foto’s van boekpagina’s kiezen</strong>
 <div class="text-secondary small mt-1">JPG, PNG of WebP · maximaal 10 pagina’s · maximaal 5 MB per afbeelding</div>
@@ -296,21 +333,17 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 </div>
 <h3 class="h5 mt-4">Belangrijkste leerpunten</h3>
 <ul><?php foreach(($analysis['learning_points']??[]) as $point):?><li><?=e($point)?></li><?php endforeach;?></ul>
-<h3 class="h5 mt-4">Voorgestelde sub-tests</h3>
-<form method="post">
+<div class="alert alert-success mt-4"><strong>Analyse voltooid.</strong> Op basis van deze foto’s kunnen maximaal <strong><?=e((string)($analysis['max_unique_questions']??0))?> verschillende vragen</strong> worden gemaakt zonder leerstof te verzinnen of vragen onnodig te herhalen.</div>
+<h3 class="h5 mt-4">Sub-Testen genereren</h3>
+<form method="post" id="generateForm">
 <input type="hidden" name="action" value="generate">
-<?php foreach(($analysis['subtests']??[]) as $i=>$sub):?>
-<label class="card analysis-card mb-3"><div class="card-body">
-<div class="form-check">
-<input class="form-check-input" type="checkbox" name="subtests[]" value="<?=$i?>" id="subtest<?=$i?>" checked>
-<span class="form-check-label d-block" for="subtest<?=$i?>">
-<span class="d-flex justify-content-between gap-3"><span><strong><?=e($sub['title'])?></strong><br><span class="text-secondary"><?=e($sub['description'])?></span></span><span class="badge text-bg-light align-self-start"><?=e((string)$sub['question_count'])?> vragen</span></span>
-<span class="small text-secondary">Voorgestelde vraagtypes: <?=e(implode(', ',(array)($sub['recommended_types']??[])))?></span>
-</span>
-</div>
-</div></label>
-<?php endforeach;?>
-<button class="btn btn-primary" type="submit">Genereer geselecteerde vragen met AI</button>
+<div class="row g-3 mb-3"><div class="col-md-6"><label class="form-label fw-semibold">Prefix voor de Sub-Testnaam</label><input class="form-control" name="prefix" value="<?=e((string)($savedRequest['prefix']??$prefix))?>" placeholder="Bijvoorbeeld 1.1"></div></div>
+<div class="card bg-light border-0 mb-3"><div class="card-body">
+<div class="d-flex justify-content-between align-items-center mb-2"><strong>Gewenste Sub-Testen</strong><button type="button" class="btn btn-outline-secondary btn-sm" id="addSpecAfter">+ Sub-test</button></div>
+<div id="specRowsAfter"></div>
+<div class="small text-secondary">Totaal gevraagd: <strong id="specTotal">0</strong> vragen · maximaal beschikbaar: <strong><?=e((string)($analysis['max_unique_questions']??0))?></strong></div>
+</div></div>
+<button class="btn btn-primary" type="submit" id="generateButton">Genereer vragen met AI</button>
 </form>
 <?php if(isset($_SESSION['ai_test_analysis']['generated']['subtests'])):?>
 <hr class="my-4">
@@ -362,4 +395,37 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <script>
 const input=document.getElementById('pages'),list=document.getElementById('fileList');
 if(input)input.addEventListener('change',()=>{list.textContent=[...input.files].map(f=>f.name+' ('+Math.round(f.size/1024)+' KB)').join(' · ')});
+const initialSpecs=<?=json_encode($requestedSpecs,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;
+const savedSpecs=<?=json_encode($savedRequest['specs']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;
+const specDefaults=savedSpecs.length?savedSpecs:(initialSpecs.length?initialSpecs:[{type:'mixed',count:10}]);
+function addSpecRow(container,row,index){
+ const wrap=document.createElement('div');wrap.className='row g-2 align-items-end mb-2 spec-row';
+ wrap.innerHTML='<div class="col-5 col-md-3"><label class="form-label small">Aantal</label><input class="form-control" type="number" name="specs['+index+'][count]" min="1" max="100" value="'+(row.count||10)+'" required></div>'+
+ '<div class="col-5 col-md-4"><label class="form-label small">Type</label><select class="form-select" name="specs['+index+'][type]"><option value="mc" '+(row.type==='mc'?'selected':'')+'>Multiple choice</option><option value="open" '+(row.type==='open'?'selected':'')+'>Open vragen</option><option value="mixed" '+(row.type==='mixed'?'selected':'')+'>Combinatie</option></select></div>'+
+ '<div class="col-2 col-md-2"><button type="button" class="btn btn-outline-danger w-100 remove-spec">×</button></div>';
+ container.appendChild(wrap);
+ wrap.querySelector('.remove-spec').addEventListener('click',()=>{wrap.remove();updateTotals(container)});
+}
+function fillSpecs(container,specs){
+ container.innerHTML='';
+ (specs.length?specs:[{type:'mixed',count:10}]).forEach((row,i)=>addSpecRow(container,row,i));
+ updateTotals(container);
+}
+function updateTotals(container){
+ if(!container)return;
+ let total=0;container.querySelectorAll('input[name$="[count]"]').forEach(el=>total+=Math.max(0,parseInt(el.value||'0',10)));
+ const totalEl=document.getElementById(container.id==='specRowsAfter'?'specTotal':null);
+ if(totalEl)totalEl.textContent=total;
+}
+const initialContainer=document.getElementById('specRows');
+if(initialContainer){
+ fillSpecs(initialContainer,specDefaults);
+ document.getElementById('addSpec').addEventListener('click',()=>{addSpecRow(initialContainer,{type:'mixed',count:10},initialContainer.children.length);updateTotals(initialContainer)});
+}
+const afterContainer=document.getElementById('specRowsAfter');
+if(afterContainer){
+ fillSpecs(afterContainer,specDefaults);
+ document.getElementById('addSpecAfter').addEventListener('click',()=>{addSpecRow(afterContainer,{type:'mixed',count:10},afterContainer.children.length);updateTotals(afterContainer)});
+ afterContainer.addEventListener('input',()=>updateTotals(afterContainer));
+}
 </script></body></html>
