@@ -168,10 +168,11 @@ function mastery_label(?float $score):string{
 <?php else:?>
 <div class="rounded-circle bg-secondary-subtle d-flex align-items-center justify-content-center flex-shrink-0" style="width:76px;height:76px;font-size:2rem">👤</div>
 <?php endif;?>
-<div>
+<div class="flex-grow-1">
 <h1 class="h2 mb-1"><?=e($student['name'])?></h1>
 <div class="text-secondary"><?=e($student['email'])?></div>
 </div>
+<a class="btn btn-outline-primary" href="user_edit.php?id=<?=(int)$student['id']?>">Gebruiker bewerken</a>
 </div>
 </div>
 </div>
