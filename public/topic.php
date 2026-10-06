@@ -60,6 +60,43 @@ usort($tests,function(array $a,array $b):int{
     return strnatcasecmp((string)$a['title'],(string)$b['title']);
 });
 
+/* Zodra alle gewone sub-testen minimaal één keer zijn afgerond, kan de leerling
+ * alle resterende fouten uit de laatste pogingen gezamenlijk oefenen. */
+$reviewAvailable=false;
+$reviewWrongCount=0;
+if($tests){
+    $completedStmt=$pdo->prepare("
+        SELECT COUNT(DISTINCT a.test_id)
+        FROM attempts a
+        JOIN tests t ON t.id=a.test_id
+        WHERE a.student_id=? AND a.status='finished' AND a.mode='normal'
+          AND t.topic_id=? AND t.is_active=1
+    ");
+    $completedStmt->execute([$studentId,$topicId]);
+    $completedCount=(int)$completedStmt->fetchColumn();
+
+    if($completedCount===count($tests)){
+        $wrongStmt=$pdo->prepare("
+            SELECT COUNT(DISTINCT aq.question_id)
+            FROM tests t
+            JOIN (
+                SELECT a.test_id,MAX(a.id) attempt_id
+                FROM attempts a
+                JOIN tests lt ON lt.id=a.test_id
+                WHERE a.student_id=? AND a.status='finished' AND a.mode='normal'
+                  AND lt.topic_id=? AND lt.is_active=1
+                GROUP BY a.test_id
+            ) latest ON latest.test_id=t.id
+            JOIN attempt_questions aq ON aq.attempt_id=latest.attempt_id
+            JOIN attempt_answers aa ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id
+            WHERE t.topic_id=? AND t.is_active=1 AND aa.is_correct=0
+        ");
+        $wrongStmt->execute([$studentId,$topicId,$topicId]);
+        $reviewWrongCount=(int)$wrongStmt->fetchColumn();
+        $reviewAvailable=$reviewWrongCount>0;
+    }
+}
+
 $historyStmt=$pdo->prepare("
     SELECT id,score,finished_at
     FROM attempts
@@ -136,6 +173,19 @@ $browserToken=$_SESSION['learner_token'];
 <?php endif;?>
 
 <h2 class="h3 mt-4 mb-3">Sub-Testen</h2>
+<?php if($reviewAvailable):?>
+<div class="card border-success shadow-sm mb-4">
+<div class="card-body p-3 p-md-4">
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
+<div>
+<h2 class="h4 mb-1">Fouten oefenen</h2>
+<p class="text-secondary mb-0">Alle <?=e((string)$reviewWrongCount)?> vragen die je in de laatste pogingen fout had, verzameld in één oefentoets.</p>
+</div>
+<a class="btn btn-success flex-shrink-0" href="quiz.php?review=1&topic_id=<?=(int)$topicId?>">Start fouten oefenen</a>
+</div>
+</div>
+</div>
+<?php endif;?>
 <?php if(!$tests):?>
 <div class="alert alert-info">Er zijn nog geen sub-testen voor deze overhoring.</div>
 <?php else:?>
