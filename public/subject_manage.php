@@ -87,11 +87,11 @@ $labels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Multiple choice','
 .topic-header{background:#cfe2ff!important}
 .topic-header-inner{display:flex;align-items:center;width:100%;min-height:52px}
 .topic-header-title{flex:1;min-width:0}
-.topic-collapse-button{border:0;background:transparent;width:100%;text-align:left;padding:.75rem 1rem;color:inherit}
+.topic-collapse-button{border:0;background:transparent;width:100%;text-align:left;padding:.75rem 1rem;color:inherit;font-size:1rem;font-weight:400}
 .topic-header-actions{display:flex;align-items:center;gap:.5rem;padding-right:.5rem;flex-shrink:0}
 .topic-chevron{border:0;background:transparent;width:38px;height:38px;display:flex;align-items:center;justify-content:center;padding:0}
-.topic-chevron span{width:11px;height:11px;border-right:2px solid #0d3b66;border-bottom:2px solid #0d3b66;transform:rotate(225deg);transition:transform .15s ease}
-.topic-chevron.collapsed span{transform:rotate(45deg)}
+.topic-chevron span{width:11px;height:11px;border-right:2px solid #0d3b66;border-bottom:2px solid #0d3b66;transform:rotate(45deg);transition:transform .15s ease}
+.topic-chevron.collapsed span{transform:rotate(225deg)}
 .admin-test-results summary::-webkit-details-marker{display:none}
 .admin-result-chevron{width:10px;height:10px;border-right:2px solid #6c757d;border-bottom:2px solid #6c757d;transform:rotate(45deg);transition:transform .15s ease;margin-right:4px;margin-top:-5px}
 .admin-test-results[open] .admin-result-chevron{transform:rotate(225deg);margin-top:5px}
