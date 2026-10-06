@@ -143,6 +143,9 @@ unset($topicTestList);
 <div class="text-nowrap">
 <a class="btn btn-sm btn-outline-primary" href="summary_edit.php?id=<?=$summary['id']?>">Bewerken</a>
 <form method="post" action="summary_edit.php?id=<?=$summary['id']?>" class="d-inline">
+<input type="hidden" name="id" value="<?=$summary['id']?>">
+<input type="hidden" name="subject_id" value="<?=$id?>">
+<input type="hidden" name="topic_id" value="<?=$topic['id']?>">
 <button class="btn btn-sm btn-outline-danger ms-1" type="submit" name="action" value="delete" onclick="return confirm('Weet u zeker dat u deze samenvatting wilt verwijderen? De samenvatting verdwijnt uit de website, maar blijft in de database bewaard.');">Verwijderen</button>
 </form>
 </div>
