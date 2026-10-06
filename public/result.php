@@ -66,8 +66,12 @@ $doneMistakes=$correct<$total;
 </div>
 
 <div class="d-grid gap-2 mb-4">
+  <?php if($r['title']==='Fouten oefenen'):?>
+  <a class="btn btn-primary" href="topic.php?id=<?=(int)$r['topic_id']?>">Terug naar de overhoring</a>
+  <?php else:?>
   <a class="btn btn-primary" href="quiz.php?id=<?=(int)$r['test_id']?>&new=1">Sub-Test opnieuw maken</a>
   <?php if($doneMistakes):?><a class="btn btn-warning" href="quiz.php?id=<?=(int)$r['test_id']?>&mode=mistakes&source=<?=(int)$r['id']?>">Alleen mijn fouten oefenen</a><?php endif;?>
+  <?php endif;?>
 </div>
 
 <?php foreach($questions as $i=>$q):?>
