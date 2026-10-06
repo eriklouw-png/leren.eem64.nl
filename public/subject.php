@@ -63,8 +63,11 @@ if($studentId && $topics){
             && !array_filter($scores,fn($score)=>$score<100);
         $topic['progress_total']=$testCounts[$topicId]??0;
         $topic['progress_done']=count($scores);
-        $topic['progress_percent']=($topic['progress_total']>0)
-            ? (int)round($topic['progress_done']/$topic['progress_total']*100)
+        /* De voortgang toont het gemiddelde van de laatste scores per sub-test.
+         * Zo blijft een overhoring met alle sub-testen gemaakt maar bijvoorbeeld
+         * één score van 80% zichtbaar als 95% wanneer de andere drie 100% zijn. */
+        $topic['progress_percent']=($topic['progress_done']>0)
+            ? (int)round(array_sum($scores)/$topic['progress_done'])
             : 0;
     }
     unset($topic);
