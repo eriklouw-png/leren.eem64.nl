@@ -162,6 +162,9 @@ $browserToken=$_SESSION['learner_token'];
 .subtest-history summary::-webkit-details-marker{display:none}
 .history-chevron{width:10px;height:10px;border-right:2px solid #6c757d;border-bottom:2px solid #6c757d;transform:rotate(45deg);transition:transform .15s ease;margin-right:4px;margin-top:-5px}
 .subtest-history[open] .history-chevron{transform:rotate(225deg);margin-top:5px}
+.subtest-complete{border:2px solid #198754!important;background:#e9f7ef}
+.subtest-complete .subtest-title{color:#198754}
+.subtest-check{color:#198754;font-size:1.35rem;line-height:1}
 </style>
 </head>
 <body class="bg-light">
@@ -228,10 +231,18 @@ $browserToken=$_SESSION['learner_token'];
 <?php else:?>
 <div class="list-group shadow-sm">
 <?php foreach($tests as $t):?>
-<div class="list-group-item p-3 p-md-4">
+<?php
+$history=$historyByTest[(int)$t['id']]??[];
+$latestScore=$history ? (float)$history[0]['score'] : null;
+$isComplete=$latestScore!==null && $latestScore>=100;
+?>
+<div class="list-group-item p-3 p-md-4<?=$isComplete?' subtest-complete':''?>">
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
 <div class="min-w-0">
-<strong class="fs-5"><?=e($t['title'])?></strong>
+<div class="d-flex align-items-center gap-2">
+<?php if($isComplete):?><span class="subtest-check" aria-label="100 procent behaald">✓</span><?php endif;?>
+<strong class="fs-5 subtest-title"><?=e($t['title'])?></strong>
+</div>
 <div class="small text-secondary"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=((($t['test_type']??'mixed')==='vocabulary' && ($t['vocab_direction']??'both')==='both') ? (int)ceil(((int)$t['question_count'])/2) : (int)$t['question_count'])?> <?=($t['test_type']??'mixed')==='vocabulary'?'woorden':'vragen'?></div>
 <?php if($t['description']):?><div class="text-secondary mt-1"><?=e($t['description'])?></div><?php endif;?>
 </div>
@@ -262,7 +273,6 @@ $progressPercent=(int)round($progressAnswered/$progressTotal*100);
 </div>
 <?php endif;?>
 
-<?php $history=$historyByTest[(int)$t['id']]??[]; ?>
 <?php if($history):?>
 <details class="mt-4 pt-3 border-top subtest-history">
 <summary class="d-flex justify-content-between align-items-center list-unstyled">
