@@ -178,11 +178,6 @@ unset($topicTestList);
 </div>
 
 <?php $testResults=$resultGroups[(int)$t['id']]??[]; ?>
-<details class="mt-3 pt-3 border-top admin-test-results">
-<summary class="d-flex justify-content-between align-items-center" style="cursor:pointer;list-style:none">
-<span class="small fw-semibold text-secondary">Eerdere resultaten<?=count($testResults)?' · '.count($testResults):''?></span>
-<span class="admin-result-chevron" aria-hidden="true"></span>
-</summary>
 <?php if($testResults):?>
 <details class="mt-3 pt-3 border-top admin-test-results">
 <summary class="d-flex justify-content-between align-items-center" style="cursor:pointer;list-style:none">
