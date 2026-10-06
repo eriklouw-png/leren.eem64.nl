@@ -91,7 +91,7 @@ if($tests){
         WHERE a.student_id=? AND a.status='in_progress' AND a.mode='mistakes'
           AND rt.topic_id=? AND rt.title='Fouten oefenen'
         GROUP BY a.id
-        ORDER BY a.id DESC
+        ORDER BY answered_count DESC, a.id DESC
         LIMIT 1
     ");
     $reviewProgressStmt->execute([$studentId,$topicId]);
