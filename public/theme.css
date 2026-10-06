@@ -70,9 +70,11 @@ body.bg-light{background:#f4f8f5!important}
 /* Beheeromgeving: bewust visueel anders dan de leerlingomgeving. */
 body.leren-admin{
   background:#d3d7dc !important;
+  color:#fff;
 }
 body.leren-admin .card{
   border-color:#d8dee6;
+  color:#212529;
 }
 body.leren-admin .navbar.bg-dark{
   background:#263238 !important;
