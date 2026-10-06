@@ -35,10 +35,19 @@ ob_start(static function(string $html): string{
         if($isAdminPage){
             $theme.='<style id="leren-admin-theme">
 /* Beheeromgeving: volledige dark mode. */
-body.leren-admin{
+body.leren-admin,
+body.leren-admin.bg-light,
+body.leren-admin.bg-white,
+body.leren-admin.bg-body{
   background:#29332c!important;color:#fff!important;
   --bs-body-bg:#29332c;--bs-body-color:#fff;--bs-secondary-color:#c7cec9;
   --bs-tertiary-bg:#202722;--bs-border-color:#465149;
+}
+body.leren-admin > main,
+body.leren-admin > .container,
+body.leren-admin > .container-fluid{
+  background:#29332c!important;
+  color:#fff!important;
 }
 body.leren-admin main,body.leren-admin section,body.leren-admin header,body.leren-admin footer{color:#fff!important}
 body.leren-admin h1,body.leren-admin h2,body.leren-admin h3,body.leren-admin h4,body.leren-admin h5,body.leren-admin h6,
@@ -61,8 +70,12 @@ body.leren-admin .card h5,body.leren-admin .card h6,body.leren-admin .card p,bod
 body.leren-admin .card small,body.leren-admin .card .text-secondary,body.leren-admin .accordion-body,
 body.leren-admin .list-group-item,body.leren-admin .alert{color:#fff!important}
 body.leren-admin .bg-light,body.leren-admin .bg-white,body.leren-admin .bg-body,
-body.leren-admin .bg-body-tertiary,body.leren-admin .bg-secondary-subtle{
+body.leren-admin .bg-body-tertiary,body.leren-admin .bg-secondary-subtle,
+body.leren-admin .bg-body-secondary,body.leren-admin .bg-body-tertiary{
   background:#252e28!important;color:#fff!important;
+}
+body.leren-admin .bg-secondary-subtle{
+  background:#303b34!important;
 }
 body.leren-admin .table{
   --bs-table-bg:#202722;--bs-table-color:#fff;--bs-table-border-color:#465149;
