@@ -35,7 +35,8 @@ ob_start(static function(string $html): string{
         if($isAdminPage){
             $theme.='<style id="leren-admin-theme">
 /* Beheeromgeving: volledige dark mode. */
-body.leren-admin{
+body.leren-admin,
+body.leren-admin:has(nav.navbar.bg-dark a[href="index.php"]){
   background:#29332c!important;color:#fff!important;
   --bs-body-bg:#29332c;--bs-body-color:#fff;--bs-secondary-color:#c7cec9;
   --bs-tertiary-bg:#202722;--bs-border-color:#465149;
