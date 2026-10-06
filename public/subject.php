@@ -124,6 +124,18 @@ if($studentId && $topics){
 <?php if($topic['test_date']):?>
 <div class="small text-secondary">Overhoring: <?=e(date('d-m-Y',strtotime($topic['test_date'])))?><?=$archived?' · Gearchiveerd':''?></div>
 <?php endif;?>
+<?php if((int)($topic['progress_total']??0)>0):?>
+<div class="topic-progress mt-2">
+<div class="d-flex justify-content-between small text-secondary mb-1">
+<span>Voortgang</span>
+<strong><?=$topic['progress_percent']?>%</strong>
+</div>
+<div class="progress" role="progressbar" aria-label="Voortgang van overhoring" aria-valuenow="<?=$topic['progress_percent']?>" aria-valuemin="0" aria-valuemax="100" style="height:8px">
+<div class="progress-bar bg-success" style="width:<?=$topic['progress_percent']?>%"></div>
+</div>
+<div class="small text-secondary mt-1"><?=$topic['progress_done']?> van <?=$topic['progress_total']?> sub-testen afgerond</div>
+</div>
+<?php endif;?>
 </a>
 </div>
 <div class="d-flex align-items-center gap-2">
