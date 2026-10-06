@@ -61,6 +61,11 @@ if($studentId && $topics){
         $topic['is_complete']=isset($testCounts[$topicId]) && count($scores)===$testCounts[$topicId]
             && $testCounts[$topicId]>0
             && !array_filter($scores,fn($score)=>$score<100);
+        $topic['progress_total']=$testCounts[$topicId]??0;
+        $topic['progress_done']=count($scores);
+        $topic['progress_percent']=($topic['progress_total']>0)
+            ? (int)round($topic['progress_done']/$topic['progress_total']*100)
+            : 0;
     }
     unset($topic);
 }
@@ -78,6 +83,7 @@ if($studentId && $topics){
 .topic-complete{border:2px solid #198754!important;background:#e9f7ef}
 .topic-complete .topic-title{color:#198754}
 .topic-check{color:#198754;font-size:1.35rem;line-height:1}
+.topic-progress{min-width:180px}
 .subject-header{position:relative;min-height:220px;border-radius:1rem;overflow:hidden;background:#6c757d}
 .subject-header-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .subject-header-overlay{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.68),rgba(0,0,0,.2))}
