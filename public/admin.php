@@ -132,14 +132,24 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
 $students=$pdo->query("
     SELECT
         u.id,u.name,u.email,u.image_mime,
-        COALESCE(SUM(ss.active_seconds),0) AS active_seconds,
-        COUNT(DISTINCT CASE WHEN a.status='finished' AND a.mode='normal' THEN a.id END) AS completed_tests,
-        COALESCE(AVG(CASE WHEN a.status='finished' AND a.mode='normal' THEN a.score END),0) AS average_score
+        COALESCE(ss.active_seconds,0) AS active_seconds,
+        COALESCE(a.completed_tests,0) AS completed_tests,
+        COALESCE(a.average_score,0) AS average_score
     FROM users u
-    LEFT JOIN study_sessions ss ON ss.student_id=u.id
-    LEFT JOIN attempts a ON a.student_id=u.id
+    LEFT JOIN (
+        SELECT student_id,SUM(active_seconds) AS active_seconds
+        FROM study_sessions
+        GROUP BY student_id
+    ) ss ON ss.student_id=u.id
+    LEFT JOIN (
+        SELECT student_id,
+               COUNT(*) AS completed_tests,
+               AVG(score) AS average_score
+        FROM attempts
+        WHERE status='finished' AND mode='normal'
+        GROUP BY student_id
+    ) a ON a.student_id=u.id
     WHERE u.role='student'
-    GROUP BY u.id,u.name,u.email,u.image_mime
     ORDER BY u.name
 ")->fetchAll();
 ?>
