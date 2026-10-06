@@ -41,10 +41,19 @@ LEFT JOIN (
             THEN 1 END) answered_count
     FROM attempts a
     JOIN (
-        SELECT test_id,MAX(id) id
-        FROM attempts
-        WHERE student_id=? AND status='in_progress' AND mode='normal'
-        GROUP BY test_id
+        SELECT a2.test_id,MAX(a2.id) id
+        FROM attempts a2
+        WHERE a2.student_id=? AND a2.status='in_progress' AND a2.mode='normal'
+          AND EXISTS (
+              SELECT 1
+              FROM attempt_answers aa2
+              WHERE aa2.attempt_id=a2.id
+                AND (
+                    (aa2.answer_text IS NOT NULL AND TRIM(aa2.answer_text)<>'')
+                    OR aa2.selected_option_id IS NOT NULL
+                )
+          )
+        GROUP BY a2.test_id
     ) latest ON latest.id=a.id
     JOIN attempt_questions aq ON aq.attempt_id=a.id
     LEFT JOIN attempt_answers aa
