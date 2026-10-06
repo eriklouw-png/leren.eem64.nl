@@ -113,10 +113,16 @@ unset($topicTestList);
 <?php foreach($topics as $topic): $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d'); $topicTests=$testsByTopic[(int)$topic['id']]??[]; $topicSummaries=$summariesByTopic[(int)$topic['id']]??[];?>
 <div class="accordion-item">
 <h2 class="accordion-header" id="heading<?=$topic['id']?>">
-<button class="accordion-button <?=$archived?'collapsed':''?>" type="button" data-bs-toggle="collapse" data-bs-target="#collapse<?=$topic['id']?>" aria-expanded="<?=$archived?'false':'true'?>" aria-controls="collapse<?=$topic['id']?>">
+<div class="d-flex align-items-center w-100 pe-2">
+<button class="accordion-button <?=$archived?'collapsed':''?> flex-grow-1" type="button" data-bs-toggle="collapse" data-bs-target="#collapse<?=$topic['id']?>" aria-expanded="<?=$archived?'false':'true'?>" aria-controls="collapse<?=$topic['id']?>">
 <span class="<?=$archived?'text-secondary':''?>"><strong><?=e($topic['name'])?></strong>
 <span class="small text-secondary ms-2"><?php if($topic['test_date']):?><?=e(date('d-m-Y',strtotime($topic['test_date'])))?> · <?= $archived?'Gearchiveerd':'Actief'?><?php else:?>Geen overhoringsdatum<?php endif;?></span></span>
 </button>
+<div class="d-flex gap-2 ms-2 flex-shrink-0">
+<a class="btn btn-sm btn-outline-success" href="ai_test_generator.php?topic_id=<?=$topic['id']?>">AI toets maken</a>
+<a class="btn btn-sm btn-outline-secondary" href="topic_edit.php?id=<?=$topic['id']?>">Overhoring bewerken</a>
+</div>
+</div>
 </h2>
 <div id="collapse<?=$topic['id']?>" class="accordion-collapse collapse <?=$archived?'':'show'?>" aria-labelledby="heading<?=$topic['id']?>" data-bs-parent="#overhoringen">
 <div class="accordion-body">
@@ -151,11 +157,7 @@ unset($topicTestList);
 
 <div class="d-flex justify-content-between align-items-center gap-2 mb-3 mt-4">
 <strong>Sub-Testen</strong>
-<div>
 <a class="btn btn-sm btn-primary" href="test_new.php?topic_id=<?=$topic['id']?>">Nieuwe sub-test</a>
-<a class="btn btn-sm btn-outline-success ms-1" href="ai_test_generator.php?topic_id=<?=$topic['id']?>">AI toets maken</a>
-<a class="btn btn-sm btn-outline-secondary ms-1" href="topic_edit.php?id=<?=$topic['id']?>">Overhoring bewerken</a>
-</div>
 </div>
 
 <?php if(!$topicTests):?>
