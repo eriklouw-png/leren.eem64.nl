@@ -184,7 +184,8 @@ if(!$attempt){
                 $ins=$pdo->prepare("INSERT INTO attempt_questions(attempt_id,question_id,sort_order) VALUES(?,?,?)");
                 foreach($questionIds as $i=>$questionId)$ins->execute([$attemptId,(int)$questionId,$i+1]);
             }else{
-                $y=$pdo->prepare("INSERT INTO attempt_questions(attempt_id,question_id,sort_order) SELECT ?,id,sort_order FROM questions WHERE test_id=? ORDER BY sort_order,id");
+                $questionOrder=($test['title']==='Klokkijken - Tijden') ? 'ORDER BY RAND()' : 'ORDER BY sort_order,id';
+                $y=$pdo->prepare("INSERT INTO attempt_questions(attempt_id,question_id,sort_order) SELECT ?,id,ROW_NUMBER() OVER () FROM questions WHERE test_id=? ".$questionOrder);
                 $y->execute([$attemptId,$testId]);
             }
         }
