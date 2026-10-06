@@ -82,6 +82,18 @@ $labels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Multiple choice','
 .admin-test-results summary::-webkit-details-marker{display:none}
 .admin-result-chevron{width:10px;height:10px;border-right:2px solid #6c757d;border-bottom:2px solid #6c757d;transform:rotate(45deg);transition:transform .15s ease;margin-right:4px;margin-top:-5px}
 .admin-test-results[open] .admin-result-chevron{transform:rotate(225deg);margin-top:5px}
+
+@media(max-width:576px){
+.topic-header-inner{flex-direction:column;align-items:stretch;min-height:0}
+.topic-header-title{width:100%}
+.topic-collapse-button{padding:.9rem 1rem .55rem;line-height:1.25}
+.topic-collapse-button strong{display:block;font-size:1.15rem;line-height:1.25;padding-right:.25rem}
+.topic-header-title .small{display:block;margin-left:0!important;margin-top:.3rem;font-size:.82rem;line-height:1.3}
+.topic-header-actions{width:100%;padding:0 .75rem .75rem;gap:.5rem}
+.topic-header-actions .btn{flex:1;min-width:0;white-space:normal;line-height:1.2;padding:.5rem .6rem}
+.topic-header-actions .topic-chevron{flex:0 0 42px;width:42px;height:42px}
+.topic-header{border-bottom:0!important}
+}
 </style></head>
 <body class="bg-light"><main class="container py-4" style="max-width:1000px">
 <a href="admin.php">&larr; Beheer</a>
