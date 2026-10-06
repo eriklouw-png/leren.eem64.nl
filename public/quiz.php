@@ -169,7 +169,11 @@ if($_SERVER['REQUEST_METHOD']==='POST' && in_array(($_POST['action']??''),['save
 $attempt=null;
 if(($mode==='normal' && !$newAttempt) || $reviewMode){
     $resumeMode=$reviewMode?'mistakes':'normal';
-    $x=$pdo->prepare("SELECT * FROM attempts WHERE test_id=? AND student_id=? AND status='in_progress' AND mode=? ORDER BY started_at DESC LIMIT 1");
+    if($reviewMode){
+        $x=$pdo->prepare("SELECT a.*, (SELECT COUNT(*) FROM attempt_answers aa WHERE aa.attempt_id=a.id AND ((aa.answer_text IS NOT NULL AND TRIM(aa.answer_text)<>'') OR aa.selected_option_id IS NOT NULL)) AS answered_count FROM attempts a WHERE a.test_id=? AND a.student_id=? AND a.status='in_progress' AND a.mode=? ORDER BY answered_count DESC, a.id DESC LIMIT 1");
+    }else{
+        $x=$pdo->prepare("SELECT * FROM attempts WHERE test_id=? AND student_id=? AND status='in_progress' AND mode=? ORDER BY started_at DESC LIMIT 1");
+    }
     $x->execute([$testId,$studentId,$resumeMode]);$attempt=$x->fetch();
 }
 
