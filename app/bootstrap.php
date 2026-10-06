@@ -29,14 +29,18 @@ ob_start(static function(string $html): string{
     if(isset($_SESSION['user']) && is_array($_SESSION['user']) && stripos($html,'<body')!==false){
         $script=basename((string)($_SERVER['SCRIPT_NAME']??''));
         $adminPages=[
-            'admin.php','subject_manage.php','subject_edit.php','topic_edit.php',
+            'admin.php','subject_manage.php','subject_edit.php','topic_new.php','topic_edit.php',
             'test_new.php','ai_test_generator.php','test_edit.php','import.php','vocabulary_import.php',
+            'questions.php','question_edit.php','summary_edit.php','user_edit.php',
             'system_update.php','debug_question.php'
         ];
         $area=in_array($script,$adminPages,true)?'admin':'website';
         $navbar=leren_navbar_html($area);
 
         if($navbar!==''){
+            if($area==='admin'){
+                $html=preg_replace('~(<body\\b[^>]*)(>)~i','$1 class="leren-admin"$2',$html,1)??$html;
+            }
             if(preg_match('~<nav\\b[^>]*>.*?</nav>~is',$html)){
                 $html=preg_replace('~<nav\\b[^>]*>.*?</nav>~is',$navbar,$html,1)??$html;
             }else{
