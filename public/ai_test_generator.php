@@ -119,17 +119,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         }else{
             $capacity=max(0,(int)($saved['analysis']['max_unique_questions']??0));
             $requestedTotal=ai_requested_total($requestedSpecs);
-            if($capacity<1){
-                $errors[]='De AI kon geen betrouwbare maximale hoeveelheid vragen bepalen. Analyseer de pagina’s opnieuw.';
-            }elseif(count($requestedSpecs)>10){
+            if(count($requestedSpecs)>10){
                 $errors[]='Je kunt maximaal tien sub-testen tegelijk genereren.';
-            }else{
-                foreach($requestedSpecs as $spec){
-                    if((int)$spec['count']>$capacity){
-                        $errors[]='Op basis van deze foto’s kunnen maximaal '.$capacity.' verschillende vragen per sub-test worden gemaakt. Je hebt '.$spec['count'].' vragen gevraagd in een sub-test. Verminder het aantal vragen.';
-                        break;
-                    }
-                }
             }
             if(!$errors){
                 $_SESSION['ai_test_analysis']['request']=['prefix'=>$prefix,'specs'=>$requestedSpecs];
@@ -137,7 +128,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 foreach($requestedSpecs as $i=>$spec){
                     $requested[]=['number'=>$i+1,'type'=>$spec['type'],'type_label'=>ai_type_label($spec['type']),'question_count'=>$spec['count']];
                 }
-                $prompt='Maak nu concrete oefentoetsvragen voor precies deze gevraagde sub-tests. Gebruik uitsluitend de informatie uit de schoolboekpagina’s. Maak exact '.count($requested).' sub-tests met de gevraagde aantallen vragen. De gewenste opdrachten zijn: '.json_encode($requested,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'. Dezelfde leerstof en feiten mogen in verschillende sub-tests opnieuw worden gebruikt: een multiple-choice-sub-test en een open-vragen-sub-test mogen dus inhoudelijk op dezelfde broninformatie zijn gebaseerd. Ook mogen verschillende sub-tests dezelfde leerstof behandelen. Binnen iedere afzonderlijke sub-test moeten de vragen wel voldoende van elkaar verschillen en niet vrijwel identiek zijn. Bepaal per sub-test zelf een korte, duidelijke titel op basis van de leerstof; voeg geen prefix toe en gebruik geen algemene titels zoals "Toets 1" als een inhoudelijke titel mogelijk is. Bij meerdere vergelijkbare sub-tests moeten de titels uniek zijn. Maak per sub-test precies het gevraagde aantal vragen. Bij mc zijn alle vragen multiple choice met exact vier antwoorden en exact één correct antwoord. Bij open zijn alle vragen open en moet accepted_answers minimaal één inhoudelijk geldig antwoord bevatten. Bij combinatie moet je een evenwichtige mix van mc en open maken. Gebruik de broninformatie dus gerust opnieuw in een andere vraagvorm; probeer niet kunstmatig alle sub-tests samen tot één unieke vragenpool te beperken. source_page is de pagina uit de geüploade set waarop de vraag het duidelijkst gebaseerd is. Zet use_image alleen op true als een afbeelding, kaart, schema of foto op die pagina echt relevant is voor het beantwoorden van de vraag.';
+                $prompt='Maak nu concrete oefentoetsvragen voor precies deze gevraagde sub-tests. Gebruik uitsluitend de informatie uit de schoolboekpagina’s. Probeer het gevraagde aantal daadwerkelijk te halen, ook als de eerdere analyse een lagere schatting van het aantal unieke vragen gaf. Gebruik de bron zo volledig mogelijk en maak binnen één sub-test verschillende vraagvormen en invalshoeken. Bij grammatica, tabellen, vervoegingen, begrippen en korte teksten mag dezelfde broninformatie meerdere keren worden bevraagd als de vraag wezenlijk anders is. Verzin geen informatie die niet uit de bron volgt; als het gevraagde aantal echt niet haalbaar is zonder verzinnen of vrijwel identieke vragen, maak dan zoveel goede vragen als verantwoord mogelijk en leg dat in de titel/description niet uit maar lever de vragen. Maak exact '.count($requested).' sub-tests met de gevraagde aantallen vragen. De gewenste opdrachten zijn: '.json_encode($requested,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'. Dezelfde leerstof en feiten mogen in verschillende sub-tests opnieuw worden gebruikt: een multiple-choice-sub-test en een open-vragen-sub-test mogen dus inhoudelijk op dezelfde broninformatie zijn gebaseerd. Ook mogen verschillende sub-tests dezelfde leerstof behandelen. Binnen iedere afzonderlijke sub-test moeten de vragen wel voldoende van elkaar verschillen en niet vrijwel identiek zijn. Bepaal per sub-test zelf een korte, duidelijke titel op basis van de leerstof; voeg geen prefix toe en gebruik geen algemene titels zoals "Toets 1" als een inhoudelijke titel mogelijk is. Bij meerdere vergelijkbare sub-tests moeten de titels uniek zijn. Maak per sub-test precies het gevraagde aantal vragen. Bij mc zijn alle vragen multiple choice met exact vier antwoorden en exact één correct antwoord. Bij open zijn alle vragen open en moet accepted_answers minimaal één inhoudelijk geldig antwoord bevatten. Bij combinatie moet je een evenwichtige mix van mc en open maken. Gebruik de broninformatie dus gerust opnieuw in een andere vraagvorm; probeer niet kunstmatig alle sub-tests samen tot één unieke vragenpool te beperken. source_page is de pagina uit de geüploade set waarop de vraag het duidelijkst gebaseerd is. Zet use_image alleen op true als een afbeelding, kaart, schema of foto op die pagina echt relevant is voor het beantwoorden van de vraag.';
                 $data=openai_generate_test_questions($prompt,(array)($saved['images']??[]));
                 if(isset($data['_leren_error']))$errors[]=$data['_leren_error'];
                 else{
@@ -433,7 +424,7 @@ $savedSummaryText=(string)($_SESSION['ai_test_analysis']['summary_text']??'');
 <div><?=nl2br(e($savedSummaryText))?></div>
 </div></div>
 <?php endif;?>
-<div class="alert alert-success mt-4"><strong>Analyse voltooid.</strong> Op basis van deze foto’s kunnen maximaal <strong><?=e((string)($analysis['max_unique_questions']??0))?> verschillende vragen</strong> worden gemaakt zonder leerstof te verzinnen of vragen onnodig te herhalen.</div>
+<div class="alert alert-success mt-4"><strong>Analyse voltooid.</strong> De AI heeft de leerstof geanalyseerd en een schatting gemaakt van het aantal mogelijke verschillende vragen. Deze schatting is <strong>geen harde limiet</strong>: je kunt bij het genereren zelf een hoger aantal vragen proberen. De AI probeert het gevraagde aantal te halen zonder leerstof te verzinnen of vrijwel identieke vragen te maken.</div>
 <h3 class="h5 mt-4">Sub-Testen genereren</h3>
 <form method="post" id="generateForm" data-ai-loading="generate">
 <input type="hidden" name="action" value="generate">
@@ -441,7 +432,7 @@ $savedSummaryText=(string)($_SESSION['ai_test_analysis']['summary_text']??'');
 <div class="card bg-light border-0 mb-3"><div class="card-body">
 <div class="d-flex justify-content-between align-items-center mb-2"><strong>Gewenste Sub-Testen</strong><button type="button" class="btn btn-outline-secondary btn-sm" id="addSpecAfter">+ Sub-test</button></div>
 <div id="specRowsAfter"></div>
-<div class="small text-secondary">Totaal gevraagd: <strong id="specTotal">0</strong> vragen · maximaal beschikbaar: <strong><?=e((string)($analysis['max_unique_questions']??0))?></strong></div>
+<div class="small text-secondary">Totaal gevraagd: <strong id="specTotal">0</strong> vragen · de AI probeert het gevraagde aantal te maken op basis van de beschikbare leerstof.</div>
 </div></div>
 <button class="btn btn-primary" type="submit" id="generateButton">Genereer vragen met AI</button>
 </form>
