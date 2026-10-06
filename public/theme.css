@@ -92,3 +92,8 @@ body:has(nav.navbar.bg-dark a[href="index.php"]) .card a:hover{
 body:has(nav.navbar.bg-dark a[href="index.php"]) .navbar.bg-dark{
   background:#263238 !important;
 }
+
+/* De aparte waarschuwing bij Fouten oefenen is niet nodig. */
+body:has(#quizForm) main > .alert-warning{
+  display:none!important;
+}
