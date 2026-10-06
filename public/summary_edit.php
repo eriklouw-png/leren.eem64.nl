@@ -16,9 +16,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }elseif($action==='delete'){
         $x=$pdo->prepare("UPDATE topic_summaries SET is_active=0,deleted_at=NOW(),updated_at=NOW() WHERE id=?");
         $x->execute([$id]);
-    }elseif($action==='restore'){
-        $x=$pdo->prepare("UPDATE topic_summaries SET is_active=1,deleted_at=NULL,updated_at=NOW() WHERE id=?");
-        $x->execute([$id]);
     }
     $x=$pdo->prepare("SELECT topic_id FROM topic_summaries WHERE id=?");
     $x->execute([$id]);
@@ -33,7 +30,7 @@ $x=$pdo->prepare("
     FROM topic_summaries ts
     JOIN topics tp ON tp.id=ts.topic_id
     JOIN subjects s ON s.id=tp.subject_id
-    WHERE ts.id=?
+    WHERE ts.id=? AND ts.is_active=1
 ");
 $x->execute([$id]);$summary=$x->fetch();
 if(!$summary){http_response_code(404);exit('Samenvatting niet gevonden.');}
@@ -46,20 +43,13 @@ if(!$summary){http_response_code(404);exit('Samenvatting niet gevonden.');}
 <div><h1 class="h3 mb-1">Samenvatting bewerken</h1><div class="text-secondary">Overhoring: <?=e($summary['topic_name'])?></div></div>
 <?php if(!(int)$summary['is_active']):?><span class="badge text-bg-secondary">Verwijderd</span><?php endif;?>
 </div>
-<?php if(!(int)$summary['is_active']):?>
-<div class="alert alert-warning">Deze samenvatting is verwijderd voor leerlingen, maar staat nog in de database. Je kunt haar herstellen.</div>
-<?php endif;?>
 <form method="post">
 <input type="hidden" name="action" value="save">
 <div class="mb-3"><label class="form-label">Naam</label><input class="form-control" name="name" value="<?=e($summary['name'])?>" required></div>
 <div class="mb-4"><label class="form-label">Samenvatting</label><textarea class="form-control" name="summary" rows="24" required><?=e($summary['summary'])?></textarea><div class="form-text">Je kunt de door AI gemaakte tekst hier volledig aanpassen.</div></div>
 <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
 <div>
-<?php if((int)$summary['is_active']):?>
-<button class="btn btn-outline-danger" type="submit" name="action" value="delete" onclick="return confirm('Deze samenvatting verbergen voor leerlingen? De tekst blijft in de database bewaard.');">Verwijderen</button>
-<?php else:?>
-<button class="btn btn-outline-success" type="submit" name="action" value="restore">Herstellen</button>
-<?php endif;?>
+<button class="btn btn-outline-danger" type="submit" name="action" value="delete" onclick="return confirm('Weet u zeker dat u deze samenvatting wilt verwijderen? De samenvatting verdwijnt uit de website, maar blijft in de database bewaard.');">Verwijderen</button>
 </div>
 <div class="d-flex gap-2"><a class="btn btn-outline-secondary" href="subject_manage.php?id=<?=$summary['subject_id']?>">Annuleren</a><button class="btn btn-primary" type="submit" name="action" value="save">Opslaan</button></div>
 </div>
