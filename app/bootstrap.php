@@ -21,8 +21,32 @@ function leren_navbar_html(string $area): string{
 }
 
 ob_start(static function(string $html): string{
+    $isAdminPage=false;
+
+    if(isset($_SESSION['user']) && is_array($_SESSION['user']) && stripos($html,'<body')!==false){
+        $script=basename((string)($_SERVER['SCRIPT_NAME']??''));
+        $adminPages=[
+            'admin.php','subject_manage.php','subject_edit.php','topic_new.php','topic_edit.php',
+            'test_new.php','ai_test_generator.php','test_edit.php','import.php','vocabulary_import.php',
+            'questions.php','question_edit.php','summary_edit.php','user_edit.php',
+            'system_update.php','debug_question.php'
+        ];
+        $isAdminPage=in_array($script,$adminPages,true);
+    }
+
     if(stripos($html,'</head>')!==false){
         $theme='<link rel="stylesheet" href="/theme.css">';
+        if($isAdminPage){
+            // Admin styling is injected directly into the page so it cannot be
+            // overridden by Bootstrap's body.bg-light rule or browser CSS caching.
+            $theme.='<style id="leren-admin-theme">
+body.leren-admin{background:#d3d7dc!important;color:#fff!important}
+body.leren-admin h1,body.leren-admin h2,body.leren-admin h3,body.leren-admin h4,body.leren-admin h5,body.leren-admin h6,body.leren-admin p,body.leren-admin .text-secondary,body.leren-admin>main>a{color:#fff!important}
+body.leren-admin .card,body.leren-admin .accordion-body,body.leren-admin .list-group-item,body.leren-admin .alert{color:#212529}
+body.leren-admin .card a,body.leren-admin .accordion-body a,body.leren-admin .list-group-item a{color:#2f7d4a}
+body.leren-admin .navbar.bg-dark{background:#263238!important}
+</style>';
+        }
         $html=preg_replace('~</head>~i',$theme.'</head>',$html,1)??$html;
     }
 
@@ -39,9 +63,6 @@ ob_start(static function(string $html): string{
 
         if($navbar!==''){
             if($area==='admin'){
-                // Add the admin class to the existing <body> tag while preserving any
-                // existing classes/attributes. This is deliberately done with a callback
-                // so pages such as <body class="bg-light"> remain valid.
                 $html=preg_replace_callback(
                     '~<body\b([^>]*)>~i',
                     static function(array $m):string{
