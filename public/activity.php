@@ -24,8 +24,13 @@ if($action==='start'){
     }
 
     if($testId){
-        $x=$pdo->prepare("SELECT id FROM tests WHERE id=? AND is_active=1");
-        $x->execute([$testId]);
+        $x=$pdo->prepare("
+            SELECT t.id
+            FROM tests t
+            LEFT JOIN attempts a ON a.id=?
+            WHERE t.id=? AND (t.is_active=1 OR a.mode='mistakes')
+        ");
+        $x->execute([$attemptId,$testId]);
         if(!$x->fetch()){http_response_code(404);echo json_encode(['ok'=>false,'error'=>'test_not_found']);exit;}
 
         $s=$pdo->prepare("INSERT INTO study_sessions(session_token,student_id,test_id,activity_type,summary_id,attempt_id) VALUES(?,?,?,'test',NULL,?)");
