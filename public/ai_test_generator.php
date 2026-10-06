@@ -433,9 +433,8 @@ $stage=$hasGenerated?3:($analysis?2:1);
 <p class="text-secondary mb-3"><?=e($analysis['summary'])?></p>
 <?php if(!empty($analysis['learning_points'])):?><div class="small fw-semibold mb-1">Belangrijkste leerpunten</div><ul class="small mb-0 ps-3"><?php foreach(array_slice((array)$analysis['learning_points'],0,6) as $point):?><li><?=e($point)?></li><?php endforeach;?></ul><?php endif;?>
 </div></div>
-<div class="d-flex justify-content-between align-items-end gap-3 mb-3">
-<div><h2 class="h4 mb-1">2. Toets instellen</h2><p class="text-secondary mb-0">Kies hier de instellingen. Je hoeft dit maar één keer te doen.</p></div>
-<form method="post"><input type="hidden" name="action" value="clear"><button class="btn btn-outline-secondary btn-sm">Nieuwe foto’s</button></form>
+<div class="mb-3">
+<h2 class="h4 mb-1">2. Toets instellen</h2><p class="text-secondary mb-0">Kies hier de instellingen. Je hoeft dit maar één keer te doen.</p>
 </div>
 <form method="post" id="generateForm" data-ai-loading="generate">
 <input type="hidden" name="action" value="generate">
@@ -455,13 +454,19 @@ $stage=$hasGenerated?3:($analysis?2:1);
 <div class="d-flex justify-content-between align-items-center mb-3"><div><strong>Sub-testen</strong><div class="small text-secondary">Bepaal aantal en vraagtype per sub-test.</div></div><button type="button" class="btn btn-outline-secondary btn-sm" id="addSpecAfter">+ Sub-test</button></div>
 <div id="specRowsAfter"></div><div class="small text-secondary mt-2">Totaal gevraagd: <strong id="specTotal">0</strong> vragen.</div>
 </div></div>
-<button class="btn btn-primary btn-lg w-100" type="submit" id="generateButton">Genereer vragen</button>
+<div class="d-flex flex-column flex-sm-row-reverse gap-2">
+<button class="btn btn-primary btn-lg flex-grow-1" type="submit" id="generateButton">Genereer vragen</button>
+</form>
+<form method="post" class="m-0">
+<input type="hidden" name="action" value="clear">
+<button class="btn btn-outline-secondary btn-lg w-100" type="submit">Annuleren</button>
+</form>
+</div>
 </form>
 
 <?php else:?>
-<div class="d-flex justify-content-between align-items-center gap-3 mb-4">
-<div><h2 class="h4 mb-1">3. Vragen controleren</h2><p class="text-secondary mb-0">Controleer de gegenereerde sub-testen en sla ze daarna op.</p></div>
-<form method="post"><input type="hidden" name="action" value="clear"><button class="btn btn-outline-secondary btn-sm">Opnieuw beginnen</button></form>
+<div class="mb-4">
+<h2 class="h4 mb-1">3. Vragen controleren</h2><p class="text-secondary mb-0">Controleer de gegenereerde sub-testen en sla ze daarna op.</p>
 </div>
 <form method="post">
 <input type="hidden" name="action" value="save">
@@ -492,7 +497,7 @@ $stage=$hasGenerated?3:($analysis?2:1);
 <?php endforeach;?>
 </div></div>
 <?php endforeach;?>
-<div class="d-flex flex-column flex-sm-row gap-2 mb-3"><button class="btn btn-success btn-lg" type="submit">Opslaan als sub-test<?=count($_SESSION['ai_test_analysis']['generated']['subtests'])===1?'':'s'?></button><button class="btn btn-outline-secondary btn-lg" type="submit" name="action" value="clear" formnovalidate>Opnieuw beginnen</button></div>
+<div class="d-flex flex-column flex-sm-row gap-2 mb-3"><button class="btn btn-success btn-lg" type="submit">Opslaan als sub-test<?=count($_SESSION['ai_test_analysis']['generated']['subtests'])===1?'':'s'?></button><button class="btn btn-outline-secondary btn-lg" type="submit" name="action" value="clear" formnovalidate>Annuleren</button></div>
 </form>
 <?php endif;?>
 
