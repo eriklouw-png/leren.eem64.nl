@@ -41,7 +41,7 @@ $importText=(string)($_POST['import_text']??'');
 $replaceExisting=!empty($_POST['replace_existing']);
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
-    if(!in_array($testType,['vocabulary','multiple_choice','mixed'],true))$testType='vocabulary';
+    if(!in_array($testType,['vocabulary','multiple_choice','open','mixed'],true))$testType='vocabulary';
     if($title==='')$errors[]='Een titel is verplicht.';
     if(!$errors){
         $pdo->beginTransaction();
@@ -158,6 +158,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <select class="form-select mb-3" name="test_type" id="testType">
 <option value="vocabulary" <?=$testType==='vocabulary'?'selected':''?>>Woordjes oefenen</option>
 <option value="multiple_choice" <?=$testType==='multiple_choice'?'selected':''?>>Multiple choice</option>
+<option value="open" <?=$testType==='open'?'selected':''?>>Open vragen</option>
 <option value="mixed" <?=$testType==='mixed'?'selected':''?>>Combinatie</option>
 </select>
 <div class="form-check mb-3">
