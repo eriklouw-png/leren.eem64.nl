@@ -37,6 +37,16 @@ $mode=$reviewMode?'mistakes':($_GET['mode']??'normal');
 if(!in_array($mode,['normal','mistakes'],true))$mode='normal';
 $sourceAttemptId=filter_input(INPUT_GET,'source',FILTER_VALIDATE_INT)?:null;
 $newAttempt=isset($_GET['new'])&&$_GET['new']==='1';
+$resumeAttemptId=filter_input(INPUT_GET,'attempt',FILTER_VALIDATE_INT)?:0;
+if(!$newAttempt && $reviewMode && $resumeAttemptId){
+    $resume=$pdo->prepare("SELECT id FROM attempts WHERE id=? AND test_id=? AND student_id=? AND status='in_progress' AND mode='mistakes' LIMIT 1");
+    $resume->execute([$resumeAttemptId,$testId,$studentId]);
+    if($resume->fetch()){
+        $attempt=['id'=>$resumeAttemptId];
+    }else{
+        $resumeAttemptId=0;
+    }
+}
 if(!$newAttempt && $mode==='normal'){
     $resume=$pdo->prepare("SELECT id FROM attempts WHERE test_id=? AND student_id=? AND status='in_progress' AND mode='normal' ORDER BY started_at DESC LIMIT 1");
     $resume->execute([$testId,$studentId]);
@@ -166,8 +176,8 @@ if($_SERVER['REQUEST_METHOD']==='POST' && in_array(($_POST['action']??''),['save
     }
 }
 
-$attempt=null;
-if(($mode==='normal' && !$newAttempt) || $reviewMode){
+$attempt=$attempt??null;
+if(!$attempt && (($mode==='normal' && !$newAttempt) || $reviewMode)){
     $resumeMode=$reviewMode?'mistakes':'normal';
     if($reviewMode){
         $x=$pdo->prepare("SELECT a.*, (SELECT COUNT(*) FROM attempt_answers aa WHERE aa.attempt_id=a.id AND ((aa.answer_text IS NOT NULL AND TRIM(aa.answer_text)<>'') OR aa.selected_option_id IS NOT NULL)) AS answered_count FROM attempts a WHERE a.test_id=? AND a.student_id=? AND a.status='in_progress' AND a.mode=? ORDER BY answered_count DESC, a.id DESC LIMIT 1");
