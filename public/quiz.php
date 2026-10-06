@@ -6,16 +6,34 @@ require_login();
 $currentUser=current_user();
 $studentId=(int)$currentUser['id'];
 
+$reviewMode=isset($_GET['review']) && $_GET['review']==='1';
+$topicId=filter_input(INPUT_GET,'topic_id',FILTER_VALIDATE_INT);
 $testId=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
+
+if($reviewMode){
+    if(!$topicId)redirect('index.php');
+    $reviewTestName='Fouten oefenen';
+    $findReview=$pdo->prepare("SELECT id FROM tests WHERE topic_id=? AND title=? LIMIT 1");
+    $findReview->execute([$topicId,$reviewTestName]);
+    $reviewTestId=(int)($findReview->fetchColumn()?:0);
+    if(!$reviewTestId){
+        $createReview=$pdo->prepare("INSERT INTO tests(topic_id,title,description,test_type,is_active) VALUES(?,?,?,?,0)");
+        $createReview->execute([$topicId,$reviewTestName,'Gezamenlijke oefentoets met fouten uit de sub-testen.','mixed']);
+        $reviewTestId=(int)$pdo->lastInsertId();
+    }
+    $testId=$reviewTestId;
+}
+
 if(!$testId)redirect('index.php');
 
-$s=$pdo->prepare("SELECT t.id,t.title,t.description,t.test_type,t.vocab_left_label,t.vocab_right_label,t.vocab_direction,s.id subject_id,s.name subject_name,tp.id topic_id,tp.name topic_name FROM tests t JOIN topics tp ON tp.id=t.topic_id JOIN subjects s ON s.id=tp.subject_id WHERE t.id=? AND t.is_active=1");
-$s->execute([$testId]);$test=$s->fetch();
+$s=$pdo->prepare("SELECT t.id,t.title,t.description,t.test_type,t.vocab_left_label,t.vocab_right_label,t.vocab_direction,s.id subject_id,s.name subject_name,tp.id topic_id,tp.name topic_name FROM tests t JOIN topics tp ON tp.id=t.topic_id JOIN subjects s ON s.id=tp.subject_id WHERE t.id=? AND (t.is_active=1 OR ?=1)");
+$s->execute([$testId,$reviewMode?1:0]);$test=$s->fetch();
 if(!$test){http_response_code(404);exit('Sub-Test niet gevonden.');}
+if($reviewMode && (int)$test['topic_id']!==$topicId){http_response_code(404);exit('Overhoring niet gevonden.');}
 
 if(!isset($_SESSION['learner_token']))$_SESSION['learner_token']=bin2hex(random_bytes(32));
 $browserToken=$_SESSION['learner_token'];
-$mode=$_GET['mode']??'normal';
+$mode=$reviewMode?'mistakes':($_GET['mode']??'normal');
 if(!in_array($mode,['normal','mistakes'],true))$mode='normal';
 $sourceAttemptId=filter_input(INPUT_GET,'source',FILTER_VALIDATE_INT)?:null;
 $newAttempt=isset($_GET['new'])&&$_GET['new']==='1';
@@ -152,13 +170,34 @@ if($mode==='normal' && !$newAttempt){
 if(!$attempt){
     $mistakes=[];
     if($mode==='mistakes'){
-        if(!$sourceAttemptId)redirect('subject.php?id='.$test['subject_id']);
-        $x=$pdo->prepare("SELECT id FROM attempts WHERE id=? AND test_id=? AND student_id=? AND status='finished'");
-        $x->execute([$sourceAttemptId,$testId,$studentId]);
-        if(!$x->fetch()){http_response_code(403);exit('Deze poging kan niet worden gebruikt voor foutentraining.');}
-        $x=$pdo->prepare("SELECT q.id,q.sort_order FROM attempt_questions aq JOIN questions q ON q.id=aq.question_id JOIN attempt_answers aa ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id WHERE aq.attempt_id=? AND aa.is_correct=0 ORDER BY aq.sort_order,q.id");
-        $x->execute([$sourceAttemptId]);$mistakes=$x->fetchAll();
-        if(!$mistakes)redirect('result.php?id='.$sourceAttemptId.'&done=1');
+        if($reviewMode){
+            $x=$pdo->prepare("
+                SELECT aq.question_id AS id,aq.sort_order
+                FROM tests t
+                JOIN (
+                    SELECT a.test_id,MAX(a.id) attempt_id
+                    FROM attempts a
+                    JOIN tests lt ON lt.id=a.test_id
+                    WHERE a.student_id=? AND a.status='finished' AND a.mode='normal'
+                      AND lt.topic_id=? AND lt.is_active=1
+                    GROUP BY a.test_id
+                ) latest ON latest.test_id=t.id
+                JOIN attempt_questions aq ON aq.attempt_id=latest.attempt_id
+                JOIN attempt_answers aa ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id
+                WHERE t.topic_id=? AND t.is_active=1 AND aa.is_correct=0
+                ORDER BY t.id,aq.sort_order,aq.question_id
+            ");
+            $x->execute([$studentId,$topicId,$topicId]);$mistakes=$x->fetchAll();
+            if(!$mistakes)redirect('topic.php?id='.$topicId);
+        }else{
+            if(!$sourceAttemptId)redirect('subject.php?id='.$test['subject_id']);
+            $x=$pdo->prepare("SELECT id FROM attempts WHERE id=? AND test_id=? AND student_id=? AND status='finished'");
+            $x->execute([$sourceAttemptId,$testId,$studentId]);
+            if(!$x->fetch()){http_response_code(403);exit('Deze poging kan niet worden gebruikt voor foutentraining.');}
+            $x=$pdo->prepare("SELECT q.id,q.sort_order FROM attempt_questions aq JOIN questions q ON q.id=aq.question_id JOIN attempt_answers aa ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id WHERE aq.attempt_id=? AND aa.is_correct=0 ORDER BY aq.sort_order,q.id");
+            $x->execute([$sourceAttemptId]);$mistakes=$x->fetchAll();
+            if(!$mistakes)redirect('result.php?id='.$sourceAttemptId.'&done=1');
+        }
     }
     $pdo->beginTransaction();
     try{
@@ -201,6 +240,51 @@ if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='finish'){
     $total=(int)$stats['total'];$correct=(int)$stats['correct'];$score=$total?round($correct/$total*100,2):0;
     $x=$pdo->prepare("UPDATE attempts SET status='finished',score=?,finished_at=NOW() WHERE id=? AND status='in_progress'");
     $x->execute([$score,$attemptId]);
+
+    if($reviewMode){
+        /* Een fout die hier goed wordt gemaakt, telt voortaan als goed op de
+         * laatste gewone poging van de betreffende sub-test. */
+        $correctQuestions=$pdo->prepare("
+            SELECT aq.question_id
+            FROM attempt_questions aq
+            JOIN attempt_answers aa ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id
+            WHERE aq.attempt_id=? AND aa.is_correct=1
+        ");
+        $correctQuestions->execute([$attemptId]);
+        $markCorrect=$correctQuestions->fetchAll(PDO::FETCH_COLUMN);
+        foreach($markCorrect as $questionId){
+            $findOriginal=$pdo->prepare("
+                SELECT a.id
+                FROM attempts a
+                JOIN tests t ON t.id=a.test_id
+                JOIN attempt_questions aq ON aq.attempt_id=a.id AND aq.question_id=?
+                JOIN attempt_answers aa ON aa.attempt_id=a.id AND aa.question_id=aq.question_id
+                WHERE a.student_id=? AND a.status='finished' AND a.mode='normal'
+                  AND t.topic_id=? AND aa.is_correct=0
+                ORDER BY a.id DESC
+                LIMIT 1
+            ");
+            $findOriginal->execute([(int)$questionId,$studentId,$topicId]);
+            $originalAttemptId=(int)($findOriginal->fetchColumn()?:0);
+            if($originalAttemptId){
+                $fix=$pdo->prepare("UPDATE attempt_answers SET is_correct=1 WHERE attempt_id=? AND question_id=?");
+                $fix->execute([$originalAttemptId,(int)$questionId]);
+
+                $scoreStmt=$pdo->prepare("
+                    SELECT COUNT(*) total,
+                           SUM(CASE WHEN is_correct=1 THEN 1 ELSE 0 END) correct
+                    FROM attempt_answers
+                    WHERE attempt_id=?
+                ");
+                $scoreStmt->execute([$originalAttemptId]);
+                $scoreData=$scoreStmt->fetch();
+                $newScore=((int)$scoreData['total'])>0
+                    ?round(((int)$scoreData['correct']/(int)$scoreData['total'])*100,2):0;
+                $pdo->prepare("UPDATE attempts SET score=? WHERE id=?")->execute([$newScore,$originalAttemptId]);
+            }
+        }
+    }
+
     unset($_SESSION['current_attempt_id']);
     redirect('result.php?id='.$attemptId);
 }
