@@ -1,6 +1,6 @@
 <?php
 require __DIR__.'/../app/bootstrap.php';
-require __DIR__.'/auth.php';
+require __DIR__.'/../app/auth.php';
 require_login();
 
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
