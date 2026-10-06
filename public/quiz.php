@@ -168,8 +168,9 @@ if($_SERVER['REQUEST_METHOD']==='POST' && in_array(($_POST['action']??''),['save
 
 $attempt=null;
 if(($mode==='normal' && !$newAttempt) || $reviewMode){
-    $x=$pdo->prepare("SELECT * FROM attempts WHERE test_id=? AND student_id=? AND status='in_progress' AND mode='normal' ORDER BY started_at DESC LIMIT 1");
-    $x->execute([$testId,$studentId]);$attempt=$x->fetch();
+    $resumeMode=$reviewMode?'mistakes':'normal';
+    $x=$pdo->prepare("SELECT * FROM attempts WHERE test_id=? AND student_id=? AND status='in_progress' AND mode=? ORDER BY started_at DESC LIMIT 1");
+    $x->execute([$testId,$studentId,$resumeMode]);$attempt=$x->fetch();
 }
 
 if(!$attempt){
