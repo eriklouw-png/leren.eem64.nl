@@ -25,6 +25,7 @@ $summarySeconds=(int)$x->fetchColumn();
 $x=$pdo->prepare("
     SELECT
         ts.id,
+        ts.topic_id,
         ts.name,
         ts.is_active,
         tp.name AS topic_name,
@@ -42,6 +43,10 @@ $x=$pdo->prepare("
 ");
 $x->execute([$studentId]);
 $summaryRows=$x->fetchAll();
+$summaryByTopic=[];
+foreach($summaryRows as $summary){
+    $summaryByTopic[(int)$summary['topic_id']][]=$summary;
+}
 
 $x=$pdo->prepare("
     SELECT
@@ -190,28 +195,6 @@ function mastery_label(?float $score):string{
 </div>
 </div>
 
-<h2 class="h4 mb-3">Tijd per samenvatting</h2>
-<?php if(!$summaryRows):?>
-<div class="alert alert-secondary mb-5">Er zijn nog geen samenvattingen.</div>
-<?php else:?>
-<div class="card shadow-sm mb-5">
-<div class="list-group list-group-flush">
-<?php foreach($summaryRows as $summary):?>
-<div class="list-group-item py-3">
-<div class="d-flex justify-content-between align-items-center gap-3">
-<div>
-<div class="small text-secondary"><?=e($summary['subject_name'])?> · <?=e($summary['topic_name'])?></div>
-<strong><?=e($summary['name'])?></strong>
-<?php if(!(int)$summary['is_active']):?><span class="badge text-bg-secondary ms-2">Inactief</span><?php endif;?>
-</div>
-<div class="text-end fw-semibold"><?=e(format_duration_student((int)$summary['active_seconds']))?></div>
-</div>
-</div>
-<?php endforeach;?>
-</div>
-</div>
-<?php endif;?>
-
 <h2 class="h4 mb-3">Actieve overhoringen</h2>
 <?php if(!$topics):?>
 <div class="alert alert-secondary">Er zijn geen actieve overhoringen.</div>
@@ -279,6 +262,28 @@ foreach($topics as $topic){
 <div class="progress student-progress"><div class="progress-bar bg-<?=$barClass?>" style="width:<?=e((string)$mastery)?>%"></div></div>
 <?php endif;?>
 </div>
+
+<?php $topicSummaries=$summaryByTopic[(int)$topic['id']]??[]; ?>
+<?php if($topicSummaries):?>
+<div class="mb-3">
+<div class="small fw-semibold text-secondary mb-2">Samenvattingen</div>
+<div class="list-group">
+<?php foreach($topicSummaries as $summary):?>
+<div class="list-group-item">
+<div class="d-flex justify-content-between align-items-center gap-3">
+<div>
+<strong><?=e($summary['name'])?></strong>
+<?php if(!(int)$summary['is_active']):?><span class="badge text-bg-secondary ms-2">Inactief</span><?php endif;?>
+</div>
+<div class="text-end fw-semibold"><?=e(format_duration_student((int)$summary['active_seconds']))?></div>
+</div>
+</div>
+<?php endforeach;?>
+</div>
+</div>
+<?php endif;?>
+
+<div class="small fw-semibold text-secondary mb-2">Sub-testen</div>
 <div class="list-group">
 <?php foreach($topic['tests'] as $test):?>
 <div class="list-group-item">
