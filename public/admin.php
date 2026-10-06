@@ -78,7 +78,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     http_response_code(400);exit('Ongeldige actie.');
 }
 $subjects=$pdo->query("SELECT id,name,description,image_mime FROM subjects ORDER BY name")->fetchAll();
-$attempts=$pdo->query("SELECT a.id,a.score,a.finished_at,t.title FROM attempts a JOIN tests t ON t.id=a.test_id WHERE a.finished_at IS NOT NULL ORDER BY a.finished_at DESC LIMIT 10")->fetchAll();
 $sessions=$pdo->query("SELECT ss.id,ss.test_id,ss.attempt_id,ss.started_at,ss.ended_at,ss.active_seconds,t.title,a.score FROM study_sessions ss LEFT JOIN attempts a ON a.id=ss.attempt_id LEFT JOIN tests t ON t.id=ss.test_id ORDER BY ss.started_at DESC")->fetchAll();
 $answeredRows=$pdo->query("SELECT ss.test_id,aa.question_id FROM study_sessions ss JOIN attempt_answers aa ON aa.attempt_id=ss.attempt_id GROUP BY ss.test_id,aa.question_id")->fetchAll();
 $questionCounts=$pdo->query("SELECT test_id,COUNT(*) question_count FROM questions GROUP BY test_id")->fetchAll();
@@ -128,4 +127,22 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
 <?php endforeach;?>
 </div>
 
-<h2 class="h4 mt-5">Recente resultaten</h2><div class="card shadow-sm"><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Sub-Test</th><th>Score</th><th>Datum</th><th></th></tr></thead><tbody><?php foreach($attempts as $a):?><tr><td><?=e($a['title'])?></td><td><?=e((string)$a['score'])?>%</td><td><?=e($a['finished_at'])?></td><td><form method="post" class="d-inline" onsubmit="return confirm('U gaat het resultaat van sub-test &quot;<?=e($a['title'])?>&quot; van <?=e((string)$a['score'])?>% verwijderen. Weet u het zeker?');"><input type="hidden" name="action" value="delete_attempt"><input type="hidden" name="id" value="<?=$a['id']?>"><button class="btn btn-sm btn-outline-danger" type="submit">Verwijderen</button></form></td></tr><?php endforeach;?></tbody></table></div></div></main><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script></body></html>
+<h2 class="h4 mt-5 mb-3">Studenten</h2>
+<?php $students=$pdo->query("SELECT id,name,email FROM users WHERE role='student' ORDER BY name")->fetchAll(); ?>
+<?php if(!$students):?>
+<div class="alert alert-secondary">Er zijn nog geen studenten.</div>
+<?php else:?>
+<div class="row g-3">
+<?php foreach($students as $student):?>
+<div class="col-12 col-md-6 col-lg-4">
+<div class="card shadow-sm h-100">
+<div class="card-body">
+<h3 class="h5 mb-1"><?=e($student['name'])?></h3>
+<div class="small text-secondary mb-3"><?=e($student['email'])?></div>
+<a class="btn btn-outline-primary w-100" href="student.php?id=<?=(int)$student['id']?>">Bekijk voortgang</a>
+</div>
+</div>
+</div>
+<?php endforeach;?>
+</div>
+<?php endif;?></main><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script></body></html>
