@@ -121,10 +121,15 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $requestedTotal=ai_requested_total($requestedSpecs);
             if($capacity<1){
                 $errors[]='De AI kon geen betrouwbare maximale hoeveelheid vragen bepalen. Analyseer de pagina’s opnieuw.';
-            }elseif($requestedTotal>$capacity){
-                $errors[]='Op basis van deze foto’s kunnen maximaal '.$capacity.' verschillende vragen worden gemaakt. Je hebt '.$requestedTotal.' vragen gevraagd. Verminder het aantal vragen of het aantal sub-testen.';
             }elseif(count($requestedSpecs)>10){
                 $errors[]='Je kunt maximaal tien sub-testen tegelijk genereren.';
+            }else{
+                foreach($requestedSpecs as $spec){
+                    if((int)$spec['count']>$capacity){
+                        $errors[]='Op basis van deze foto’s kunnen maximaal '.$capacity.' verschillende vragen per sub-test worden gemaakt. Je hebt '.$spec['count'].' vragen gevraagd in een sub-test. Verminder het aantal vragen.';
+                        break;
+                    }
+                }
             }
             if(!$errors){
                 $_SESSION['ai_test_analysis']['request']=['prefix'=>$prefix,'specs'=>$requestedSpecs];
@@ -132,7 +137,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 foreach($requestedSpecs as $i=>$spec){
                     $requested[]=['number'=>$i+1,'type'=>$spec['type'],'type_label'=>ai_type_label($spec['type']),'question_count'=>$spec['count']];
                 }
-                $prompt='Maak nu concrete oefentoetsvragen voor precies deze gevraagde sub-tests. Gebruik uitsluitend de informatie uit de schoolboekpagina’s. Maak exact '.count($requested).' sub-tests met in totaal '.$requestedTotal.' vragen. De gewenste opdrachten zijn: '.json_encode($requested,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'. Bepaal per sub-test zelf een korte, duidelijke titel op basis van de leerstof; voeg geen prefix toe en gebruik geen algemene titels zoals "Toets 1" als een inhoudelijke titel mogelijk is. Bij meerdere vergelijkbare sub-tests moeten de titels uniek zijn. Maak per sub-test precies het gevraagde aantal vragen. Bij mc zijn alle vragen multiple choice met exact vier antwoorden en exact één correct antwoord. Bij open zijn alle vragen open en moet accepted_answers minimaal één inhoudelijk geldig antwoord bevatten. Bij combinatie moet je een evenwichtige mix van mc en open maken. Vermijd dubbele of vrijwel identieke vragen, ook tussen verschillende sub-tests. Als de bron een bepaald aantal niet voldoende verschillende vragen ondersteunt, verzin dan niets. source_page is de pagina uit de geüploade set waarop de vraag het duidelijkst gebaseerd is. Zet use_image alleen op true als een afbeelding, kaart, schema of foto op die pagina echt relevant is voor het beantwoorden van de vraag.';
+                $prompt='Maak nu concrete oefentoetsvragen voor precies deze gevraagde sub-tests. Gebruik uitsluitend de informatie uit de schoolboekpagina’s. Maak exact '.count($requested).' sub-tests met de gevraagde aantallen vragen. De gewenste opdrachten zijn: '.json_encode($requested,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'. Dezelfde leerstof en feiten mogen in verschillende sub-tests opnieuw worden gebruikt: een multiple-choice-sub-test en een open-vragen-sub-test mogen dus inhoudelijk op dezelfde broninformatie zijn gebaseerd. Ook mogen verschillende sub-tests dezelfde leerstof behandelen. Binnen iedere afzonderlijke sub-test moeten de vragen wel voldoende van elkaar verschillen en niet vrijwel identiek zijn. Bepaal per sub-test zelf een korte, duidelijke titel op basis van de leerstof; voeg geen prefix toe en gebruik geen algemene titels zoals "Toets 1" als een inhoudelijke titel mogelijk is. Bij meerdere vergelijkbare sub-tests moeten de titels uniek zijn. Maak per sub-test precies het gevraagde aantal vragen. Bij mc zijn alle vragen multiple choice met exact vier antwoorden en exact één correct antwoord. Bij open zijn alle vragen open en moet accepted_answers minimaal één inhoudelijk geldig antwoord bevatten. Bij combinatie moet je een evenwichtige mix van mc en open maken. Gebruik de broninformatie dus gerust opnieuw in een andere vraagvorm; probeer niet kunstmatig alle sub-tests samen tot één unieke vragenpool te beperken. source_page is de pagina uit de geüploade set waarop de vraag het duidelijkst gebaseerd is. Zet use_image alleen op true als een afbeelding, kaart, schema of foto op die pagina echt relevant is voor het beantwoorden van de vraag.';
                 $data=openai_generate_test_questions($prompt,(array)($saved['images']??[]));
                 if(isset($data['_leren_error']))$errors[]=$data['_leren_error'];
                 else{
@@ -298,7 +303,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         }
 
         if(!$errors){
-            $prompt='Analyseer de geüploade schoolboekpagina’s voor het maken van oefentoetsen. Identificeer het vak en onderwerp, vat de stof kort samen en geef de belangrijkste leerpunten. Gebruik uitsluitend informatie uit de pagina’s. Bepaal daarnaast zo realistisch mogelijk hoeveel verschillende, inhoudelijk zinvolle vragen maximaal uit deze bron kunnen worden gemaakt zonder leerstof te verzinnen of dezelfde vraag opnieuw te formuleren. Wees conservatief: tel alleen vragen mee die echt van elkaar verschillen. Stel ook enkele logische inhoudelijke sub-testtitels voor. Geef alleen JSON volgens het opgegeven schema.';
+            $prompt='Analyseer de geüploade schoolboekpagina’s voor het maken van oefentoetsen. Identificeer het vak en onderwerp, vat de stof kort samen en geef de belangrijkste leerpunten. Gebruik uitsluitend informatie uit de pagina’s. Bepaal daarnaast zo realistisch mogelijk hoeveel verschillende, inhoudelijk zinvolle vragen maximaal binnen één afzonderlijke sub-test uit deze bron kunnen worden gemaakt zonder leerstof te verzinnen of dezelfde vraag onnodig te herhalen. Dezelfde leerstof mag in meerdere sub-tests opnieuw worden gebruikt en mag bijvoorbeeld zowel als multiple-choicevraag als als open vraag worden bevraagd. Wees conservatief binnen één sub-test: tel alleen vragen mee die echt van elkaar verschillen. Stel ook enkele logische inhoudelijke sub-testtitels voor. Geef alleen JSON volgens het opgegeven schema.';
             $data=openai_generate_with_images($prompt,$valid);
             if(isset($data['_leren_error'])){
                 foreach($valid as $path)@unlink($path);
