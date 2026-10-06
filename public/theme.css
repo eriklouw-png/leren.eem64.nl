@@ -65,3 +65,15 @@ body.bg-light{background:#f4f8f5!important}
   align-items:center;
 }
 .leren-userbar .text-white{color:#fff!important}
+
+
+/* Beheeromgeving: bewust visueel anders dan de leerlingomgeving. */
+body.leren-admin{
+  background:#eef1f5 !important;
+}
+body.leren-admin .card{
+  border-color:#d8dee6;
+}
+body.leren-admin .navbar.bg-dark{
+  background:#263238 !important;
+}
