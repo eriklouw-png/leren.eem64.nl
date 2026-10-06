@@ -36,6 +36,9 @@ CREATE TABLE topics (
  name VARCHAR(150) NOT NULL,
  test_date DATE NULL,
  is_active TINYINT(1) NOT NULL DEFAULT 1,
+ use_summary TINYINT(1) NOT NULL DEFAULT 0,
+ summary TEXT NULL,
+ summary_updated_at DATETIME NULL,
  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
  UNIQUE KEY uq_topics_subject_name(subject_id,name),
  CONSTRAINT fk_topics_subject FOREIGN KEY(subject_id) REFERENCES subjects(id) ON DELETE CASCADE ON UPDATE CASCADE
@@ -46,7 +49,7 @@ CREATE TABLE tests (
  topic_id INT UNSIGNED NULL,
  title VARCHAR(200) NOT NULL,
  description TEXT NULL,
- test_type ENUM('vocabulary','multiple_choice','mixed') NOT NULL DEFAULT 'mixed',
+ test_type ENUM('vocabulary','multiple_choice','open','mixed') NOT NULL DEFAULT 'mixed',
  vocab_left_label VARCHAR(80) NULL,
  vocab_right_label VARCHAR(80) NULL,
  vocab_direction ENUM('both','left_to_right','right_to_left') NOT NULL DEFAULT 'both',
