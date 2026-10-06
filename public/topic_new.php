@@ -46,7 +46,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <div class="mb-3"><label class="form-label">Overhoringsdatum</label><input class="form-control" type="date" name="test_date" value="<?=e($testDate)?>"><div class="form-text">Na deze datum wordt de overhoring automatisch gearchiveerd. Laat leeg als er geen vaste datum is.</div></div>
 <div class="form-check mb-4">
 <input class="form-check-input" type="checkbox" name="use_summary" value="1" id="useSummary" <?=$useSummary?'checked':''?>>
-<label class="form-check-label" for="useSummary"><strong>Samenvatting gebruiken</strong><br><span class="text-secondary">Bewaar de geüploade boekpagina’s voor deze overhoring en bouw daar automatisch één doorlopende samenvatting van op. Leerlingen kunnen die samenvatting op de overhoringpagina lezen.</span></label>
+<label class="form-check-label" for="useSummary"><strong>Samenvatting gebruiken</strong><br><span class="text-secondary">Je kunt voor deze overhoring meerdere afzonderlijke samenvattingen maken. Elke samenvatting kan bijvoorbeeld de naam 1.3 Samenvatting krijgen en wordt op de overhoringpagina getoond.</span></label>
 </div>
 <div class="d-flex justify-content-end gap-2"><a class="btn btn-outline-secondary" href="subject_manage.php?id=<?=$subjectId?>">Annuleren</a><button class="btn btn-primary" type="submit">Overhoring aanmaken</button></div>
 </form>
