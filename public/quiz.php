@@ -438,7 +438,7 @@ unset($q);
  async function finish(){
    btnFinishState();
    try{
-     const response=await fetch('quiz.php?id='+testId,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({action:'finish',attempt_id:attemptId})});
+     const response=await fetch(saveUrl,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({action:'finish',attempt_id:attemptId})});
      if(!response.ok)throw new Error('finish_failed_'+response.status);
      window.location.href='result.php?id='+attemptId;
    }catch(e){
