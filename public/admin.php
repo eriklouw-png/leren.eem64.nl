@@ -4,21 +4,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $action=$_POST['action']??'';
     $id=filter_var($_POST['id']??null,FILTER_VALIDATE_INT);
     if(!$id){http_response_code(400);exit('Ongeldig ID.');}
-    if($action==='upload_user_image'){
-        if(!isset($_FILES['image']) || $_FILES['image']['error']!==UPLOAD_ERR_OK){ redirect('admin.php?user_image_error=upload'); }
-        if((int)$_FILES['image']['size']>5*1024*1024){ redirect('admin.php?user_image_error=size'); }
-        $tmp=$_FILES['image']['tmp_name']; $info=@getimagesize($tmp);
-        $allowed=['image/jpeg','image/png','image/webp']; $mime=$info['mime']??'';
-        if(!$info || !in_array($mime,$allowed,true)){ redirect('admin.php?user_image_error=type'); }
-        $data=file_get_contents($tmp);
-        if($data===false){ redirect('admin.php?user_image_error=read'); }
-        $x=$pdo->prepare("UPDATE users SET image_mime=?,image_data=? WHERE id=? AND role='student'");
-        $x->execute([$mime,$data,$id]); redirect('admin.php?user_image_saved=1');
-    }
-    if($action==='delete_user_image'){
-        $x=$pdo->prepare("UPDATE users SET image_mime=NULL,image_data=NULL WHERE id=? AND role='student'");
-        $x->execute([$id]); redirect('admin.php?user_image_deleted=1');
-    }
     if($action==='upload_subject_image'){
         if(!isset($_FILES['image']) || $_FILES['image']['error']!==UPLOAD_ERR_OK){
             redirect('admin.php?image_error=upload');
@@ -143,30 +128,50 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
 </div>
 
 <h2 class="h4 mt-5 mb-3">Studenten</h2>
-<?php $students=$pdo->query("SELECT id,name,email,image_mime FROM users WHERE role='student' ORDER BY name")->fetchAll(); ?>
+<?php
+$students=$pdo->query("
+    SELECT
+        u.id,u.name,u.email,u.image_mime,
+        COALESCE(SUM(ss.active_seconds),0) AS active_seconds,
+        COUNT(DISTINCT CASE WHEN a.status='finished' AND a.mode='normal' THEN a.id END) AS completed_tests,
+        COALESCE(AVG(CASE WHEN a.status='finished' AND a.mode='normal' THEN a.score END),0) AS average_score
+    FROM users u
+    LEFT JOIN study_sessions ss ON ss.student_id=u.id
+    LEFT JOIN attempts a ON a.student_id=u.id
+    WHERE u.role='student'
+    GROUP BY u.id,u.name,u.email,u.image_mime
+    ORDER BY u.name
+")->fetchAll();
+?>
 <?php if(!$students):?>
 <div class="alert alert-secondary">Er zijn nog geen studenten.</div>
 <?php else:?>
 <div class="row g-3">
 <?php foreach($students as $student):?>
 <div class="col-12 col-md-6 col-lg-4">
+<a href="student.php?id=<?=(int)$student['id']?>" class="text-decoration-none text-dark">
 <div class="card shadow-sm h-100">
-<div class="card-body">
-<div class="d-flex align-items-center gap-3 mb-3">
+<div class="card-body p-3">
+<div class="d-flex align-items-center gap-3">
 <?php if($student['image_mime']):?>
-<img src="student_image.php?id=<?=(int)$student['id']?>" class="rounded-circle flex-shrink-0" style="width:64px;height:64px;object-fit:cover" alt="<?=e($student['name'])?>">
+<img src="student_image.php?id=<?=(int)$student['id']?>" class="rounded flex-shrink-0" style="width:86px;height:86px;object-fit:cover" alt="<?=e($student['name'])?>">
 <?php else:?>
-<div class="rounded-circle bg-secondary-subtle d-flex align-items-center justify-content-center flex-shrink-0" style="width:64px;height:64px;font-size:1.5rem">👤</div>
+<div class="rounded bg-secondary-subtle d-flex align-items-center justify-content-center flex-shrink-0" style="width:86px;height:86px;font-size:2rem">👤</div>
 <?php endif;?>
-<div class="min-w-0"><h3 class="h5 mb-1"><?=e($student['name'])?></h3><div class="small text-secondary"><?=e($student['email'])?></div></div>
-</div>
-<form method="post" enctype="multipart/form-data" class="mb-2">
-<input type="hidden" name="action" value="upload_user_image"><input type="hidden" name="id" value="<?=(int)$student['id']?>">
-<div class="input-group input-group-sm"><input type="file" name="image" class="form-control" accept="image/jpeg,image/png,image/webp" required><button class="btn btn-outline-secondary" type="submit">Afbeelding</button></div>
-</form>
-<a class="btn btn-outline-primary w-100" href="student.php?id=<?=(int)$student['id']?>">Bekijk voortgang</a>
+<div class="min-w-0">
+<h2 class="h4 mb-1"><?=e($student['name'])?></h2>
+<div class="text-secondary small"><?=e($student['email'])?></div>
 </div>
 </div>
+<div class="row g-2 mt-3 small">
+<div class="col-4"><div class="bg-light rounded p-2 text-center"><strong><?=e((string)$student['completed_tests'])?></strong><div class="text-secondary">toetsen</div></div></div>
+<div class="col-4"><div class="bg-light rounded p-2 text-center"><strong><?=e(rtrim(rtrim(number_format((float)$student['average_score'],0,',','.'),'0'),','))?>%</strong><div class="text-secondary">gem.</div></div></div>
+<div class="col-4"><div class="bg-light rounded p-2 text-center"><strong><?=e((string)intdiv((int)$student['active_seconds'],60))?></strong><div class="text-secondary">min.</div></div></div>
+</div>
+<div class="btn btn-primary w-100 mt-3">Naar <?=e($student['name'])?> →</div>
+</div>
+</div>
+</a>
 </div>
 <?php endforeach;?>
 </div>
