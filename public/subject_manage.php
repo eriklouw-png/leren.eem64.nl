@@ -44,29 +44,6 @@ foreach($summariesByTopic as &$topicSummaryList){
 }
 unset($topicSummaryList);
 
-$testIds=array_map('intval',array_column($tests,'id'));
-$resultGroups=[];
-if($testIds){
-    $ph=implode(',',array_fill(0,count($testIds),'?'));
-    $rx=$pdo->prepare("
-        SELECT
-            a.id,a.test_id,a.score,a.finished_at,
-            u.name AS student_name
-        FROM attempts a
-        JOIN users u ON u.id=a.student_id
-        WHERE a.test_id IN ($ph)
-          AND a.status='finished'
-          AND a.mode='normal'
-          AND a.student_id IS NOT NULL
-        ORDER BY a.finished_at DESC,a.id DESC
-    ");
-    $rx->execute($testIds);
-    $results=$rx->fetchAll();
-    foreach($results as $result){
-        $tid=(int)$result['test_id'];
-        $resultGroups[$tid][]=$result;
-    }
-}
 $labels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Multiple choice','open'=>'Open vragen','mixed'=>'Combinatie'];
 ?>
 <!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($subject['name'])?> - Beheer</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -79,9 +56,6 @@ $labels=['vocabulary'=>'Woordjes oefenen','multiple_choice'=>'Multiple choice','
 .topic-chevron{border:0;background:transparent;width:38px;height:38px;display:flex;align-items:center;justify-content:center;padding:0}
 .topic-chevron span{width:11px;height:11px;border-right:2px solid #0d3b66;border-bottom:2px solid #0d3b66;transform:rotate(45deg);transition:transform .15s ease}
 .topic-chevron.collapsed span{transform:rotate(225deg)}
-.admin-test-results summary::-webkit-details-marker{display:none}
-.admin-result-chevron{width:10px;height:10px;border-right:2px solid #6c757d;border-bottom:2px solid #6c757d;transform:rotate(45deg);transition:transform .15s ease;margin-right:4px;margin-top:-5px}
-.admin-test-results[open] .admin-result-chevron{transform:rotate(225deg);margin-top:5px}
 
 @media(max-width:576px){
 .topic-header-inner{flex-direction:column;align-items:stretch;min-height:0}
@@ -192,33 +166,6 @@ unset($topicTestList);
 </div>
 </div>
 
-<?php $testResults=$resultGroups[(int)$t['id']]??[]; ?>
-<?php if($testResults):?>
-<details class="mt-3 pt-3 border-top admin-test-results">
-<summary class="d-flex justify-content-between align-items-center" style="cursor:pointer;list-style:none">
-<span class="small fw-semibold text-secondary">Eerdere resultaten · <?=count($testResults)?></span>
-<span class="admin-result-chevron" aria-hidden="true"></span>
-</summary>
-<div class="table-responsive mt-2">
-<table class="table table-sm table-hover align-middle mb-0">
-<thead><tr><th>Naam</th><th>Datum</th><th class="text-end">Resultaat</th></tr></thead>
-<tbody>
-<?php foreach($testResults as $result):?>
-<tr>
-<td><a href="result.php?id=<?=(int)$result['id']?>" class="text-decoration-none"><?=e($result['student_name'])?></a></td>
-<td><a href="result.php?id=<?=(int)$result['id']?>" class="text-decoration-none text-secondary"><?=e(date('d-m-Y H:i',strtotime((string)$result['finished_at'])))?></a></td>
-<td class="text-end">
-<a href="result.php?id=<?=(int)$result['id']?>" class="text-decoration-none fw-semibold <?=((float)$result['score']>=70?'text-success':((float)$result['score']>=50?'text-warning':'text-danger'))?>">
-<?=e(rtrim(rtrim(number_format((float)$result['score'],2,',','.'),'0'),','))?>%
-</a>
-</td>
-</tr>
-<?php endforeach;?>
-</tbody>
-</table>
-</div>
-</details>
-<?php endif;?>
 </div>
 <?php endforeach;?>
 </div>
