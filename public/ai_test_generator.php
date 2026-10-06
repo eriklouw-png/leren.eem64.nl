@@ -521,7 +521,6 @@ if(afterContainer){
  document.getElementById('addSpecAfter').addEventListener('click',()=>{addSpecRow(afterContainer,{type:'mixed',count:10},afterContainer.children.length);updateTotals(afterContainer)});
  afterContainer.addEventListener('input',()=>updateTotals(afterContainer));
 }
-<script>
 const aiLoading=document.getElementById('aiLoading');
 const aiLoadingTitle=document.getElementById('aiLoadingTitle');
 const aiLoadingText=document.getElementById('aiLoadingText');
