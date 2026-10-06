@@ -64,6 +64,9 @@ usort($tests,function(array $a,array $b):int{
  * alle resterende fouten uit de laatste pogingen gezamenlijk oefenen. */
 $reviewAvailable=false;
 $reviewWrongCount=0;
+$reviewInProgressId=0;
+$reviewProgressAnswered=0;
+$reviewProgressTotal=0;
 if($tests){
     $completedStmt=$pdo->prepare("
         SELECT COUNT(DISTINCT a.test_id)
@@ -74,6 +77,30 @@ if($tests){
     ");
     $completedStmt->execute([$studentId,$topicId]);
     $completedCount=(int)$completedStmt->fetchColumn();
+
+    $reviewProgressStmt=$pdo->prepare("
+        SELECT a.id,
+               COUNT(aq.question_id) total_count,
+               COUNT(CASE WHEN aa.id IS NOT NULL
+                    AND ((aa.answer_text IS NOT NULL AND TRIM(aa.answer_text)<>'') OR aa.selected_option_id IS NOT NULL)
+                    THEN 1 END) answered_count
+        FROM attempts a
+        JOIN attempt_questions aq ON aq.attempt_id=a.id
+        LEFT JOIN attempt_answers aa ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id
+        JOIN tests rt ON rt.id=a.test_id
+        WHERE a.student_id=? AND a.status='in_progress' AND a.mode='mistakes'
+          AND rt.topic_id=? AND rt.title='Fouten oefenen'
+        GROUP BY a.id
+        ORDER BY a.id DESC
+        LIMIT 1
+    ");
+    $reviewProgressStmt->execute([$studentId,$topicId]);
+    if($reviewProgress=$reviewProgressStmt->fetch()){
+        $reviewInProgressId=(int)$reviewProgress['id'];
+        $reviewProgressTotal=(int)$reviewProgress['total_count'];
+        $reviewProgressAnswered=(int)$reviewProgress['answered_count'];
+        $reviewAvailable=true;
+    }
 
     if($completedCount===count($tests)){
         $wrongStmt=$pdo->prepare("
@@ -177,11 +204,16 @@ $browserToken=$_SESSION['learner_token'];
 <div class="card border-success shadow-sm mb-4">
 <div class="card-body p-3 p-md-4">
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
-<div>
+<div class="min-w-0">
 <h2 class="h4 mb-1">Fouten oefenen</h2>
+<?php if($reviewInProgressId):?>
+<p class="text-secondary mb-2">Ga verder met de fouten uit de sub-testen.</p>
+<?php if($reviewProgressTotal>0):?><div class="small text-secondary">Voortgang: <?=$reviewProgressAnswered?> van <?=$reviewProgressTotal?> vragen</div><?php endif;?>
+<?php else:?>
 <p class="text-secondary mb-0">Alle <?=e((string)$reviewWrongCount)?> vragen die je in de laatste pogingen fout had, verzameld in één oefentoets.</p>
+<?php endif;?>
 </div>
-<a class="btn btn-success flex-shrink-0" href="quiz.php?review=1&topic_id=<?=(int)$topicId?>">Start fouten oefenen</a>
+<a class="btn btn-success flex-shrink-0" href="quiz.php?review=1&topic_id=<?=(int)$topicId?>"><?= $reviewInProgressId?'Ga verder':'Start fouten oefenen' ?></a>
 </div>
 </div>
 </div>
