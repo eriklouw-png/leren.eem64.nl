@@ -143,7 +143,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 else{
                     $generated=openai_output_json($data);
                     if(!$generated||!isset($generated['subtests'])||!is_array($generated['subtests'])){
-                        $errors[]='De AI gaf geen bruikbaar JSON-resultaat voor de vragen terug. Probeer dezelfde selectie opnieuw.';
+                        $reason=(string)($data['incomplete_details']['reason']??'');
+                        if(($data['status']??'')==='incomplete' && $reason!==''){
+                            $errors[]='De AI-generatie van de vragen werd niet volledig afgerond ('.$reason.'). Verminder eventueel het aantal vragen per sub-test en probeer het opnieuw.';
+                        }else{
+                            $errors[]='De AI gaf geen bruikbaar JSON-resultaat voor de vragen terug. Probeer dezelfde selectie opnieuw.';
+                        }
                     }else{
                         $_SESSION['ai_test_analysis']['generated']=$generated;
                     }
