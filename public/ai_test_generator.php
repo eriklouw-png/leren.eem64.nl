@@ -403,7 +403,7 @@ $savedSummaryText=(string)($_SESSION['ai_test_analysis']['summary_text']??'');
 </div>
 <div class="form-check mb-3">
 <input class="form-check-input" type="checkbox" name="use_summary" value="1" id="useSummaryUpload" <?=$useSummary?'checked':''?>>
-<label class="form-check-label" for="useSummaryUpload"><strong>Samenvatting gebruiken voor deze overhoring</strong><br><span class="text-secondary">Als dit aanstaat, worden deze en toekomstige geüploade boekpagina’s bewaard en samengevoegd tot één samenvatting die leerlingen op de overhoringpagina kunnen lezen.</span></label>
+<label class="form-check-label" for="useSummaryUpload"><strong>Samenvatting gebruiken voor deze overhoring</strong><br><span class="text-secondary">Als dit aanstaat, kun je voor deze overhoring meerdere afzonderlijke samenvattingen maken. Elke upload kan bijvoorbeeld een eigen samenvatting krijgen zoals 1.3 Samenvatting.</span></label>
 </div>
 <div class="card bg-light border-0 mb-3"><div class="card-body">
 <div class="d-flex justify-content-between align-items-center mb-2"><strong>Gewenste Sub-Testen</strong><button type="button" class="btn btn-outline-secondary btn-sm" id="addSpec">+ Sub-test</button></div>
