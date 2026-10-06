@@ -78,30 +78,6 @@ if($tests){
     $completedStmt->execute([$studentId,$topicId]);
     $completedCount=(int)$completedStmt->fetchColumn();
 
-    $reviewProgressStmt=$pdo->prepare("
-        SELECT a.id,
-               COUNT(aq.question_id) total_count,
-               COUNT(CASE WHEN aa.id IS NOT NULL
-                    AND ((aa.answer_text IS NOT NULL AND TRIM(aa.answer_text)<>'') OR aa.selected_option_id IS NOT NULL)
-                    THEN 1 END) answered_count
-        FROM attempts a
-        JOIN attempt_questions aq ON aq.attempt_id=a.id
-        LEFT JOIN attempt_answers aa ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id
-        JOIN tests rt ON rt.id=a.test_id
-        WHERE a.student_id=? AND a.status='in_progress' AND a.mode='mistakes'
-          AND rt.topic_id=? AND rt.title='Fouten oefenen'
-        GROUP BY a.id
-        ORDER BY answered_count DESC, a.id DESC
-        LIMIT 1
-    ");
-    $reviewProgressStmt->execute([$studentId,$topicId]);
-    if($reviewProgress=$reviewProgressStmt->fetch()){
-        $reviewInProgressId=(int)$reviewProgress['id'];
-        $reviewProgressTotal=(int)$reviewProgress['total_count'];
-        $reviewProgressAnswered=(int)$reviewProgress['answered_count'];
-        $reviewAvailable=true;
-    }
-
     if($completedCount===count($tests)){
         $wrongStmt=$pdo->prepare("
             SELECT COUNT(DISTINCT aq.question_id)
@@ -120,6 +96,20 @@ if($tests){
         ");
         $wrongStmt->execute([$studentId,$topicId,$topicId]);
         $reviewWrongCount=(int)$wrongStmt->fetchColumn();
+
+        /* Alleen een lopende review hervatten als die exact de huidige
+         * resterende fouten bevat. Oude/lege review-attempts met bijvoorbeeld
+         * 32 vragen mogen na het afronden van 23 vragen niet meer als 0/32
+         * worden gepresenteerd wanneer er nog maar 9 fouten over zijn. */
+        if($reviewWrongCount>0){
+            $reviewProgressStmt=$pdo->prepare("\n                SELECT a.id,\n                       COUNT(aq.question_id) total_count,\n                       COUNT(CASE WHEN aa.id IS NOT NULL\n                            AND ((aa.answer_text IS NOT NULL AND TRIM(aa.answer_text)<>'') OR aa.selected_option_id IS NOT NULL)\n                            THEN 1 END) answered_count\n                FROM attempts a\n                JOIN attempt_questions aq ON aq.attempt_id=a.id\n                LEFT JOIN attempt_answers aa ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id\n                JOIN tests rt ON rt.id=a.test_id\n                WHERE a.student_id=? AND a.status='in_progress' AND a.mode='mistakes'\n                  AND rt.topic_id=? AND rt.title='Fouten oefenen'\n                GROUP BY a.id\n                HAVING COUNT(aq.question_id)=?\n                ORDER BY answered_count DESC, a.id DESC\n                LIMIT 1\n            ");
+            $reviewProgressStmt->execute([$studentId,$topicId,$reviewWrongCount]);
+            if($reviewProgress=$reviewProgressStmt->fetch()){
+                $reviewInProgressId=(int)$reviewProgress['id'];
+                $reviewProgressTotal=(int)$reviewProgress['total_count'];
+                $reviewProgressAnswered=(int)$reviewProgress['answered_count'];
+            }
+        }
         $reviewAvailable=$reviewWrongCount>0;
     }
 }
