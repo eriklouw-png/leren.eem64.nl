@@ -120,15 +120,6 @@ unset($topicTestList);
 </h2>
 <div id="collapse<?=$topic['id']?>" class="accordion-collapse collapse <?=$archived?'':'show'?>" aria-labelledby="heading<?=$topic['id']?>" data-bs-parent="#overhoringen">
 <div class="accordion-body">
-<div class="d-flex justify-content-between align-items-center gap-2 mb-3">
-<strong>Sub-Testen</strong>
-<div>
-<a class="btn btn-sm btn-primary" href="test_new.php?topic_id=<?=$topic['id']?>">Nieuwe sub-test</a>
-<a class="btn btn-sm btn-outline-success ms-1" href="ai_test_generator.php?topic_id=<?=$topic['id']?>">AI toets maken</a>
-<a class="btn btn-sm btn-outline-secondary ms-1" href="topic_edit.php?id=<?=$topic['id']?>">Overhoring bewerken</a>
-</div>
-</div>
-
 <?php if($topicSummaries):?>
 <div class="mb-4">
 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -157,6 +148,15 @@ unset($topicTestList);
 <?php else:?>
 <div class="alert alert-secondary">Nog geen samenvattingen voor deze overhoring.</div>
 <?php endif;?>
+
+<div class="d-flex justify-content-between align-items-center gap-2 mb-3 mt-4">
+<strong>Sub-Testen</strong>
+<div>
+<a class="btn btn-sm btn-primary" href="test_new.php?topic_id=<?=$topic['id']?>">Nieuwe sub-test</a>
+<a class="btn btn-sm btn-outline-success ms-1" href="ai_test_generator.php?topic_id=<?=$topic['id']?>">AI toets maken</a>
+<a class="btn btn-sm btn-outline-secondary ms-1" href="topic_edit.php?id=<?=$topic['id']?>">Overhoring bewerken</a>
+</div>
+</div>
 
 <?php if(!$topicTests):?>
 <div class="alert alert-info mb-0">Nog geen sub-testen binnen deze overhoring.</div>
