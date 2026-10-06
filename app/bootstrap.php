@@ -57,6 +57,19 @@ $dsn="mysql:host={$db['host']};port={$db['port']};dbname={$db['name']};charset={
 try{$pdo=new PDO($dsn,$db['user'],$db['password'],[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,PDO::ATTR_EMULATE_PREPARES=>false]);}
 catch(PDOException $e){http_response_code(500);exit('Databaseverbinding mislukt.');}
 
+/*
+ * User profile images are stored directly in the users table.
+ * Keep older installations compatible by adding the columns once when needed.
+ */
+try{
+    $userImageColumn=$pdo->query("SHOW COLUMNS FROM users LIKE 'image_mime'")->fetch();
+    if(!$userImageColumn){
+        $pdo->exec("ALTER TABLE users ADD COLUMN image_mime VARCHAR(50) NULL AFTER email, ADD COLUMN image_data MEDIUMBLOB NULL AFTER image_mime");
+    }
+}catch(Throwable $e){
+    // Do not make the complete website unavailable if an older database cannot be migrated here.
+}
+
 function e(?string $v):string{return htmlspecialchars($v??'',ENT_QUOTES,'UTF-8');}
 function redirect(string $url):never{header('Location: '.$url);exit;}
 function is_admin():bool{return isset($_SESSION['user'])&&$_SESSION['user']['role']==='admin';}
