@@ -226,8 +226,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         foreach($test['questions'] as $q){$hasOpen=$hasOpen||$q['type']==='open';$hasMc=$hasMc||$q['type']==='mc';}
                         if($hasOpen&&$hasMc)$testType='mixed';elseif($hasOpen)$testType='open';
                         $check=$pdo->prepare("SELECT id FROM tests WHERE topic_id=? AND title=? LIMIT 1");
-                        $check->execute([$topicId,$title]);
-                        if($check->fetchColumn())throw new RuntimeException('Er bestaat al een sub-test met de titel "'.$title.'". Pas de titel aan voordat je opslaat.');
+                        $check->execute([$topicId,$test['title']]);
+                        if($check->fetchColumn())throw new RuntimeException('Er bestaat al een sub-test met de titel "'.$test['title'].'". Pas de titel aan voordat je opslaat.');
                         $testIns->execute([$topicId,$title,$test['description'],$testType,null,null,'both']);
                         $testId=(int)$pdo->lastInsertId();
                         foreach($test['questions'] as $sort=>$q){
@@ -429,8 +429,8 @@ $savedSummaryText=(string)($_SESSION['ai_test_analysis']['summary_text']??'');
 </form>
 <?php if(isset($_SESSION['ai_test_analysis']['generated']['subtests'])):?>
 <hr class="my-4">
-<h3 class="h5">Gegenereerde vragen controleren</h3>
-<div class="alert alert-warning">Pas hieronder de teksten, antwoorden en uitleg aan. Er wordt pas iets in de database opgeslagen wanneer je onderaan op <strong>Opslaan als sub-tests</strong> klikt.</div>
+<h3 class="h5">Gegenereerde vragen</h3>
+<div class="alert alert-info">Controleer alleen welke vragen en vraagtypes zijn aangemaakt. Je hoeft de inhoud niet meer één voor één te beoordelen. Een aangevinkte afbeelding wordt bij het opslaan aan de vraag gekoppeld.</div>
 <form method="post">
 <input type="hidden" name="action" value="save">
 <?php foreach($_SESSION['ai_test_analysis']['generated']['subtests'] as $si=>$generatedSub):?>
@@ -439,38 +439,40 @@ $savedSummaryText=(string)($_SESSION['ai_test_analysis']['summary_text']??'');
 <div class="col-md-8"><label class="form-label fw-semibold">Naam sub-test</label><input class="form-control" name="tests[<?=$si?>][title]" value="<?=e($generatedSub['title'])?>" required></div>
 <div class="col-md-4"><label class="form-label fw-semibold">Beschrijving</label><input class="form-control" name="tests[<?=$si?>][description]" value="<?=e($generatedSub['description']??'')?>"></div>
 </div>
+
+<div class="list-group">
 <?php foreach(($generatedSub['questions']??[]) as $qi=>$q):?>
-<div class="border-top pt-3 mt-3">
+<div class="list-group-item">
 <input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][type]" value="<?=e($q['type'])?>">
-<div class="d-flex justify-content-between align-items-center mb-2"><strong>Vraag <?=($qi+1)?></strong><span class="badge text-bg-light"><?=e(strtoupper($q['type']))?></span></div>
-<label class="form-label">Vraag</label>
-<textarea class="form-control mb-2" name="tests[<?=$si?>][questions][<?=$qi?>][question]" rows="2" required><?=e($q['question'])?></textarea>
+<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][source_page]" value="<?=e((string)($q['source_page']??1))?>">
+<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][correct_answer]" value="<?=e($q['correct_answer']??'')?>">
+<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][question]" value="<?=e($q['question'])?>">
 <?php if($q['type']==='mc'):?>
-<div class="row g-2 mb-2">
-<?php foreach(($q['options']??[]) as $oi=>$option):?><div class="col-md-6"><label class="form-label small">Antwoord <?=chr(65+$oi)?></label><input class="form-control" name="tests[<?=$si?>][questions][<?=$qi?>][options][<?=$oi?>]" value="<?=e($option)?>" required></div><?php endforeach;?>
-</div>
-<label class="form-label">Juiste antwoord</label>
-<select class="form-select mb-2" name="tests[<?=$si?>][questions][<?=$qi?>][correct_option]">
-<?php foreach(($q['options']??[]) as $oi=>$option):?><option value="<?=$oi?>" <?=$oi===(int)$q['correct_option']?'selected':''?>><?=chr(65+$oi)?> — <?=e($option)?></option><?php endforeach;?>
-</select>
-<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][correct_answer]" value="<?=e($q['correct_answer'])?>">
+<?php foreach(($q['options']??[]) as $oi=>$option):?>
+<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][options][<?=$oi?>]" value="<?=e($option)?>">
+<?php endforeach;?>
+<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][correct_option]" value="<?=e((string)($q['correct_option']??0))?>">
 <?php else:?>
-<label class="form-label">Juiste antwoord(en)</label>
-<input class="form-control mb-2" name="tests[<?=$si?>][questions][<?=$qi?>][accepted_answers]" value="<?=e(implode(' | ',(array)($q['accepted_answers']??[$q['correct_answer']])))?>" required>
-<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][correct_answer]" value="<?=e($q['correct_answer'])?>">
+<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][accepted_answers]" value="<?=e(implode(' | ',(array)($q['accepted_answers']??[$q['correct_answer']??''])))?>">
 <?php endif;?>
-<label class="form-label">Uitleg</label>
-<textarea class="form-control mb-2" name="tests[<?=$si?>][questions][<?=$qi?>][explanation]" rows="2"><?=e($q['explanation']??'')?></textarea>
-<div class="row g-2 align-items-end">
-<div class="col-md-4"><label class="form-label small">Bronpagina</label><input class="form-control" type="number" min="1" max="10" name="tests[<?=$si?>][questions][<?=$qi?>][source_page]" value="<?=e((string)($q['source_page']??1))?>"></div>
-<div class="col-md-8"><div class="form-check"><input class="form-check-input" type="checkbox" name="tests[<?=$si?>][questions][<?=$qi?>][use_image]" value="1" id="img<?=$si?>_<?=$qi?>" <?=$q['use_image']?'checked':''?>><label class="form-check-label" for="img<?=$si?>_<?=$qi?>">Gebruik afbeelding van deze bronpagina bij deze vraag</label></div></div>
+<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][explanation]" value="<?=e($q['explanation']??'')?>">
+<div class="d-flex align-items-start gap-3">
+<div class="fw-semibold text-secondary" style="min-width:3.5rem">Vraag <?=($qi+1)?></div>
+<div class="flex-grow-1"><?=e($q['question'])?></div>
+<span class="badge text-bg-light"><?=e($q['type']==='mc'?'Multiple choice':'Open')?></span>
+<div class="form-check ms-2">
+<input class="form-check-input" type="checkbox" name="tests[<?=$si?>][questions][<?=$qi?>][use_image]" value="1" id="img<?=$si?>_<?=$qi?>" <?=$q['use_image']?'checked':''?>>
+<label class="form-check-label" for="img<?=$si?>_<?=$qi?>" title="Gebruik de afbeelding van de bronpagina bij deze vraag">Afbeelding</label>
+</div>
 </div>
 </div>
 <?php endforeach;?>
+</div>
 </div></div>
 <?php endforeach;?>
 <div class="d-flex gap-2 mb-3"><button class="btn btn-success btn-lg" type="submit">Opslaan als sub-tests</button><button class="btn btn-outline-secondary" type="submit" name="action" value="clear" formnovalidate>Annuleren</button></div>
-</form><div class="alert alert-success mt-4 mb-0"><strong>Veilige tussenstap:</strong> de analyse en gegenereerde vragen staan alleen in deze sessie. De volgende stap kan de geselecteerde vragen laten aanpassen en pas daarna een nieuwe sub-test in de database aanmaken.</div>
+</form>
+<div class="alert alert-success mt-4 mb-0"><strong>Veilige tussenstap:</strong> de analyse en gegenereerde vragen staan alleen in deze sessie. De volgende stap kan de geselecteerde vragen laten aanpassen en pas daarna een nieuwe sub-test in de database aanmaken.</div>
 <?php endif;?>
 <?php endif;?>
 </div></div></main>
