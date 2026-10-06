@@ -165,6 +165,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 }
             }
         }
+        if($errors && isset($_SESSION['ai_test_analysis']['generated'])){
+            unset($_SESSION['ai_test_analysis']['generated']);
+        }
         $analysis=$_SESSION['ai_test_analysis']['analysis']??$analysis;
     }
 
