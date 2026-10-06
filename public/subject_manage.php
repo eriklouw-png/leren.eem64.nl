@@ -33,6 +33,11 @@ $tx->execute([$id]);$topics=$tx->fetchAll();
 $x=$pdo->prepare("SELECT t.id,t.topic_id,t.title,t.description,t.test_type,t.vocab_direction,t.is_active,COUNT(q.id) question_count FROM tests t JOIN topics tp ON tp.id=t.topic_id LEFT JOIN questions q ON q.test_id=t.id WHERE tp.subject_id=? AND t.is_active=1 GROUP BY t.id ORDER BY tp.name,t.created_at DESC");
 $x->execute([$id]);$tests=$x->fetchAll();
 
+$x=$pdo->prepare("SELECT ts.id,ts.topic_id,ts.name,ts.is_active,ts.updated_at,ts.created_at FROM topic_summaries ts JOIN topics tp ON tp.id=ts.topic_id WHERE tp.subject_id=? ORDER BY ts.topic_id,ts.created_at,ts.id");
+$x->execute([$id]);$summaries=$x->fetchAll();
+$summariesByTopic=[];
+foreach($summaries as $summary)$summariesByTopic[(int)$summary['topic_id']][]=$summary;
+
 $testIds=array_map('intval',array_column($tests,'id'));
 $resultGroups=[];
 if($testIds){
@@ -93,7 +98,7 @@ foreach($tests as $t){
     $testsByTopic[(int)$t['topic_id']][]=$t;
 }
 ?>
-<?php foreach($topics as $topic): $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d'); $topicTests=$testsByTopic[(int)$topic['id']]??[];?>
+<?php foreach($topics as $topic): $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d'); $topicTests=$testsByTopic[(int)$topic['id']]??[]; $topicSummaries=$summariesByTopic[(int)$topic['id']]??[];?>
 <div class="accordion-item">
 <h2 class="accordion-header" id="heading<?=$topic['id']?>">
 <button class="accordion-button <?=$archived?'collapsed':''?>" type="button" data-bs-toggle="collapse" data-bs-target="#collapse<?=$topic['id']?>" aria-expanded="<?=$archived?'false':'true'?>" aria-controls="collapse<?=$topic['id']?>">
@@ -111,6 +116,42 @@ foreach($tests as $t){
 <a class="btn btn-sm btn-outline-secondary ms-1" href="topic_edit.php?id=<?=$topic['id']?>">Overhoring bewerken</a>
 </div>
 </div>
+
+<?php if($topicSummaries):?>
+<div class="mb-4">
+<div class="d-flex justify-content-between align-items-center mb-2">
+<strong>Samenvattingen</strong>
+<span class="small text-secondary"><?=count($topicSummaries)?> totaal</span>
+</div>
+<div class="list-group">
+<?php foreach($topicSummaries as $summary):?>
+<div class="list-group-item p-3">
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
+<div>
+<strong><?=e($summary['name'])?></strong>
+<div class="small text-secondary"><?=((int)$summary['is_active']?'Actief voor leerlingen':'Verwijderd voor leerlingen')?> · <?=e(date('d-m-Y',strtotime((string)($summary['updated_at']?:$summary['created_at']))))?></div>
+</div>
+<div class="text-nowrap">
+<a class="btn btn-sm btn-outline-primary" href="summary_edit.php?id=<?=$summary['id']?>">Bewerken</a>
+<?php if((int)$summary['is_active']):?>
+<form method="post" action="summary_edit.php?id=<?=$summary['id']?>" class="d-inline">
+<button class="btn btn-sm btn-outline-danger ms-1" type="submit" name="action" value="delete" onclick="return confirm('Deze samenvatting verbergen voor leerlingen? De tekst blijft in de database bewaard.');">Verwijderen</button>
+</form>
+<?php else:?>
+<form method="post" action="summary_edit.php?id=<?=$summary['id']?>" class="d-inline">
+<button class="btn btn-sm btn-outline-success ms-1" type="submit" name="action" value="restore">Herstellen</button>
+</form>
+<?php endif;?>
+</div>
+</div>
+</div>
+<?php endforeach;?>
+</div>
+</div>
+<?php else:?>
+<div class="alert alert-secondary">Nog geen samenvattingen voor deze overhoring.</div>
+<?php endif;?>
+
 <?php if(!$topicTests):?>
 <div class="alert alert-info mb-0">Nog geen sub-testen binnen deze overhoring.</div>
 <?php else:?>
