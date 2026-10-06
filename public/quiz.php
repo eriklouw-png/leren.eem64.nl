@@ -202,12 +202,27 @@ if(!$attempt){
                       AND lt.topic_id=? AND lt.is_active=1
                     GROUP BY a.test_id
                 ) latest ON latest.test_id=t.id
+                JOIN attempts latest_attempt ON latest_attempt.id=latest.attempt_id
                 JOIN attempt_questions aq ON aq.attempt_id=latest.attempt_id
                 JOIN attempt_answers aa ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id
                 WHERE t.topic_id=? AND t.is_active=1 AND aa.is_correct=0
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM attempts ra
+                      JOIN tests rt ON rt.id=ra.test_id
+                      JOIN attempt_answers raa ON raa.attempt_id=ra.id
+                      WHERE ra.student_id=?
+                        AND ra.status='finished'
+                        AND ra.mode='mistakes'
+                        AND rt.topic_id=?
+                        AND rt.title='Fouten oefenen'
+                        AND raa.question_id=aq.question_id
+                        AND raa.is_correct=1
+                        AND ra.finished_at>latest_attempt.finished_at
+                  )
                 ORDER BY t.id,aq.sort_order,aq.question_id
             ");
-            $x->execute([$studentId,$topicId,$topicId]);$mistakes=$x->fetchAll();
+            $x->execute([$studentId,$topicId,$topicId,$studentId,$topicId]);$mistakes=$x->fetchAll();
             if(!$mistakes)redirect('topic.php?id='.$topicId);
         }else{
             if(!$sourceAttemptId)redirect('subject.php?id='.$test['subject_id']);
