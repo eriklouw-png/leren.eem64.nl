@@ -123,6 +123,25 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $errors[]='Je kunt maximaal tien sub-testen tegelijk genereren.';
             }
             if(!$errors){
+                $useSummary=!empty($_POST['use_summary']);
+                if($topicId){
+                    $topicSummarySetting=$pdo->prepare("UPDATE topics SET use_summary=? WHERE id=?");
+                    $topicSummarySetting->execute([$useSummary?1:0,$topicId]);
+                }
+                $summaryText=null;
+                if($useSummary){
+                    try{
+                        $summaryPrompt='Maak een complete, zelfstandige samenvatting van deze geüploade schoolboekpagina’s voor deze overhoring. Deze samenvatting wordt één afzonderlijke samenvatting binnen de overhoring en mag dus alleen de informatie uit deze nieuwe upload bevatten. Gebruik uitsluitend informatie uit de pagina’s. Neem belangrijke begrippen, namen, processen, voorbeelden en jaartallen mee. Schrijf in duidelijk Nederlands op het niveau van ongeveer 12-15 jaar. Deel de samenvatting logisch op in duidelijke onderwerpen. IEDER nieuw onderwerp moet beginnen met een Markdown-kopje op exact deze manier: "## Onderwerp". Gebruik dus letterlijk twee hekjes, gevolgd door één spatie en daarna de titel van het onderwerp, bijvoorbeeld "## Stofwisseling". Gebruik geen andere Markdown-kopniveaus zoals # of ###. Zet onder ieder kopje de bijbehorende uitleg in korte, duidelijke alinea’s. Verzin niets en vul ontbrekende informatie niet aan.';
+                        $summaryData=openai_generate_topic_summary($summaryPrompt,(array)($saved['images']??[]));
+                        if(isset($summaryData['_leren_error']))throw new RuntimeException((string)$summaryData['_leren_error']);
+                        $summaryJson=openai_output_json($summaryData);
+                        $summaryText=trim((string)($summaryJson['summary']??''));
+                        if($summaryText==='')throw new RuntimeException('De AI gaf geen bruikbare samenvatting terug.');
+                    }catch(Throwable $summaryError){
+                        $errors[]='De samenvatting kon niet worden gemaakt: '.$summaryError->getMessage();
+                    }
+                }
+                if(!$errors)$_SESSION['ai_test_analysis']['summary_text']=$summaryText;
                 $_SESSION['ai_test_analysis']['request']=['prefix'=>$prefix,'specs'=>$requestedSpecs];
                 $requested=[];
                 foreach($requestedSpecs as $i=>$spec){
@@ -282,11 +301,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }
 
     if($action==='analyze'){
-        if($topicId){
-            $useSummary=!empty($_POST['use_summary']);
-            $topicSummarySetting=$pdo->prepare("UPDATE topics SET use_summary=? WHERE id=?");
-            $topicSummarySetting->execute([$useSummary?1:0,$topicId]);
-        }
         if(!warm_ai())$errors[]='AI is niet beschikbaar. Controleer OPENAI_API_KEY en de AI-instellingen.';
         $files=$_FILES['pages']??null;
         $valid=[];
@@ -338,27 +352,13 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     }
                     $analysis=null;
                 }else{
-                    $summaryText=null;
-                    if($useSummary){
-                        try{
-                            $summaryPrompt='Maak een complete, zelfstandige samenvatting van deze geüploade schoolboekpagina’s voor deze overhoring. Deze samenvatting wordt één afzonderlijke samenvatting binnen de overhoring en mag dus alleen de informatie uit deze nieuwe upload bevatten. Gebruik uitsluitend informatie uit de pagina’s. Neem belangrijke begrippen, namen, processen, voorbeelden en jaartallen mee. Schrijf in duidelijk Nederlands op het niveau van ongeveer 12-15 jaar. Deel de samenvatting logisch op in duidelijke onderwerpen. IEDER nieuw onderwerp moet beginnen met een Markdown-kopje op exact deze manier: "## Onderwerp". Gebruik dus letterlijk twee hekjes, gevolgd door één spatie en daarna de titel van het onderwerp, bijvoorbeeld "## Stofwisseling". Gebruik geen andere Markdown-kopniveaus zoals # of ###. Zet onder ieder kopje de bijbehorende uitleg in korte, duidelijke alinea’s. Verzin niets en vul ontbrekende informatie niet aan.';
-                            $summaryData=openai_generate_topic_summary($summaryPrompt,$valid);
-                            if(isset($summaryData['_leren_error']))throw new RuntimeException((string)$summaryData['_leren_error']);
-                            $summaryJson=openai_output_json($summaryData);
-                            $summaryText=trim((string)($summaryJson['summary']??''));
-                            if($summaryText==='')throw new RuntimeException('De AI gaf geen bruikbare samenvatting terug.');
-                        }catch(Throwable $summaryError){
-                            foreach($valid as $path)@unlink($path);
-                            $errors[]='De vragenanalyse is gelukt, maar de samenvatting kon niet worden gemaakt: '.$summaryError->getMessage();
-                        }
-                    }
-                    if(!$errors)$_SESSION['ai_test_analysis']=[
+                    $_SESSION['ai_test_analysis']=[
                         'subject_id'=>$subjectId,
                         'topic_id'=>$topicId,
                         'analysis'=>$analysis,
                         'images'=>$valid,
-                        'summary_text'=>$summaryText,
-                        'request'=>['prefix'=>$prefix,'specs'=>$requestedSpecs],
+                        'summary_text'=>null,
+                        'request'=>['prefix'=>'','specs'=>[]],
                         'created_at'=>time()
                     ];
                 }
@@ -376,7 +376,15 @@ $savedSummaryText=(string)($_SESSION['ai_test_analysis']['summary_text']??'');
 <!doctype html>
 <html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AI toets maken</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<style>.dropzone{border:2px dashed #adb5bd;border-radius:.75rem;padding:2rem;text-align:center;background:#fff;cursor:pointer}.dropzone:hover{border-color:#2f7d4a;background:#f8fbf9}.analysis-card{border-left:4px solid #2f7d4a}.ai-loading{position:fixed;inset:0;background:rgba(255,255,255,.88);z-index:9999;display:flex;align-items:center;justify-content:center}.ai-loading-card{background:#fff;border:1px solid #dee2e6;border-radius:1rem;box-shadow:0 .5rem 1.5rem rgba(0,0,0,.12);padding:2rem 2.5rem;text-align:center;min-width:320px}.ai-loading .spinner-border{width:3rem;height:3rem}</style>
+<style>
+.dropzone{border:2px dashed #adb5bd;border-radius:1rem;padding:2.5rem 1.25rem;text-align:center;background:#fff;cursor:pointer;transition:.15s}.dropzone:hover,.dropzone.dragover{border-color:#2f7d4a;background:#f8fbf9}
+.upload-icon{font-size:3rem;line-height:1;margin-bottom:1rem}.upload-rules{display:flex;flex-wrap:wrap;justify-content:center;gap:.5rem}.upload-rules span{background:#f1f3f5;border-radius:999px;padding:.35rem .7rem;font-size:.8rem;color:#6c757d}
+.upload-file-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.5rem}.upload-file{background:#fff;border:1px solid #dee2e6;border-radius:.6rem;padding:.65rem .75rem;display:flex;align-items:center;gap:.65rem}.upload-file-name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ai-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem}.ai-step{background:#e9ecef;border-radius:.6rem;padding:.6rem .75rem;display:flex;align-items:center;gap:.5rem;color:#6c757d}.ai-step span{width:28px;height:28px;border-radius:50%;background:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700}.ai-step.active{background:#cfe2ff;color:#084298}.ai-step.done{background:#d1e7dd;color:#0f5132}
+.generated-test-card{background:#fff;border:1px solid #dee2e6;border-radius:.9rem;overflow:hidden;box-shadow:0 .15rem .5rem rgba(0,0,0,.04)}.generated-test-header{padding:1rem;border-bottom:1px solid #dee2e6;background:#f8f9fa}.generated-question{padding:1rem;border-bottom:1px solid #e9ecef}.generated-question:last-child{border-bottom:0}.question-number{font-weight:700;color:#6c757d}.question-text{font-size:1.02rem;font-weight:600;line-height:1.5}.question-meta{display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap}
+@media(max-width:576px){.container{padding-left:.75rem;padding-right:.75rem}.ai-steps{gap:.25rem}.ai-step{justify-content:center;padding:.5rem .25rem}.ai-step strong{display:none}.generated-test-header{padding:.85rem}.generated-question{padding:.85rem}.question-meta{align-items:flex-start;flex-direction:column}}
+.ai-loading{position:fixed;inset:0;background:rgba(255,255,255,.88);z-index:9999;display:flex;align-items:center;justify-content:center}.ai-loading-card{background:#fff;border:1px solid #dee2e6;border-radius:1rem;box-shadow:0 .5rem 1.5rem rgba(0,0,0,.12);padding:2rem 2.5rem;text-align:center;min-width:320px}.ai-loading .spinner-border{width:3rem;height:3rem}
+</style>
 </head><body class="bg-light"><div id="aiLoading" class="ai-loading d-none" aria-live="polite" aria-busy="true"><div class="ai-loading-card"><div class="spinner-border text-primary mb-3" role="status"><span class="visually-hidden">Bezig...</span></div><div id="aiLoadingTitle" class="h5 mb-1">Bezig met AI...</div><div id="aiLoadingText" class="text-secondary">Even geduld.</div></div></div><main class="container py-4" style="max-width:1000px">
 <a href="subject_manage.php?id=<?=$subjectId?>">&larr; <?=e($subjectName)?></a>
 <div class="card shadow-sm mt-3"><div class="card-body p-4">
@@ -384,158 +392,117 @@ $savedSummaryText=(string)($_SESSION['ai_test_analysis']['summary_text']??'');
 <div class="text-secondary mb-4">Vak: <strong><?=e($subjectName)?></strong> · Onderwerp: <strong><?=e($topicName)?></strong></div>
 <?php foreach($errors as $error):?><div class="alert alert-danger"><?=e($error)?></div><?php endforeach;?>
 
-<?php if(!$analysis):?>
-<div class="alert alert-info">Upload foto’s van de relevante pagina’s uit het boek. Geef meteen aan welke sub-testen je wilt maken. De AI controleert na het analyseren hoeveel verschillende vragen de bron maximaal ondersteunt.</div>
+<?php
+$hasGenerated=isset($_SESSION['ai_test_analysis']['generated']['subtests']) && is_array($_SESSION['ai_test_analysis']['generated']['subtests']);
+$stage=$hasGenerated?3:($analysis?2:1);
+?>
+<div class="ai-steps mb-4">
+<?php foreach([1=>'Pagina’s',2=>'Instellingen',3=>'Vragen'] as $stepNo=>$stepName):?>
+<div class="ai-step <?=$stage===$stepNo?'active':($stage>$stepNo?'done':'')?>"><span><?=$stepNo?></span><strong><?=e($stepName)?></strong></div>
+<?php endforeach;?>
+</div>
 
+<?php if($stage===1):?>
+<div class="upload-intro mb-4">
+<h2 class="h4 mb-2">1. Boekpagina’s toevoegen</h2>
+<p class="text-secondary mb-0">Upload de relevante pagina’s uit het schoolboek. Op de volgende pagina kies je pas hoe de toets moet worden opgebouwd.</p>
+</div>
 <form method="post" enctype="multipart/form-data" id="analyzeForm" data-ai-loading="analyze">
 <input type="hidden" name="action" value="analyze">
-<div class="row g-3 mb-3">
-<div class="col-md-6"><label class="form-label fw-semibold">Prefix voor de Sub-Testnaam</label><input class="form-control" name="prefix" value="<?=e($prefix)?>" placeholder="Bijvoorbeeld 1.1"><div class="form-text">De AI levert de inhoudelijke naam; de app zet de prefix ervoor.</div></div>
-</div>
-<div class="form-check mb-3">
-<input class="form-check-input" type="checkbox" name="use_summary" value="1" id="useSummaryUpload" <?=$useSummary?'checked':''?>>
-<label class="form-check-label" for="useSummaryUpload"><strong>Samenvatting gebruiken voor deze overhoring</strong><br><span class="text-secondary">Als dit aanstaat, kun je voor deze overhoring meerdere afzonderlijke samenvattingen maken. Elke upload kan bijvoorbeeld een eigen samenvatting krijgen zoals 1.3 Samenvatting.</span></label>
-</div>
-<div class="card bg-light border-0 mb-3"><div class="card-body">
-<div class="d-flex justify-content-between align-items-center mb-2"><strong>Gewenste Sub-Testen</strong><button type="button" class="btn btn-outline-secondary btn-sm" id="addSpec">+ Sub-test</button></div>
-<div id="specRows"></div>
-<div class="small text-secondary">Bijvoorbeeld: 1 × 40 Multiple choice en 1 × 14 Open vragen, of 3 × 53 Combinatie.</div>
-</div></div>
-<label class="dropzone d-block mb-3" for="pages">
-<div class="fs-1">📷</div><strong>Foto’s van boekpagina’s kiezen</strong>
-<div class="text-secondary small mt-1">JPG, PNG of WebP · maximaal 10 pagina’s · maximaal 5 MB per afbeelding</div>
+<label class="dropzone d-block mb-3" for="pages" id="dropzone">
+<div class="upload-icon">📚</div>
+<div class="fw-semibold fs-5">Sleep boekpagina’s hierheen</div>
+<div class="text-secondary mt-1">of tik om foto’s te kiezen</div>
+<div class="upload-rules mt-3"><span>JPG, PNG of WebP</span><span>Max. 10 pagina’s</span><span>Max. 5 MB per foto</span></div>
 <input class="d-none" id="pages" type="file" name="pages[]" accept="image/jpeg,image/png,image/webp" multiple required>
 </label>
-<div id="fileList" class="small text-secondary mb-3"></div>
-<button class="btn btn-primary" type="submit">Analyseer met AI</button>
-<a class="btn btn-outline-secondary" href="subject_manage.php?id=<?=$subjectId?>">Annuleren</a>
-</form>
-<?php else:?>
-<div class="d-flex justify-content-between align-items-start gap-3 mb-3">
-<div><h2 class="h4 mb-1"><?=e($analysis['subject'])?> — <?=e($analysis['topic'])?></h2><p class="mb-0 text-secondary"><?=e($analysis['summary'])?></p></div>
-<form method="post"><input type="hidden" name="action" value="clear"><button class="btn btn-outline-secondary btn-sm">Nieuwe analyse</button></form>
+<div id="fileList" class="upload-file-list mb-4"></div>
+<div class="d-flex flex-column flex-sm-row gap-2">
+<button class="btn btn-primary btn-lg" type="submit" id="analyzeButton" disabled>Ga naar instellingen</button>
+<a class="btn btn-outline-secondary btn-lg" href="subject_manage.php?id=<?=$subjectId?>">Annuleren</a>
 </div>
-<h3 class="h5 mt-4">Belangrijkste leerpunten</h3>
-<ul><?php foreach(($analysis['learning_points']??[]) as $point):?><li><?=e($point)?></li><?php endforeach;?></ul>
-<?php if($savedSummaryText!==''):?>
-<div class="card mt-4 border-success"><div class="card-body">
-<h3 class="h5">Samenvatting</h3>
-<div class="small text-secondary mb-2">Deze samenvatting wordt bij het opslaan gekoppeld aan de overhoring.</div>
-<div><?=nl2br(e($savedSummaryText))?></div>
+</form>
+
+<?php elseif($stage===2):?>
+<div class="analysis-overview card border-0 bg-light mb-4"><div class="card-body">
+<div class="small text-uppercase text-secondary fw-semibold mb-1">Analyse voltooid</div>
+<h2 class="h4 mb-1"><?=e($analysis['subject'])?> — <?=e($analysis['topic'])?></h2>
+<p class="text-secondary mb-3"><?=e($analysis['summary'])?></p>
+<?php if(!empty($analysis['learning_points'])):?><div class="small fw-semibold mb-1">Belangrijkste leerpunten</div><ul class="small mb-0 ps-3"><?php foreach(array_slice((array)$analysis['learning_points'],0,6) as $point):?><li><?=e($point)?></li><?php endforeach;?></ul><?php endif;?>
 </div></div>
-<?php endif;?>
-<div class="alert alert-success mt-4"><strong>Analyse voltooid.</strong> De AI heeft de leerstof geanalyseerd en een schatting gemaakt van het aantal mogelijke verschillende vragen. Deze schatting is <strong>geen harde limiet</strong>: je kunt bij het genereren zelf een hoger aantal vragen proberen. De AI probeert het gevraagde aantal te halen zonder leerstof te verzinnen of vrijwel identieke vragen te maken.</div>
-<h3 class="h5 mt-4">Sub-Testen genereren</h3>
+<div class="d-flex justify-content-between align-items-end gap-3 mb-3">
+<div><h2 class="h4 mb-1">2. Toets instellen</h2><p class="text-secondary mb-0">Kies hier de instellingen. Je hoeft dit maar één keer te doen.</p></div>
+<form method="post"><input type="hidden" name="action" value="clear"><button class="btn btn-outline-secondary btn-sm">Nieuwe foto’s</button></form>
+</div>
 <form method="post" id="generateForm" data-ai-loading="generate">
 <input type="hidden" name="action" value="generate">
-<div class="row g-3 mb-3"><div class="col-md-6"><label class="form-label fw-semibold">Prefix voor de Sub-Testnaam</label><input class="form-control" name="prefix" value="<?=e((string)($savedRequest['prefix']??$prefix))?>" placeholder="Bijvoorbeeld 1.1"></div></div>
-<div class="card bg-light border-0 mb-3"><div class="card-body">
-<div class="d-flex justify-content-between align-items-center mb-2"><strong>Gewenste Sub-Testen</strong><button type="button" class="btn btn-outline-secondary btn-sm" id="addSpecAfter">+ Sub-test</button></div>
-<div id="specRowsAfter"></div>
-<div class="small text-secondary">Totaal gevraagd: <strong id="specTotal">0</strong> vragen · de AI probeert het gevraagde aantal te maken op basis van de beschikbare leerstof.</div>
+<div class="card mb-3"><div class="card-body">
+<label class="form-label fw-semibold">Prefix voor de sub-testnaam</label>
+<input class="form-control form-control-lg" name="prefix" value="<?=e((string)($savedRequest['prefix']??''))?>" placeholder="Bijvoorbeeld 1.1">
+<div class="form-text">De AI maakt de inhoudelijke titel. De prefix wordt ervoor gezet.</div>
 </div></div>
-<button class="btn btn-primary" type="submit" id="generateButton">Genereer vragen met AI</button>
+<div class="card mb-3"><div class="card-body">
+<div class="form-check form-switch">
+<input class="form-check-input" type="checkbox" name="use_summary" value="1" id="useSummarySettings" <?=$useSummary?'checked':''?>>
+<label class="form-check-label fw-semibold" for="useSummarySettings">Samenvatting maken</label>
+<div class="small text-secondary mt-1">De AI maakt een aparte leersamenvatting van deze pagina’s.</div>
+</div>
+</div></div>
+<div class="card mb-4"><div class="card-body">
+<div class="d-flex justify-content-between align-items-center mb-3"><div><strong>Sub-testen</strong><div class="small text-secondary">Bepaal aantal en vraagtype per sub-test.</div></div><button type="button" class="btn btn-outline-secondary btn-sm" id="addSpecAfter">+ Sub-test</button></div>
+<div id="specRowsAfter"></div><div class="small text-secondary mt-2">Totaal gevraagd: <strong id="specTotal">0</strong> vragen.</div>
+</div></div>
+<button class="btn btn-primary btn-lg w-100" type="submit" id="generateButton">Genereer vragen</button>
 </form>
-<?php if(isset($_SESSION['ai_test_analysis']['generated']['subtests'])):?>
-<hr class="my-4">
-<h3 class="h5">Gegenereerde vragen</h3>
-<div class="alert alert-info">Controleer alleen welke vragen en vraagtypes zijn aangemaakt. Je hoeft de inhoud niet meer één voor één te beoordelen. Een aangevinkte afbeelding wordt bij het opslaan aan de vraag gekoppeld.</div>
+
+<?php else:?>
+<div class="d-flex justify-content-between align-items-center gap-3 mb-4">
+<div><h2 class="h4 mb-1">3. Vragen controleren</h2><p class="text-secondary mb-0">Controleer de gegenereerde sub-testen en sla ze daarna op.</p></div>
+<form method="post"><input type="hidden" name="action" value="clear"><button class="btn btn-outline-secondary btn-sm">Opnieuw beginnen</button></form>
+</div>
 <form method="post">
 <input type="hidden" name="action" value="save">
 <?php foreach($_SESSION['ai_test_analysis']['generated']['subtests'] as $si=>$generatedSub):?>
-<div class="card mb-4"><div class="card-body">
-<div class="row g-2 mb-3">
-<div class="col-md-8"><label class="form-label fw-semibold">Naam sub-test</label><input class="form-control" name="tests[<?=$si?>][title]" value="<?=e($generatedSub['title'])?>" required></div>
-<div class="col-md-4"><label class="form-label fw-semibold">Beschrijving</label><input class="form-control" name="tests[<?=$si?>][description]" value="<?=e($generatedSub['description']??'')?>"></div>
+<div class="generated-test-card mb-4">
+<div class="generated-test-header">
+<div class="small text-uppercase text-secondary fw-semibold mb-1">Sub-test <?=($si+1)?></div>
+<input class="form-control form-control-lg fw-semibold mb-2" name="tests[<?=$si?>][title]" value="<?=e($generatedSub['title'])?>" required>
+<input class="form-control" name="tests[<?=$si?>][description]" value="<?=e($generatedSub['description']??'')?>" placeholder="Beschrijving (optioneel)">
 </div>
-
-<div class="list-group">
+<div class="generated-question-list">
 <?php foreach(($generatedSub['questions']??[]) as $qi=>$q):?>
-<div class="list-group-item">
+<div class="generated-question">
+<div class="d-flex justify-content-between align-items-start gap-2 mb-2"><span class="question-number">Vraag <?=($qi+1)?></span><span class="badge rounded-pill text-bg-light"><?=e($q['type']==='mc'?'Multiple choice':'Open')?></span></div>
+<div class="question-text mb-3"><?=e($q['question'])?></div>
+<div class="question-meta">
+<div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="tests[<?=$si?>][questions][<?=$qi?>][use_image]" value="1" id="img<?=$si?>_<?=$qi?>" <?=$q['use_image']?'checked':''?>><label class="form-check-label small" for="img<?=$si?>_<?=$qi?>">Afbeelding gebruiken</label></div>
+<span class="small text-secondary">Bronpagina <?=e((string)($q['source_page']??1))?></span>
+</div>
 <input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][type]" value="<?=e($q['type'])?>">
 <input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][source_page]" value="<?=e((string)($q['source_page']??1))?>">
 <input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][correct_answer]" value="<?=e($q['correct_answer']??'')?>">
 <input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][question]" value="<?=e($q['question'])?>">
-<?php if($q['type']==='mc'):?>
-<?php foreach(($q['options']??[]) as $oi=>$option):?>
-<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][options][<?=$oi?>]" value="<?=e($option)?>">
-<?php endforeach;?>
-<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][correct_option]" value="<?=e((string)($q['correct_option']??0))?>">
-<?php else:?>
-<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][accepted_answers]" value="<?=e(implode(' | ',(array)($q['accepted_answers']??[$q['correct_answer']??''])))?>">
-<?php endif;?>
+<?php if($q['type']==='mc'):?><?php foreach(($q['options']??[]) as $oi=>$option):?><input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][options][<?=$oi?>]" value="<?=e($option)?>"><?php endforeach;?><input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][correct_option]" value="<?=e((string)($q['correct_option']??0))?>">
+<?php else:?><input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][accepted_answers]" value="<?=e(implode(' | ',(array)($q['accepted_answers']??[$q['correct_answer']??''])))?>"><?php endif;?>
 <input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][explanation]" value="<?=e($q['explanation']??'')?>">
-<div class="d-flex align-items-start gap-3">
-<div class="fw-semibold text-secondary" style="min-width:3.5rem">Vraag <?=($qi+1)?></div>
-<div class="flex-grow-1"><?=e($q['question'])?></div>
-<span class="badge text-bg-light"><?=e($q['type']==='mc'?'Multiple choice':'Open')?></span>
-<div class="form-check ms-2">
-<input class="form-check-input" type="checkbox" name="tests[<?=$si?>][questions][<?=$qi?>][use_image]" value="1" id="img<?=$si?>_<?=$qi?>" <?=$q['use_image']?'checked':''?>>
-<label class="form-check-label" for="img<?=$si?>_<?=$qi?>" title="Gebruik de afbeelding van de bronpagina bij deze vraag">Afbeelding</label>
-</div>
-</div>
 </div>
 <?php endforeach;?>
-</div>
 </div></div>
 <?php endforeach;?>
-<div class="d-flex gap-2 mb-3"><button class="btn btn-success btn-lg" type="submit">Opslaan als sub-tests</button><button class="btn btn-outline-secondary" type="submit" name="action" value="clear" formnovalidate>Annuleren</button></div>
+<div class="d-flex flex-column flex-sm-row gap-2 mb-3"><button class="btn btn-success btn-lg" type="submit">Opslaan als sub-test<?=count($_SESSION['ai_test_analysis']['generated']['subtests'])===1?'':'s'?></button><button class="btn btn-outline-secondary btn-lg" type="submit" name="action" value="clear" formnovalidate>Opnieuw beginnen</button></div>
 </form>
-<div class="alert alert-success mt-4 mb-0"><strong>Veilige tussenstap:</strong> de analyse en gegenereerde vragen staan alleen in deze sessie. De volgende stap kan de geselecteerde vragen laten aanpassen en pas daarna een nieuwe sub-test in de database aanmaken.</div>
 <?php endif;?>
-<?php endif;?>
+
 </div></div></main>
 <script>
-const input=document.getElementById('pages'),list=document.getElementById('fileList');
-if(input)input.addEventListener('change',()=>{list.textContent=[...input.files].map(f=>f.name+' ('+Math.round(f.size/1024)+' KB)').join(' · ')});
-const initialSpecs=<?=json_encode($requestedSpecs,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;
-const savedSpecs=<?=json_encode($savedRequest['specs']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;
-const specDefaults=savedSpecs.length?savedSpecs:(initialSpecs.length?initialSpecs:[{type:'mixed',count:10}]);
-function addSpecRow(container,row,index){
- const wrap=document.createElement('div');wrap.className='row g-2 align-items-end mb-2 spec-row';
- wrap.innerHTML='<div class="col-5 col-md-3"><label class="form-label small">Aantal</label><input class="form-control" type="number" name="specs['+index+'][count]" min="1" max="100" value="'+(row.count||10)+'" required></div>'+
- '<div class="col-5 col-md-4"><label class="form-label small">Type</label><select class="form-select" name="specs['+index+'][type]"><option value="mc" '+(row.type==='mc'?'selected':'')+'>Multiple choice</option><option value="open" '+(row.type==='open'?'selected':'')+'>Open vragen</option><option value="mixed" '+(row.type==='mixed'?'selected':'')+'>Combinatie</option></select></div>'+
- '<div class="col-2 col-md-2"><button type="button" class="btn btn-outline-danger w-100 remove-spec">×</button></div>';
- container.appendChild(wrap);
- wrap.querySelector('.remove-spec').addEventListener('click',()=>{wrap.remove();updateTotals(container)});
-}
-function fillSpecs(container,specs){
- container.innerHTML='';
- (specs.length?specs:[{type:'mixed',count:10}]).forEach((row,i)=>addSpecRow(container,row,i));
- updateTotals(container);
-}
-function updateTotals(container){
- if(!container)return;
- let total=0;container.querySelectorAll('input[name$="[count]"]').forEach(el=>total+=Math.max(0,parseInt(el.value||'0',10)));
- const totalEl=document.getElementById(container.id==='specRowsAfter'?'specTotal':null);
- if(totalEl)totalEl.textContent=total;
-}
-const initialContainer=document.getElementById('specRows');
-if(initialContainer){
- fillSpecs(initialContainer,specDefaults);
- document.getElementById('addSpec').addEventListener('click',()=>{addSpecRow(initialContainer,{type:'mixed',count:10},initialContainer.children.length);updateTotals(initialContainer)});
-}
-const afterContainer=document.getElementById('specRowsAfter');
-if(afterContainer){
- fillSpecs(afterContainer,specDefaults);
- document.getElementById('addSpecAfter').addEventListener('click',()=>{addSpecRow(afterContainer,{type:'mixed',count:10},afterContainer.children.length);updateTotals(afterContainer)});
- afterContainer.addEventListener('input',()=>updateTotals(afterContainer));
-}
-const aiLoading=document.getElementById('aiLoading');
-const aiLoadingTitle=document.getElementById('aiLoadingTitle');
-const aiLoadingText=document.getElementById('aiLoadingText');
-function showAiLoading(kind){
- if(!aiLoading)return;
- if(kind==='analyze'){
-   aiLoadingTitle.textContent='Afbeeldingen aan het analyseren...';
-   aiLoadingText.textContent='De AI leest de pagina’s en bepaalt welke leerstof en vragen mogelijk zijn. Dit kan even duren.';
- }else{
-   aiLoadingTitle.textContent='Vragen aan het genereren...';
-   aiLoadingText.textContent='De AI maakt de gevraagde vragen en controleert de vraagvormen. Even geduld.';
- }
- aiLoading.classList.remove('d-none');
- document.body.style.overflow='hidden';
-}
-document.getElementById('analyzeForm')?.addEventListener('submit',()=>showAiLoading('analyze'));
-document.getElementById('generateForm')?.addEventListener('submit',()=>showAiLoading('generate'));
+const input=document.getElementById('pages'),list=document.getElementById('fileList'),dropzone=document.getElementById('dropzone'),analyzeButton=document.getElementById('analyzeButton');
+function renderFiles(){if(!input||!list)return;const files=[...input.files];list.innerHTML='';if(!files.length){if(analyzeButton)analyzeButton.disabled=true;return;}files.forEach((file,index)=>{const item=document.createElement('div');item.className='upload-file';item.innerHTML='<span>🖼️</span><div class="flex-grow-1 min-w-0"><div class="upload-file-name">'+(index+1)+'. '+file.name.replace(/[<>&"]/g,'')+'</div><div class="small text-secondary">'+Math.round(file.size/1024)+' KB</div></div>';list.appendChild(item)});if(analyzeButton)analyzeButton.disabled=false}
+input?.addEventListener('change',renderFiles);dropzone?.addEventListener('dragover',e=>{e.preventDefault();dropzone.classList.add('dragover')});dropzone?.addEventListener('dragleave',()=>dropzone.classList.remove('dragover'));dropzone?.addEventListener('drop',e=>{e.preventDefault();dropzone.classList.remove('dragover');if(input&&e.dataTransfer.files.length){input.files=e.dataTransfer.files;renderFiles()}});
+const savedSpecs=<?=json_encode($savedRequest['specs']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;const specDefaults=savedSpecs.length?savedSpecs:[{type:'mixed',count:10}];
+function addSpecRow(container,row,index){const wrap=document.createElement('div');wrap.className='row g-2 align-items-end mb-2 spec-row';wrap.innerHTML='<div class="col-5 col-md-3"><label class="form-label small">Aantal</label><input class="form-control" type="number" name="specs['+index+'][count]" min="1" max="100" value="'+(row.count||10)+'" required></div><div class="col-5 col-md-4"><label class="form-label small">Type</label><select class="form-select" name="specs['+index+'][type]"><option value="mc" '+(row.type==='mc'?'selected':'')+'>Multiple choice</option><option value="open" '+(row.type==='open'?'selected':'')+'>Open vragen</option><option value="mixed" '+(row.type==='mixed'?'selected':'')+'>Combinatie</option></select></div><div class="col-2 col-md-2"><button type="button" class="btn btn-outline-danger w-100 remove-spec">×</button></div>';container.appendChild(wrap);wrap.querySelector('.remove-spec').addEventListener('click',()=>{wrap.remove();updateTotals(container)})}
+function fillSpecs(container,specs){container.innerHTML='';(specs.length?specs:[{type:'mixed',count:10}]).forEach((row,i)=>addSpecRow(container,row,i));updateTotals(container)}
+function updateTotals(container){if(!container)return;let total=0;container.querySelectorAll('input[name$="[count]"]').forEach(el=>total+=Math.max(0,parseInt(el.value||'0',10)));const totalEl=document.getElementById('specTotal');if(totalEl)totalEl.textContent=total}
+const afterContainer=document.getElementById('specRowsAfter');if(afterContainer){fillSpecs(afterContainer,specDefaults);document.getElementById('addSpecAfter')?.addEventListener('click',()=>{addSpecRow(afterContainer,{type:'mixed',count:10},afterContainer.children.length);updateTotals(afterContainer)});afterContainer.addEventListener('input',()=>updateTotals(afterContainer));afterContainer.addEventListener('change',()=>updateTotals(afterContainer))}
+const aiLoading=document.getElementById('aiLoading'),aiLoadingTitle=document.getElementById('aiLoadingTitle'),aiLoadingText=document.getElementById('aiLoadingText');function showAiLoading(kind){if(!aiLoading)return;if(kind==='analyze'){aiLoadingTitle.textContent='Pagina’s analyseren...';aiLoadingText.textContent='De AI leest de boekpagina’s. Dit kan even duren.'}else{aiLoadingTitle.textContent='Toets maken...';aiLoadingText.textContent='De AI maakt de gevraagde vragen en eventuele samenvatting.'}aiLoading.classList.remove('d-none');document.body.style.overflow='hidden'}
+document.getElementById('analyzeForm')?.addEventListener('submit',()=>showAiLoading('analyze'));document.getElementById('generateForm')?.addEventListener('submit',()=>showAiLoading('generate'));
 </script></body></html>
