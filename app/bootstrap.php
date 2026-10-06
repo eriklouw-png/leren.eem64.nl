@@ -426,7 +426,7 @@ function openai_generate_topic_summary(string $input,array $imagePaths):?array{
 
     $payload=[
         'model'=>openai_model(),
-        'instructions'=>'Je maakt een Nederlandse samenvatting van foto’s van schoolboekpagina’s. Gebruik uitsluitend informatie die zichtbaar of leesbaar in de aangeleverde pagina’s staat. Verzin niets en gebruik geen algemene kennis om ontbrekende informatie aan te vullen. De samenvatting is bedoeld voor een leerling van ongeveer 12-15 jaar en moet overzichtelijk, leerbaar en inhoudelijk volledig zijn. Behoud belangrijke begrippen, namen, processen, voorbeelden en jaartallen uit de bron.',
+        'instructions'=>'Je maakt een Nederlandse samenvatting van foto’s van schoolboekpagina’s. Gebruik uitsluitend informatie die zichtbaar of leesbaar in de aangeleverde pagina’s staat. Verzin niets en gebruik geen algemene kennis om ontbrekende informatie aan te vullen. De samenvatting is bedoeld voor een leerling van ongeveer 12-15 jaar en moet overzichtelijk, leerbaar en inhoudelijk volledig zijn. Behoud belangrijke begrippen, namen, processen, voorbeelden en jaartallen uit de bron. Deel de samenvatting op in logische onderwerpen. Elk nieuw onderwerp MOET beginnen met een Markdown-kopje in exact dit formaat: ## Onderwerp. Dus twee hekjes, één spatie en daarna de titel, bijvoorbeeld: ## Stofwisseling. Gebruik geen # of ### kopjes. Zet de inhoud van elk onderwerp onder het bijbehorende ##-kopje.',
         'input'=>[['role'=>'user','content'=>$content]],
         'max_output_tokens'=>3000,
         'store'=>false,
