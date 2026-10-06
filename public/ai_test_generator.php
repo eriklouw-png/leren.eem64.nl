@@ -309,7 +309,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 if(!$analysis||!isset($analysis['subtests'])||!is_array($analysis['subtests'])||count($analysis['subtests'])===0){
                     foreach($valid as $path)@unlink($path);
                     @rmdir($sessionDir);
-                    $errors[]='De AI gaf geen bruikbaar analyse-resultaat terug.';
+                    $reason=(string)($data['incomplete_details']['reason']??'');
+                    if(($data['status']??'')==='incomplete' && $reason!==''){
+                        $errors[]='De AI-analyse werd niet volledig afgerond ('.$reason.'). Probeer het opnieuw.';
+                    }else{
+                        $errors[]='De AI gaf geen bruikbaar analyse-resultaat terug. Probeer het opnieuw.';
+                    }
                     $analysis=null;
                 }else{
                     $summaryText=null;
