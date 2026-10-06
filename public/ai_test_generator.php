@@ -49,15 +49,15 @@ function ai_summary_image_dir(int $topicId):string{
     return __DIR__.'/../storage/summaries/'.(int)$topicId;
 }
 
-function ai_archive_summary_images(int $topicId,array $paths):array{
-    $dir=ai_summary_image_dir($topicId);
+function ai_archive_summary_images(int $topicId,int $summaryId,array $paths):array{
+    $dir=__DIR__.'/../storage/summaries/'.(int)$topicId.'/'.(int)$summaryId;
     if(!is_dir($dir)&&!@mkdir($dir,0755,true))throw new RuntimeException('De map voor samenvattingspagina’s kon niet worden aangemaakt.');
     $archived=[];
     foreach($paths as $path){
         if(!is_string($path)||!is_file($path))continue;
         $mime=(string)(@mime_content_type($path)?:'');
         $ext=$mime==='image/png'?'png':($mime==='image/webp'?'webp':'jpg');
-        $destination=$dir.'/'.date('Ymd_His').'_'.bin2hex(random_bytes(8)).'.'.$ext;
+        $destination=$dir.'/'.date('Ymd_His').'_' .bin2hex(random_bytes(8)).'.'.$ext;
         if(!@copy($path,$destination))throw new RuntimeException('Een boekpagina kon niet voor de samenvatting worden bewaard.');
         $archived[]=$destination;
     }
@@ -261,8 +261,21 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         $savedCount++;
                     }
                     if($useSummary && !empty($saved['summary_text'])){
-                        $summaryUpdate=$pdo->prepare("UPDATE topics SET summary=?,summary_updated_at=NOW() WHERE id=?");
-                        $summaryUpdate->execute([(string)$saved['summary_text'],$topicId]);
+                        $summaryName=trim((string)($saved['request']['prefix']??''));
+                        $summaryName=$summaryName!==''?$summaryName.' Samenvatting':'Samenvatting';
+                        $baseSummaryName=$summaryName;
+                        $summarySuffix=2;
+                        $summaryCheck=$pdo->prepare("SELECT id FROM topic_summaries WHERE topic_id=? AND name=? AND is_active=1 LIMIT 1");
+                        while(true){
+                            $summaryCheck->execute([$topicId,$summaryName]);
+                            if(!$summaryCheck->fetchColumn())break;
+                            $summaryName=$baseSummaryName.' ('.$summarySuffix.')';
+                            $summarySuffix++;
+                        }
+                        $summaryIns=$pdo->prepare("INSERT INTO topic_summaries(topic_id,name,summary,is_active) VALUES(?,?,?,1)");
+                        $summaryIns->execute([$topicId,$summaryName,(string)$saved['summary_text']]);
+                        $summaryId=(int)$pdo->lastInsertId();
+                        ai_archive_summary_images($topicId,$summaryId,$sourceImages);
                     }
                     $pdo->commit();
                     ai_cleanup_session();
@@ -337,10 +350,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     $summaryText=null;
                     if($useSummary){
                         try{
-                            $archived=ai_archive_summary_images($topicId,$valid);
-                            $summaryImages=ai_all_summary_images($topicId);
-                            $summaryPrompt='Maak één complete, doorlopende samenvatting van alle geüploade schoolboekpagina’s voor deze overhoring. Dit zijn alle bronpagina’s die tot nu toe voor deze overhoring zijn bewaard. Gebruik uitsluitend informatie uit de pagina’s. Neem belangrijke begrippen, namen, processen, voorbeelden en jaartallen mee. Verwijder dubbele informatie waar nodig, maar laat inhoudelijke details niet weg. Schrijf in duidelijk Nederlands op het niveau van ongeveer 12-15 jaar. Gebruik korte kopjes en alinea’s, zodat een leerling de tekst als leersamenvatting kan gebruiken. Verzin niets en vul ontbrekende informatie niet aan.';
-                            $summaryData=openai_generate_topic_summary($summaryPrompt,$summaryImages);
+                            $summaryPrompt='Maak een complete, zelfstandige samenvatting van deze geüploade schoolboekpagina’s voor deze overhoring. Deze samenvatting wordt één afzonderlijke samenvatting binnen de overhoring en mag dus alleen de informatie uit deze nieuwe upload bevatten. Gebruik uitsluitend informatie uit de pagina’s. Neem belangrijke begrippen, namen, processen, voorbeelden en jaartallen mee. Schrijf in duidelijk Nederlands op het niveau van ongeveer 12-15 jaar. Gebruik korte kopjes en alinea’s, zodat een leerling de tekst als leersamenvatting kan gebruiken. Verzin niets en vul ontbrekende informatie niet aan.';
+                            $summaryData=openai_generate_topic_summary($summaryPrompt,$valid);
                             if(isset($summaryData['_leren_error']))throw new RuntimeException((string)$summaryData['_leren_error']);
                             $summaryJson=openai_output_json($summaryData);
                             $summaryText=trim((string)($summaryJson['summary']??''));
