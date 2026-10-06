@@ -7,16 +7,16 @@ $subjectId=filter_input(INPUT_GET,'subject_id',FILTER_VALIDATE_INT);
 if(!$topicId && !$subjectId){redirect('admin.php');}
 
 if($topicId){
-    $x=$pdo->prepare("SELECT tp.id topic_id,tp.name topic_name,s.id subject_id,s.name subject_name FROM topics tp JOIN subjects s ON s.id=tp.subject_id WHERE tp.id=?");
+    $x=$pdo->prepare("SELECT tp.id topic_id,tp.name topic_name,tp.use_summary,tp.summary,tp.summary_updated_at,s.id subject_id,s.name subject_name FROM topics tp JOIN subjects s ON s.id=tp.subject_id WHERE tp.id=?");
     $x->execute([$topicId]);$context=$x->fetch();
     if(!$context){http_response_code(404);exit('Overhoring niet gevonden.');}
     $topicId=(int)$context['topic_id'];$subjectId=(int)$context['subject_id'];
-    $topicName=$context['topic_name'];$subjectName=$context['subject_name'];
+    $topicName=$context['topic_name'];$subjectName=$context['subject_name'];$useSummary=(int)($context['use_summary']??0)===1;
 }else{
     $x=$pdo->prepare("SELECT id,name FROM subjects WHERE id=?");
     $x->execute([$subjectId]);$subject=$x->fetch();
     if(!$subject){http_response_code(404);exit('Vak niet gevonden.');}
-    $subjectName=$subject['name'];$topicName='Algemeen';
+    $subjectName=$subject['name'];$topicName='Algemeen';$useSummary=false;
 }
 
 $errors=[];$analysis=null;
@@ -44,6 +44,34 @@ function ai_type_label(string $type):string{
     return ['mc'=>'Multiple choice','open'=>'Open vragen','mixed'=>'Combinatie'][$type]??'Combinatie';
 }
 $requestedSpecs=ai_requested_specs($requestedSpecs);
+
+function ai_summary_image_dir(int $topicId):string{
+    return __DIR__.'/uploads/summaries/'.(int)$topicId;
+}
+
+function ai_archive_summary_images(int $topicId,array $paths):array{
+    $dir=ai_summary_image_dir($topicId);
+    if(!is_dir($dir)&&!@mkdir($dir,0755,true))throw new RuntimeException('De map voor samenvattingspagina’s kon niet worden aangemaakt.');
+    $archived=[];
+    foreach($paths as $path){
+        if(!is_string($path)||!is_file($path))continue;
+        $mime=(string)(@mime_content_type($path)?:'');
+        $ext=$mime==='image/png'?'png':($mime==='image/webp'?'webp':'jpg');
+        $destination=$dir.'/'.date('Ymd_His').'_'.bin2hex(random_bytes(8)).'.'.$ext;
+        if(!@copy($path,$destination))throw new RuntimeException('Een boekpagina kon niet voor de samenvatting worden bewaard.');
+        $archived[]=$destination;
+    }
+    return $archived;
+}
+
+function ai_all_summary_images(int $topicId):array{
+    $dir=ai_summary_image_dir($topicId);
+    if(!is_dir($dir))return [];
+    $files=glob($dir.'/*.{jpg,jpeg,png,webp}',GLOB_BRACE);
+    if(!$files)return [];
+    sort($files,SORT_NATURAL);
+    return array_values(array_filter($files,'is_file'));
+}
 
 function ai_cleanup_source_images(array $paths):void{
     $dirs=[];
@@ -215,6 +243,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         }
                         $savedCount++;
                     }
+                    if($useSummary && !empty($saved['summary_text'])){
+                        $summaryUpdate=$pdo->prepare("UPDATE topics SET summary=?,summary_updated_at=NOW() WHERE id=?");
+                        $summaryUpdate->execute([(string)$saved['summary_text'],$topicId]);
+                    }
                     $pdo->commit();
                     ai_cleanup_session();
                     redirect('subject_manage.php?id='.$subjectId.'&ai_saved='.$savedCount);
@@ -275,11 +307,28 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     $errors[]='De AI gaf geen bruikbaar analyse-resultaat terug.';
                     $analysis=null;
                 }else{
-                    $_SESSION['ai_test_analysis']=[
+                    $summaryText=null;
+                    if($useSummary){
+                        try{
+                            $archived=ai_archive_summary_images($topicId,$valid);
+                            $summaryImages=ai_all_summary_images($topicId);
+                            $summaryPrompt='Maak één complete, doorlopende samenvatting van alle geüploade schoolboekpagina’s voor deze overhoring. Dit zijn alle bronpagina’s die tot nu toe voor deze overhoring zijn bewaard. Gebruik uitsluitend informatie uit de pagina’s. Neem belangrijke begrippen, namen, processen, voorbeelden en jaartallen mee. Verwijder dubbele informatie waar nodig, maar laat inhoudelijke details niet weg. Schrijf in duidelijk Nederlands op het niveau van ongeveer 12-15 jaar. Gebruik korte kopjes en alinea’s, zodat een leerling de tekst als leersamenvatting kan gebruiken. Verzin niets en vul ontbrekende informatie niet aan.';
+                            $summaryData=openai_generate_topic_summary($summaryPrompt,$summaryImages);
+                            if(isset($summaryData['_leren_error']))throw new RuntimeException((string)$summaryData['_leren_error']);
+                            $summaryJson=openai_output_json($summaryData);
+                            $summaryText=trim((string)($summaryJson['summary']??''));
+                            if($summaryText==='')throw new RuntimeException('De AI gaf geen bruikbare samenvatting terug.');
+                        }catch(Throwable $summaryError){
+                            foreach($valid as $path)@unlink($path);
+                            $errors[]='De vragenanalyse is gelukt, maar de samenvatting kon niet worden gemaakt: '.$summaryError->getMessage();
+                        }
+                    }
+                    if(!$errors)$_SESSION['ai_test_analysis']=[
                         'subject_id'=>$subjectId,
                         'topic_id'=>$topicId,
                         'analysis'=>$analysis,
                         'images'=>$valid,
+                        'summary_text'=>$summaryText,
                         'request'=>['prefix'=>$prefix,'specs'=>$requestedSpecs],
                         'created_at'=>time()
                     ];
@@ -293,6 +342,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }
 }
 $savedRequest=$_SESSION['ai_test_analysis']['request']??['prefix'=>$prefix,'specs'=>$requestedSpecs];
+$savedSummaryText=(string)($_SESSION['ai_test_analysis']['summary_text']??'');
 ?>
 <!doctype html>
 <html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -307,6 +357,10 @@ $savedRequest=$_SESSION['ai_test_analysis']['request']??['prefix'=>$prefix,'spec
 
 <?php if(!$analysis):?>
 <div class="alert alert-info">Upload foto’s van de relevante pagina’s uit het boek. Geef meteen aan welke sub-testen je wilt maken. De AI controleert na het analyseren hoeveel verschillende vragen de bron maximaal ondersteunt.</div>
+<div class="alert <?= $useSummary ? 'alert-success' : 'alert-secondary' ?>">
+<strong>Samenvatting voor deze overhoring:</strong>
+<?= $useSummary ? 'Aan. Nieuwe geüploade pagina’s worden toegevoegd aan de bron en de samenvatting wordt automatisch bijgewerkt.' : 'Uit. De geüploade pagina’s worden niet bewaard voor een doorlopende samenvatting.' ?>
+</div>
 <form method="post" enctype="multipart/form-data">
 <input type="hidden" name="action" value="analyze">
 <div class="row g-3 mb-3">
@@ -333,6 +387,13 @@ $savedRequest=$_SESSION['ai_test_analysis']['request']??['prefix'=>$prefix,'spec
 </div>
 <h3 class="h5 mt-4">Belangrijkste leerpunten</h3>
 <ul><?php foreach(($analysis['learning_points']??[]) as $point):?><li><?=e($point)?></li><?php endforeach;?></ul>
+<?php if($savedSummaryText!==''):?>
+<div class="card mt-4 border-success"><div class="card-body">
+<h3 class="h5">Samenvatting</h3>
+<div class="small text-secondary mb-2">Deze samenvatting wordt bij het opslaan gekoppeld aan de overhoring.</div>
+<div><?=nl2br(e($savedSummaryText))?></div>
+</div></div>
+<?php endif;?>
 <div class="alert alert-success mt-4"><strong>Analyse voltooid.</strong> Op basis van deze foto’s kunnen maximaal <strong><?=e((string)($analysis['max_unique_questions']??0))?> verschillende vragen</strong> worden gemaakt zonder leerstof te verzinnen of vragen onnodig te herhalen.</div>
 <h3 class="h5 mt-4">Sub-Testen genereren</h3>
 <form method="post" id="generateForm">
