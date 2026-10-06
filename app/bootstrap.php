@@ -34,9 +34,10 @@ ob_start(static function(string $html): string{
         $theme='<link rel="stylesheet" href="/theme.css">';
         if($isAdminPage){
             $theme.='<style id="leren-admin-theme">
-body.leren-admin{background:#d3d7dc!important;color:#fff!important}
+body.leren-admin{background:#29332c!important;color:#fff!important}
 body.leren-admin h1,body.leren-admin h2,body.leren-admin h3,body.leren-admin h4,body.leren-admin h5,body.leren-admin h6,body.leren-admin p,body.leren-admin .text-secondary,body.leren-admin>main>a{color:#fff!important}
 body.leren-admin .card,body.leren-admin .accordion-body,body.leren-admin .list-group-item,body.leren-admin .alert{color:#212529}
+body.leren-admin .card h1,body.leren-admin .card h2,body.leren-admin .card h3,body.leren-admin .card h4,body.leren-admin .card h5,body.leren-admin .card h6,body.leren-admin .card p,body.leren-admin .card .text-secondary{color:#212529!important}
 body.leren-admin .card a,body.leren-admin .accordion-body a,body.leren-admin .list-group-item a{color:#2f7d4a}
 body.leren-admin .navbar.bg-dark{background:#263238!important}
 </style>';
