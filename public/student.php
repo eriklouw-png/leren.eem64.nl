@@ -5,7 +5,7 @@ require_admin();
 $studentId=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if(!$studentId){redirect('admin.php');}
 
-$x=$pdo->prepare("SELECT id,name,email FROM users WHERE id=? AND role='student'");
+$x=$pdo->prepare("SELECT id,name,email,image_mime FROM users WHERE id=? AND role='student'");
 $x->execute([$studentId]);
 $student=$x->fetch();
 if(!$student){http_response_code(404);exit('Student niet gevonden.');}
@@ -150,10 +150,22 @@ function mastery_label(?float $score):string{
 </nav>
 <main class="container py-4" style="max-width:1100px">
 <a href="admin.php">&larr; Beheer</a>
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-3 mb-4">
+<div class="card shadow-sm mt-3 mb-4 overflow-hidden">
+<?php if($student['image_mime']):?>
+<img src="student_image.php?id=<?=(int)$student['id']?>" style="height:220px;width:100%;object-fit:cover" alt="<?=e($student['name'])?>">
+<?php endif;?>
+<div class="card-body p-4">
+<div class="d-flex align-items-center gap-3">
+<?php if($student['image_mime']):?>
+<img src="student_image.php?id=<?=(int)$student['id']?>" class="rounded-circle flex-shrink-0" style="width:76px;height:76px;object-fit:cover;margin-top:-58px;border:4px solid #fff" alt="">
+<?php else:?>
+<div class="rounded-circle bg-secondary-subtle d-flex align-items-center justify-content-center flex-shrink-0" style="width:76px;height:76px;font-size:2rem">👤</div>
+<?php endif;?>
 <div>
 <h1 class="h2 mb-1"><?=e($student['name'])?></h1>
 <div class="text-secondary"><?=e($student['email'])?></div>
+</div>
+</div>
 </div>
 </div>
 
@@ -206,7 +218,7 @@ function mastery_label(?float $score):string{
 <?php else:
 $subjects=[];
 foreach($topics as $topic){
-    $subjectKey=(int)array_search($topic['subject_name'],array_column($subjects,'name'),true);
+    $subjectKey=array_search($topic['subject_name'],array_column($subjects,'name'),true);
     if($subjectKey===false){
         $subjects[]=['name'=>$topic['subject_name'],'topics'=>[]];
         $subjectKey=count($subjects)-1;
