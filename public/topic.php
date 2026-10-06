@@ -8,10 +8,14 @@ $studentId=(int)$currentUser['id'];
 $topicId=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if(!$topicId)redirect('index.php');
 
-$x=$pdo->prepare("SELECT tp.id,tp.name,tp.test_date,tp.is_active,tp.use_summary,tp.summary,tp.summary_updated_at,s.id subject_id,s.name subject_name,s.description subject_description,s.image_mime FROM topics tp JOIN subjects s ON s.id=tp.subject_id WHERE tp.id=?");
+$x=$pdo->prepare("SELECT tp.id,tp.name,tp.test_date,tp.is_active,tp.use_summary,s.id subject_id,s.name subject_name,s.description subject_description,s.image_mime FROM topics tp JOIN subjects s ON s.id=tp.subject_id WHERE tp.id=?");
 $x->execute([$topicId]);
 $topic=$x->fetch();
 if(!$topic || !(int)$topic['is_active']){http_response_code(404);exit('Overhoring niet gevonden.');}
+
+$summaryStmt=$pdo->prepare("SELECT id,name,summary,updated_at,created_at FROM topic_summaries WHERE topic_id=? AND is_active=1 ORDER BY created_at,id");
+$summaryStmt->execute([$topicId]);
+$topicSummaries=$summaryStmt->fetchAll();
 
 $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d');
 
@@ -84,6 +88,9 @@ $browserToken=$_SESSION['learner_token'];
 .subtest-history summary::-webkit-details-marker{display:none}
 .history-chevron{width:10px;height:10px;border-right:2px solid #6c757d;border-bottom:2px solid #6c757d;transform:rotate(45deg);transition:transform .15s ease;margin-right:4px;margin-top:-5px}
 .subtest-history[open] .history-chevron{transform:rotate(225deg);margin-top:5px}
+.topic-summaries summary::-webkit-details-marker{display:none}
+.summary-chevron{width:11px;height:11px;border-right:2px solid #6c757d;border-bottom:2px solid #6c757d;transform:rotate(45deg);transition:transform .15s ease;margin-right:4px;margin-top:-5px;flex-shrink:0}
+.topic-summaries[open] .summary-chevron{transform:rotate(225deg);margin-top:5px}
 </style>
 </head>
 <body class="bg-light">
@@ -103,16 +110,27 @@ $browserToken=$_SESSION['learner_token'];
 </div>
 </div>
 
-<?php if(!empty($topic['use_summary']) && trim((string)($topic['summary']??''))!==''):?>
-<div class="card shadow-sm mt-4 border-0">
-<div class="card-body p-4">
-<div class="d-flex justify-content-between align-items-start gap-3">
-<div><h2 class="h3 mb-1">Samenvatting</h2><div class="small text-secondary">Gebaseerd op de geüploade boekpagina’s voor deze overhoring.</div></div>
-<?php if(!empty($topic['summary_updated_at'])):?><span class="small text-secondary text-nowrap">Bijgewerkt <?=e(date('d-m-Y',strtotime((string)$topic['summary_updated_at'])))?></span><?php endif;?>
+<?php if($topicSummaries):?>
+<details class="card shadow-sm mt-4 border-0 topic-summaries">
+<summary class="card-body p-4 d-flex justify-content-between align-items-center" style="cursor:pointer;list-style:none">
+<div>
+<h2 class="h4 mb-1">Samenvattingen <span class="small text-secondary">· <?=count($topicSummaries)?></span></h2>
+<div class="small text-secondary">Leer de stof voordat je de sub-testen maakt.</div>
 </div>
-<div class="mt-3 lh-lg"><?=nl2br(e((string)$topic['summary']))?></div>
+<span class="summary-chevron" aria-hidden="true"></span>
+</summary>
+<div class="card-body pt-0">
+<?php foreach($topicSummaries as $summary):?>
+<div class="border-top pt-3 mt-3">
+<h3 class="h5 mb-2"><?=e($summary['name'])?></h3>
+<div class="lh-lg"><?=nl2br(e((string)$summary['summary']))?></div>
+<?php if(!empty($summary['updated_at']) || !empty($summary['created_at'])):?>
+<div class="small text-secondary mt-2">Bijgewerkt <?=e(date('d-m-Y',strtotime((string)($summary['updated_at']?:$summary['created_at']))))?></div>
+<?php endif;?>
 </div>
+<?php endforeach;?>
 </div>
+</details>
 <?php endif;?>
 
 <h2 class="h3 mt-4 mb-3">Sub-Testen</h2>
