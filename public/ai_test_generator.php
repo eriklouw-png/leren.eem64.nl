@@ -385,8 +385,8 @@ $savedSummaryText=(string)($_SESSION['ai_test_analysis']['summary_text']??'');
 <!doctype html>
 <html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AI toets maken</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<style>.dropzone{border:2px dashed #adb5bd;border-radius:.75rem;padding:2rem;text-align:center;background:#fff;cursor:pointer}.dropzone:hover{border-color:#2f7d4a;background:#f8fbf9}.analysis-card{border-left:4px solid #2f7d4a}</style>
-</head><body class="bg-light"><main class="container py-4" style="max-width:1000px">
+<style>.dropzone{border:2px dashed #adb5bd;border-radius:.75rem;padding:2rem;text-align:center;background:#fff;cursor:pointer}.dropzone:hover{border-color:#2f7d4a;background:#f8fbf9}.analysis-card{border-left:4px solid #2f7d4a}.ai-loading{position:fixed;inset:0;background:rgba(255,255,255,.88);z-index:9999;display:flex;align-items:center;justify-content:center}.ai-loading-card{background:#fff;border:1px solid #dee2e6;border-radius:1rem;box-shadow:0 .5rem 1.5rem rgba(0,0,0,.12);padding:2rem 2.5rem;text-align:center;min-width:320px}.ai-loading .spinner-border{width:3rem;height:3rem}</style>
+</head><body class="bg-light"><div id="aiLoading" class="ai-loading d-none" aria-live="polite" aria-busy="true"><div class="ai-loading-card"><div class="spinner-border text-primary mb-3" role="status"><span class="visually-hidden">Bezig...</span></div><div id="aiLoadingTitle" class="h5 mb-1">Bezig met AI...</div><div id="aiLoadingText" class="text-secondary">Even geduld.</div></div></div><main class="container py-4" style="max-width:1000px">
 <a href="subject_manage.php?id=<?=$subjectId?>">&larr; <?=e($subjectName)?></a>
 <div class="card shadow-sm mt-3"><div class="card-body p-4">
 <h1 class="h3 mb-1">AI toets maken</h1>
@@ -396,7 +396,7 @@ $savedSummaryText=(string)($_SESSION['ai_test_analysis']['summary_text']??'');
 <?php if(!$analysis):?>
 <div class="alert alert-info">Upload foto’s van de relevante pagina’s uit het boek. Geef meteen aan welke sub-testen je wilt maken. De AI controleert na het analyseren hoeveel verschillende vragen de bron maximaal ondersteunt.</div>
 
-<form method="post" enctype="multipart/form-data">
+<form method="post" enctype="multipart/form-data" id="analyzeForm" data-ai-loading="analyze">
 <input type="hidden" name="action" value="analyze">
 <div class="row g-3 mb-3">
 <div class="col-md-6"><label class="form-label fw-semibold">Prefix voor de Sub-Testnaam</label><input class="form-control" name="prefix" value="<?=e($prefix)?>" placeholder="Bijvoorbeeld 1.1"><div class="form-text">De AI levert de inhoudelijke naam; de app zet de prefix ervoor.</div></div>
@@ -435,7 +435,7 @@ $savedSummaryText=(string)($_SESSION['ai_test_analysis']['summary_text']??'');
 <?php endif;?>
 <div class="alert alert-success mt-4"><strong>Analyse voltooid.</strong> Op basis van deze foto’s kunnen maximaal <strong><?=e((string)($analysis['max_unique_questions']??0))?> verschillende vragen</strong> worden gemaakt zonder leerstof te verzinnen of vragen onnodig te herhalen.</div>
 <h3 class="h5 mt-4">Sub-Testen genereren</h3>
-<form method="post" id="generateForm">
+<form method="post" id="generateForm" data-ai-loading="generate">
 <input type="hidden" name="action" value="generate">
 <div class="row g-3 mb-3"><div class="col-md-6"><label class="form-label fw-semibold">Prefix voor de Sub-Testnaam</label><input class="form-control" name="prefix" value="<?=e((string)($savedRequest['prefix']??$prefix))?>" placeholder="Bijvoorbeeld 1.1"></div></div>
 <div class="card bg-light border-0 mb-3"><div class="card-body">
@@ -530,4 +530,22 @@ if(afterContainer){
  document.getElementById('addSpecAfter').addEventListener('click',()=>{addSpecRow(afterContainer,{type:'mixed',count:10},afterContainer.children.length);updateTotals(afterContainer)});
  afterContainer.addEventListener('input',()=>updateTotals(afterContainer));
 }
+<script>
+const aiLoading=document.getElementById('aiLoading');
+const aiLoadingTitle=document.getElementById('aiLoadingTitle');
+const aiLoadingText=document.getElementById('aiLoadingText');
+function showAiLoading(kind){
+ if(!aiLoading)return;
+ if(kind==='analyze'){
+   aiLoadingTitle.textContent='Afbeeldingen aan het analyseren...';
+   aiLoadingText.textContent='De AI leest de pagina’s en bepaalt welke leerstof en vragen mogelijk zijn. Dit kan even duren.';
+ }else{
+   aiLoadingTitle.textContent='Vragen aan het genereren...';
+   aiLoadingText.textContent='De AI maakt de gevraagde vragen en controleert de vraagvormen. Even geduld.';
+ }
+ aiLoading.classList.remove('d-none');
+ document.body.style.overflow='hidden';
+}
+document.getElementById('analyzeForm')?.addEventListener('submit',()=>showAiLoading('analyze'));
+document.getElementById('generateForm')?.addEventListener('submit',()=>showAiLoading('generate'));
 </script></body></html>
