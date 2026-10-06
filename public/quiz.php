@@ -81,8 +81,13 @@ if($_SERVER['REQUEST_METHOD']==='POST' && in_array(($_POST['action']??''),['save
     $a=$pdo->prepare("SELECT id FROM attempts WHERE id=? AND test_id=? AND student_id=? AND status='in_progress'");
     $a->execute([$attemptId,$testId,$studentId]);
     if(!$a->fetch()){http_response_code(403);echo json_encode(['ok'=>false]);exit;}
-    $q=$pdo->prepare("SELECT q.question_text,q.question_type,q.explanation FROM questions q JOIN attempt_questions aq ON aq.question_id=q.id AND aq.attempt_id=? WHERE q.id=? AND q.test_id=?");
-    $q->execute([$attemptId,$questionId,$testId]);$question=$q->fetch();
+    $q=$pdo->prepare($reviewMode
+        ? "SELECT q.question_text,q.question_type,q.explanation FROM questions q JOIN attempt_questions aq ON aq.question_id=q.id AND aq.attempt_id=? WHERE q.id=?"
+        : "SELECT q.question_text,q.question_type,q.explanation FROM questions q JOIN attempt_questions aq ON aq.question_id=q.id AND aq.attempt_id=? WHERE q.id=? AND q.test_id=?"
+    );
+    if($reviewMode)$q->execute([$attemptId,$questionId]);
+    else $q->execute([$attemptId,$questionId,$testId]);
+    $question=$q->fetch();
     if(!$question){http_response_code(400);echo json_encode(['ok'=>false]);exit;}
     $raw=$_POST['answer']??'';$selected=null;$answerText=null;$ok=null;
     $feedback=[];
