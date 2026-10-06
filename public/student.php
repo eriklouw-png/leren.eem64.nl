@@ -98,17 +98,16 @@ foreach($rows as $row){
             'tests'=>[],
             'completed'=>0,
             'total'=>0,
-            'weighted_score'=>0,
-            'weighted_questions'=>0
+            'score_total'=>0,
+            'score_count'=>0
         ];
     }
     $topics[$topicKey]['tests'][]=$row;
     $topics[$topicKey]['total']++;
     if($row['score']!==null){
         $topics[$topicKey]['completed']++;
-        $questions=max(0,(int)$row['question_count']);
-        $topics[$topicKey]['weighted_score']+=(float)$row['score']*$questions;
-        $topics[$topicKey]['weighted_questions']+=$questions;
+        $topics[$topicKey]['score_total']+=(float)$row['score'];
+        $topics[$topicKey]['score_count']++;
     }
 }
 
@@ -225,7 +224,7 @@ foreach($topics as $topic){
 <div class="accordion-body p-2 p-md-3">
 <div class="accordion" id="subjectTopics<?=$subjectIndex?>">
 <?php foreach($subject['topics'] as $topicIndex=>$topic):
-    $mastery=$topic['weighted_questions']>0 ? round($topic['weighted_score']/$topic['weighted_questions'],1) : null;
+    $mastery=$topic['score_count']>0 ? round($topic['score_total']/$topic['total'],1) : null;
     $barClass=mastery_class($mastery);
     $label=mastery_label($mastery);
     $completed=$topic['completed'];
