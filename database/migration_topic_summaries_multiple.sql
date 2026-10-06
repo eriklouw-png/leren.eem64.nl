@@ -14,3 +14,15 @@ CREATE TABLE IF NOT EXISTS topic_summaries (
     CONSTRAINT fk_topic_summaries_topic FOREIGN KEY(topic_id)
         REFERENCES topics(id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO topic_summaries(topic_id,name,summary,is_active,created_at,updated_at)
+SELECT tp.id,'Samenvatting',tp.summary,1,
+       COALESCE(tp.summary_updated_at,tp.created_at),
+       tp.summary_updated_at
+FROM topics tp
+WHERE tp.summary IS NOT NULL
+  AND TRIM(tp.summary) <> ''
+  AND NOT EXISTS (
+      SELECT 1 FROM topic_summaries ts
+      WHERE ts.topic_id=tp.id
+  );
