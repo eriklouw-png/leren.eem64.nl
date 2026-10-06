@@ -49,6 +49,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
    }
  } 
  $title=trim($_POST['title']??'');$description=trim($_POST['description']??'');$topicId=filter_input(INPUT_POST,'topic_id',FILTER_VALIDATE_INT);$testType=$_POST['test_type']??'mixed';$vocabDirection=$_POST['vocab_direction']??($test['vocab_direction']??'both');
+ $shuffleQuestions=isset($_POST['shuffle_questions'])?1:0;
  if(!in_array($testType,['vocabulary','multiple_choice','open','mixed'],true))$testType='mixed';
  if(!in_array($vocabDirection,['both','left_to_right','right_to_left'],true))$vocabDirection='both';
  if($title==='')$error='Een titel is verplicht.';
@@ -63,8 +64,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
  if(empty($error)){
    try{
      $leftLabel=$test['subject_name']??'';$rightLabel='Nederlands';
-     $s=$pdo->prepare("UPDATE tests SET topic_id=?,title=?,description=?,test_type=?,vocab_left_label=?,vocab_right_label=?,vocab_direction=? WHERE id=?");
-     $s->execute([$topicId,$title,$description,$testType,$testType==='vocabulary'?$leftLabel:null,$testType==='vocabulary'?$rightLabel:null,$vocabDirection,$id]);
+     $s=$pdo->prepare("UPDATE tests SET topic_id=?,title=?,description=?,test_type=?,vocab_left_label=?,vocab_right_label=?,vocab_direction=?,shuffle_questions=? WHERE id=?");
+     $s->execute([$topicId,$title,$description,$testType,$testType==='vocabulary'?$leftLabel:null,$testType==='vocabulary'?$rightLabel:null,$vocabDirection,$shuffleQuestions,$id]);
      redirect('questions.php?test_id='.$id);
    }catch(PDOException $e){
      $error=$e->getCode()==='23000'?'Deze titel bestaat al binnen deze overhoring. Kies een andere titel.':'Opslaan is mislukt. Probeer het opnieuw.';
@@ -76,6 +77,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <div class="alert alert-secondary py-2">Taal: <strong><?=e($test['subject_name']??'')?> → Nederlands</strong></div>
 <label class="form-label">Oefenrichting</label><select class="form-select" name="vocab_direction"><option value="both" <?=($test['vocab_direction']??'both')==='both'?'selected':''?>>Beide richtingen</option><option value="left_to_right" <?=($test['vocab_direction']??'both')==='left_to_right'?'selected':''?>>Alleen eerste → tweede</option><option value="right_to_left" <?=($test['vocab_direction']??'both')==='right_to_left'?'selected':''?>>Alleen tweede → eerste</option></select>
 </div>
+<div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="shuffle_questions" value="1" id="shuffleQuestions" <?=((int)($test['shuffle_questions']??1)===1)?'checked':''?>><label class="form-check-label" for="shuffleQuestions"><strong>Vragen husselen</strong><br><span class="text-secondary">De vragen worden bij een nieuwe poging in willekeurige volgorde getoond.</span></label></div>
 <label class="form-label">Overhoring</label><select class="form-select mb-3" name="topic_id" required><option value="">Kies een overhoring...</option><?php foreach($topics as $topic):?><option value="<?=$topic['id']?>" <?=isset($test['topic_id'])&&(int)$test['topic_id']===(int)$topic['id']?'selected':''?>><?php $subjectName='';foreach($subjects as $subject)if((int)$subject['id']===(int)$topic['subject_id']){$subjectName=$subject['name'];break;}?><?=e($subjectName.' — '.$topic['name'])?></option><?php endforeach;?></select>
 <div class="border rounded p-3 mt-4 mb-3"><label class="form-label"><strong>Gegevens importeren</strong></label><div id="vocabHelp" class="small text-secondary mb-2">Woordjes: één woordpaar per regel met <code>=</code>.</div><div id="mcHelp" class="small text-secondary mb-2 d-none">Multiple choice: <code>vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg</code></div><div id="mixedHelp" class="small text-secondary mb-2 d-none">Combinatie: <code>mc;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg</code> of <code>open;vraag;juiste_antwoord;;; ;uitleg</code>.</div><textarea class="form-control font-monospace mb-2" name="import_text" rows="8" placeholder=""></textarea><button class="btn btn-outline-primary" type="submit" name="action" value="import">Importeren</button></div>
 <div class="d-flex justify-content-between align-items-center gap-2 mt-4"><button class="btn btn-primary" type="submit" name="action" value="save">Opslaan</button><?php if($id):?><?php if((int)$test['is_active']):?><button class="btn btn-outline-danger" type="submit" name="action" value="hide" onclick="return confirm('Deze Sub-Test verwijderen? De gegevens blijven bewaard.')">Verwijderen</button><?php else:?><button class="btn btn-outline-success" type="submit" name="action" value="restore">Herstellen</button><?php endif;?><?php endif;?></div>
