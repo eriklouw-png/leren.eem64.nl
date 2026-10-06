@@ -261,6 +261,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }
 
     if($action==='analyze'){
+        if($topicId){
+            $useSummary=!empty($_POST['use_summary']);
+            $topicSummarySetting=$pdo->prepare("UPDATE topics SET use_summary=? WHERE id=?");
+            $topicSummarySetting->execute([$useSummary?1:0,$topicId]);
+        }
         if(!warm_ai())$errors[]='AI is niet beschikbaar. Controleer OPENAI_API_KEY en de AI-instellingen.';
         $files=$_FILES['pages']??null;
         $valid=[];
@@ -357,14 +362,15 @@ $savedSummaryText=(string)($_SESSION['ai_test_analysis']['summary_text']??'');
 
 <?php if(!$analysis):?>
 <div class="alert alert-info">Upload foto’s van de relevante pagina’s uit het boek. Geef meteen aan welke sub-testen je wilt maken. De AI controleert na het analyseren hoeveel verschillende vragen de bron maximaal ondersteunt.</div>
-<div class="alert <?= $useSummary ? 'alert-success' : 'alert-secondary' ?>">
-<strong>Samenvatting voor deze overhoring:</strong>
-<?= $useSummary ? 'Aan. Nieuwe geüploade pagina’s worden toegevoegd aan de bron en de samenvatting wordt automatisch bijgewerkt.' : 'Uit. De geüploade pagina’s worden niet bewaard voor een doorlopende samenvatting.' ?>
-</div>
+
 <form method="post" enctype="multipart/form-data">
 <input type="hidden" name="action" value="analyze">
 <div class="row g-3 mb-3">
 <div class="col-md-6"><label class="form-label fw-semibold">Prefix voor de Sub-Testnaam</label><input class="form-control" name="prefix" value="<?=e($prefix)?>" placeholder="Bijvoorbeeld 1.1"><div class="form-text">De AI levert de inhoudelijke naam; de app zet de prefix ervoor.</div></div>
+</div>
+<div class="form-check mb-3">
+<input class="form-check-input" type="checkbox" name="use_summary" value="1" id="useSummaryUpload" <?=$useSummary?'checked':''?>>
+<label class="form-check-label" for="useSummaryUpload"><strong>Samenvatting gebruiken voor deze overhoring</strong><br><span class="text-secondary">Als dit aanstaat, worden deze en toekomstige geüploade boekpagina’s bewaard en samengevoegd tot één samenvatting die leerlingen op de overhoringpagina kunnen lezen.</span></label>
 </div>
 <div class="card bg-light border-0 mb-3"><div class="card-body">
 <div class="d-flex justify-content-between align-items-center mb-2"><strong>Gewenste Sub-Testen</strong><button type="button" class="btn btn-outline-secondary btn-sm" id="addSpec">+ Sub-test</button></div>
