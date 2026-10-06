@@ -46,7 +46,7 @@ function ai_type_label(string $type):string{
 $requestedSpecs=ai_requested_specs($requestedSpecs);
 
 function ai_summary_image_dir(int $topicId):string{
-    return __DIR__.'/uploads/summaries/'.(int)$topicId;
+    return __DIR__.'/../storage/summaries/'.(int)$topicId;
 }
 
 function ai_archive_summary_images(int $topicId,array $paths):array{
