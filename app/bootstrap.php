@@ -255,6 +255,7 @@ function openai_generate_with_images(string $input,array $imagePaths):?array{
                         'topic'=>['type'=>'string'],
                         'summary'=>['type'=>'string'],
                         'learning_points'=>['type'=>'array','items'=>['type'=>'string']],
+                        'max_unique_questions'=>['type'=>'integer','minimum'=>0,'maximum'=>500],
                         'subtests'=>[
                             'type'=>'array',
                             'items'=>[
@@ -270,7 +271,7 @@ function openai_generate_with_images(string $input,array $imagePaths):?array{
                             ]
                         ]
                     ],
-                    'required'=>['subject','topic','summary','learning_points','subtests'],
+                    'required'=>['subject','topic','summary','learning_points','max_unique_questions','subtests'],
                     'additionalProperties'=>false
                 ]
             ]
