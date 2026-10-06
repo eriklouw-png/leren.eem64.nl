@@ -2,7 +2,7 @@
 require __DIR__.'/../app/bootstrap.php';require_admin();
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);$test=null;
 if($id){
- $s=$pdo->prepare("SELECT t.*,s.name subject_name,tp.name topic_name FROM tests t JOIN topics tp ON tp.id=t.topic_id JOIN subjects s ON s.id=tp.subject_id WHERE t.id=?");
+ $s=$pdo->prepare("SELECT t.*,s.name subject_name,tp.name topic_name FROM tests t JOIN topics tp ON tp.id=t.topic_id JOIN subjects s ON s.id=tp.subject_id WHERE t.id=? AND t.is_active=1");
  $s->execute([$id]);$test=$s->fetch();if(!$test)exit('Sub-Test niet gevonden.');
 }
 $subjects=$pdo->query("SELECT id,name FROM subjects ORDER BY name")->fetchAll();
@@ -10,11 +10,13 @@ $topics=$pdo->query("SELECT id,subject_id,name,is_active FROM topics WHERE is_ac
 if($_SERVER['REQUEST_METHOD']==='POST'){
  $action=$_POST['action']??'save';
  if(!$id){http_response_code(400);exit('Ongeldig Sub-Test.');}
- if($action==='hide' || $action==='restore'){
-   $active=$action==='restore'?1:0;
-   $s=$pdo->prepare("UPDATE tests SET is_active=? WHERE id=?");
-   $s->execute([$active,$id]);
-   redirect('test_edit.php?id='.$id);
+ if($action==='delete'){
+   $s=$pdo->prepare("UPDATE tests SET is_active=0 WHERE id=?");
+   $s->execute([$id]);
+   $topicId=$pdo->prepare("SELECT topic_id FROM tests WHERE id=?");
+   $topicId->execute([$id]);
+   $topicId=(int)$topicId->fetchColumn();
+   redirect($topicId?'subject_manage.php?deleted=test&topic_id='.$topicId:'admin.php?deleted=test');
  }
  $importText=(string)($_POST['import_text']??'');
  if($action==='import'){
@@ -80,8 +82,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="shuffle_questions" value="1" id="shuffleQuestions" <?=((int)($test['shuffle_questions']??1)===1)?'checked':''?>><label class="form-check-label" for="shuffleQuestions"><strong>Vragen husselen</strong><br><span class="text-secondary">De vragen worden bij een nieuwe poging in willekeurige volgorde getoond.</span></label></div>
 <label class="form-label">Overhoring</label><select class="form-select mb-3" name="topic_id" required><option value="">Kies een overhoring...</option><?php foreach($topics as $topic):?><option value="<?=$topic['id']?>" <?=isset($test['topic_id'])&&(int)$test['topic_id']===(int)$topic['id']?'selected':''?>><?php $subjectName='';foreach($subjects as $subject)if((int)$subject['id']===(int)$topic['subject_id']){$subjectName=$subject['name'];break;}?><?=e($subjectName.' — '.$topic['name'])?></option><?php endforeach;?></select>
 <div class="border rounded p-3 mt-4 mb-3"><label class="form-label"><strong>Gegevens importeren</strong></label><div id="vocabHelp" class="small text-secondary mb-2">Woordjes: één woordpaar per regel met <code>=</code>.</div><div id="mcHelp" class="small text-secondary mb-2 d-none">Multiple choice: <code>vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg</code></div><div id="mixedHelp" class="small text-secondary mb-2 d-none">Combinatie: <code>mc;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg</code> of <code>open;vraag;juiste_antwoord;;; ;uitleg</code>.</div><textarea class="form-control font-monospace mb-2" name="import_text" rows="8" placeholder=""></textarea><button class="btn btn-outline-primary" type="submit" name="action" value="import">Importeren</button></div>
-<div class="d-flex justify-content-between align-items-center gap-2 mt-4"><button class="btn btn-primary" type="submit" name="action" value="save">Opslaan</button><?php if($id):?><?php if((int)$test['is_active']):?><button class="btn btn-outline-danger" type="submit" name="action" value="hide" onclick="return confirm('Deze Sub-Test verwijderen? De gegevens blijven bewaard.')">Verwijderen</button><?php else:?><button class="btn btn-outline-success" type="submit" name="action" value="restore">Herstellen</button><?php endif;?><?php endif;?></div>
-<?php if($id && !(int)$test['is_active']):?><div class="alert alert-warning mt-3 mb-0">Deze Sub-Test is verborgen voor leerlingen.</div><?php endif;?>
+<div class="d-flex justify-content-between align-items-center gap-2 mt-4"><button class="btn btn-primary" type="submit" name="action" value="save">Opslaan</button><?php if($id):?><button class="btn btn-outline-danger" type="submit" name="action" value="delete" onclick="return confirm('Weet u zeker dat u deze Sub-Test wilt verwijderen? De Sub-Test verdwijnt uit de website, maar blijft in de database bewaard.');">Verwijderen</button><?php endif;?></div>
+
 </form></div></div></main><script>
 const typeSelect=document.querySelector('[name="test_type"]'),vocabSettings=document.getElementById('vocab-settings');const vocabHelp=document.getElementById('vocabHelp'),mcHelp=document.getElementById('mcHelp'),mixedHelp=document.getElementById('mixedHelp');
 function toggleVocab(){vocabSettings.classList.toggle('d-none',typeSelect.value!=='vocabulary')}
