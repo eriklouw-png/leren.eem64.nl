@@ -45,7 +45,7 @@ if(!$topic){http_response_code(404);exit('Overhoring niet gevonden.');}
 <div class="mb-3"><label class="form-label">Overhoringsdatum</label><input class="form-control" type="date" name="test_date" value="<?=e($topic['test_date']??'')?>"><div class="form-text">Na deze datum wordt het overhoring automatisch gearchiveerd. Laat leeg als er geen overhoringsdatum is.</div></div>
 <div class="form-check mb-4">
 <input class="form-check-input" type="checkbox" name="use_summary" value="1" id="useSummary" <?=!empty($topic['use_summary'])?'checked':''?>>
-<label class="form-check-label" for="useSummary"><strong>Samenvatting gebruiken</strong><br><span class="text-secondary">Bewaar de geüploade boekpagina’s voor deze overhoring en bouw daar automatisch één doorlopende samenvatting van op.</span></label>
+<label class="form-check-label" for="useSummary"><strong>Samenvatting gebruiken</strong><br><span class="text-secondary">Je kunt voor deze overhoring meerdere afzonderlijke samenvattingen maken. Elke samenvatting kan bijvoorbeeld de naam 1.3 Samenvatting krijgen.</span></label>
 </div>
 <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
 <div>
