@@ -69,6 +69,7 @@ CREATE TABLE tests (
  vocab_left_label VARCHAR(80) NULL,
  vocab_right_label VARCHAR(80) NULL,
  vocab_direction ENUM('both','left_to_right','right_to_left') NOT NULL DEFAULT 'both',
+ shuffle_questions TINYINT(1) NOT NULL DEFAULT 1,
  is_active TINYINT(1) NOT NULL DEFAULT 1,
  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
  KEY idx_tests_topic(topic_id),
