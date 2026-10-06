@@ -37,6 +37,12 @@ $x=$pdo->prepare("SELECT ts.id,ts.topic_id,ts.name,ts.is_active,ts.updated_at,ts
 $x->execute([$id]);$summaries=$x->fetchAll();
 $summariesByTopic=[];
 foreach($summaries as $summary)$summariesByTopic[(int)$summary['topic_id']][]=$summary;
+foreach($summariesByTopic as &$topicSummaryList){
+    usort($topicSummaryList,function(array $a,array $b):int{
+        return strnatcasecmp((string)$a['name'],(string)$b['name']);
+    });
+}
+unset($topicSummaryList);
 
 $testIds=array_map('intval',array_column($tests,'id'));
 $resultGroups=[];
