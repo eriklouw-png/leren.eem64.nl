@@ -145,9 +145,18 @@ $historyStmt=$pdo->prepare("
     ORDER BY finished_at DESC,id DESC
 ");
 $historyByTest=[];
+$mistakeCountByTest=[];
 foreach($tests as $testRow){
     $historyStmt->execute([(int)$testRow['id'],$studentId]);
     $historyByTest[(int)$testRow['id']]=$historyStmt->fetchAll();
+    if($historyByTest[(int)$testRow['id']]){
+        $latestAttemptId=(int)$historyByTest[(int)$testRow['id']][0]['id'];
+        $wrongCountStmt=$pdo->prepare("SELECT COUNT(*) FROM attempt_answers WHERE attempt_id=? AND is_correct=0");
+        $wrongCountStmt->execute([$latestAttemptId]);
+        $mistakeCountByTest[(int)$testRow['id']]=(int)$wrongCountStmt->fetchColumn();
+    }else{
+        $mistakeCountByTest[(int)$testRow['id']]=0;
+    }
 }
 
 $labels=['vocabulary'=>'Woordjes oefenen','sentences'=>'Zinnen oefenen','multiple_choice'=>'Multiple choice','open'=>'Open vragen','mixed'=>'Combinatie'];
@@ -263,6 +272,9 @@ $isComplete=$latestScore!==null && $latestScore>=100;
 <a class="btn btn-outline-secondary btn-sm" href="quiz.php?id=<?=(int)$t['id']?>&new=1">Start Opnieuw</a>
 <?php else:?>
 <a class="btn btn-outline-primary btn-sm" href="quiz.php?id=<?=(int)$t['id']?>">Start</a>
+<?php endif;?>
+<?php if(($mistakeCountByTest[(int)$t['id']]??0)>0):?>
+<a class="btn btn-outline-warning btn-sm" href="quiz.php?id=<?=(int)$t['id']?>&mode=mistakes">Alleen fouten (<?= (int)$mistakeCountByTest[(int)$t['id']] ?>)</a>
 <?php endif;?>
 </div>
 </div>
