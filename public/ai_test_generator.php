@@ -296,11 +296,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             }
             if(!$errors&&!$validTests)$errors[]='Er is geen geldige sub-test om op te slaan.';
             if(!$errors){
+                if($isPracticeMode){
+                    $pdo->exec("ALTER TABLE tests MODIFY COLUMN test_type ENUM('vocabulary','sentences','multiple_choice','open','mixed') NOT NULL DEFAULT 'mixed'");
+                }
                 $pdo->beginTransaction();
                 try{
-                    if($isPracticeMode){
-                        $pdo->exec("ALTER TABLE tests MODIFY COLUMN test_type ENUM('vocabulary','sentences','multiple_choice','open','mixed') NOT NULL DEFAULT 'mixed'");
-                    }
                     $qIns=$pdo->prepare("INSERT INTO questions(test_id,question_text,image_path,question_type,explanation,sort_order) VALUES(?,?,?,?,?,?)");
                     $optIns=$pdo->prepare("INSERT INTO question_options(question_id,option_text,is_correct,sort_order) VALUES(?,?,?,?)");
                     $oaIns=$pdo->prepare("INSERT INTO open_question_answers(question_id,answer_text,sort_order) VALUES(?,?,?)");
