@@ -189,19 +189,36 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $prompt.='Bij mc zijn alle vragen multiple choice met exact vier antwoorden en exact één correct antwoord. Bij open zijn alle vragen open en moet accepted_answers minimaal één inhoudelijk geldig antwoord bevatten. Bij combinatie moet je een evenwichtige mix van mc en open maken. ';
                 $prompt.='Gebruik de broninformatie gerust opnieuw in een andere vraagvorm. source_page is de pagina uit de geüploade set waarop de vraag het duidelijkst gebaseerd is. ';
                 $prompt.='Gebruik afbeeldingen zeer spaarzaam: alleen als een afbeelding de vraag inhoudelijk echt helpt of noodzakelijk is. Bepaal voor iedere vraag met use_image=true exact één image_method: none, web, svg of generate. Gebruik none als geen afbeelding nodig is. Gebruik svg voor eenvoudige, nauwkeurige schematische/vectorafbeeldingen. Een geografische kaart, landkaart, stadskaart, provinciekaart of andere kaart mag óók als SVG worden gemaakt, maar alleen als je de geografische vorm, posities, verhoudingen en relevante locaties voldoende nauwkeurig kunt weergeven. Als je die nauwkeurigheid niet betrouwbaar kunt garanderen, kies dan een andere afbeeldingsmethode. Maak nooit een schematische kaart die inhoudelijk slechts een ruwe of willekeurige benadering is. Voorbeelden die geschikt kunnen zijn voor SVG zijn een tijdlijn, eenvoudige geometrie, diagram, klok, tabelachtige visualisatie en — wanneer nauwkeurig uitvoerbaar — een educatieve kaart. SVG-kwaliteit is belangrijk: maak geen ruwe schets. Bouw de geometrie bewust en mathematisch op, gebruik bij herhaalde of radiale elementen gelijke afstanden, lijn elementen uit op een logisch raster, houd de compositie gecentreerd en geef rondom voldoende marge. Gebruik exact viewBox=\"0 0 1000 1000\", width=\"1000\" en height=\"1000\". Gebruik consistente lijndiktes, bij voorkeur round linecaps/linejoins, duidelijke contrasten en een rustig sans-serif lettertype. Houd tekst en belangrijke onderdelen volledig binnen de viewBox en maak tekst groot genoeg voor een mobiele telefoon. Gebruik geen onnodige decoratie, 3D-effecten of willekeurige handmatige plaatsing wanneer een berekening mogelijk is. Controleer intern vóór het teruggeven of de SVG volledig gesloten, logisch gecentreerd en visueel leesbaar is. Gebruik web wanneer een echte foto, historische afbeelding, kunstwerk, kaart of andere bestaande bronafbeelding inhoudelijk beter is. Gebruik generate alleen als web en SVG niet geschikt zijn. Geef image_reason kort aan waarom de gekozen methode inhoudelijk passend is. Bij image_method=web geef je een concrete image_search_query en laat je svg_code en image_prompt leeg. Bij image_method=svg geef je complete direct bruikbare svg_code en laat je image_search_query en image_prompt leeg. Bij image_method=generate geef je een zelfstandige image_prompt en laat je image_search_query en svg_code leeg. Bij image_method=none zijn alle drie de afbeeldingsvelden leeg. Bij een query zonder bronpagina’s is source_page altijd 1.';
-                $data=openai_generate_test_questions($prompt,(array)($saved['images']??[]),$query!=='' && empty($saved['images']));
-                if(isset($data['_leren_error']))$errors[]=$data['_leren_error'];
-                else{
-                    $generated=openai_output_json($data);
-                    if(!$generated||!isset($generated['subtests'])||!is_array($generated['subtests'])||count($generated['subtests'])!==count($requested)){
-                        $reason=(string)($data['incomplete_details']['reason']??'');
-                        if(($data['status']??'')==='incomplete' && $reason!==''){
-                            $errors[]='De AI-generatie van de vragen werd niet volledig afgerond ('.$reason.'). Verminder eventueel het aantal vragen per sub-test en probeer het opnieuw.';
+                $vocabularyPairs=is_array($saved['analysis']['vocabulary_pairs']??null)?$saved['analysis']['vocabulary_pairs']:[];
+                $isVocabularyList=!empty($saved['analysis']['is_vocabulary_list'])&&$vocabularyPairs;
+                if($isVocabularyList){
+                    $generatedQuestions=[];
+                    $language=trim((string)($saved['analysis']['vocabulary_language']??''));
+                    foreach($vocabularyPairs as $pair){
+                        $source=trim((string)($pair['source']??''));
+                        $translation=trim((string)($pair['translation']??''));
+                        if($source===''||$translation==='')continue;
+                        $generatedQuestions[]=['type'=>'open','question'=>$source,'correct_answer'=>$translation,'options'=>[],'correct_option'=>0,'accepted_answers'=>[$translation],'explanation'=>'Vertaal naar Nederlands.','source_page'=>1,'use_image'=>false,'image_prompt'=>'','image_search_query'=>'','svg_code'=>'','image_method'=>'none','image_reason'=>''];
+                        $generatedQuestions[]=['type'=>'open','question'=>$translation,'correct_answer'=>$source,'options'=>[],'correct_option'=>0,'accepted_answers'=>[$source],'explanation'=>'Vertaal naar '.($language!==''?$language:'de brontaal').'.','source_page'=>1,'use_image'=>false,'image_prompt'=>'','image_search_query'=>'','svg_code'=>'','image_method'=>'none','image_reason'=>''];
+                    }
+                    $generated=['subtests'=>[['title'=>'Woordjes oefenen','description'=>'Automatisch herkende woordenlijst'.($language!==''?' ('.$language.')':'').' — '.count($generatedQuestions).' vragen, beide richtingen.','questions'=>$generatedQuestions]]];
+                    $_SESSION['ai_test_analysis']['generated']=$generated;
+                    $_SESSION['ai_test_analysis']['vocabulary_mode']=true;
+                }else{
+                    $data=openai_generate_test_questions($prompt,(array)($saved['images']??[]),$query!=='' && empty($saved['images']));
+                    if(isset($data['_leren_error']))$errors[]=$data['_leren_error'];
+                    else{
+                        $generated=openai_output_json($data);
+                        if(!$generated||!isset($generated['subtests'])||!is_array($generated['subtests'])||count($generated['subtests'])!==count($requested)){
+                            $reason=(string)($data['incomplete_details']['reason']??'');
+                            if(($data['status']??'')==='incomplete' && $reason!==''){
+                                $errors[]='De AI-generatie van de vragen werd niet volledig afgerond ('.$reason.'). Verminder eventueel het aantal vragen per sub-test en probeer het opnieuw.';
+                            }else{
+                                $errors[]='De AI gaf geen bruikbaar JSON-resultaat voor de vragen terug. Probeer dezelfde selectie opnieuw.';
+                            }
                         }else{
-                            $errors[]='De AI gaf geen bruikbaar JSON-resultaat voor de vragen terug. Probeer dezelfde selectie opnieuw.';
+                            $_SESSION['ai_test_analysis']['generated']=$generated;
                         }
-                    }else{
-                        $_SESSION['ai_test_analysis']['generated']=$generated;
                     }
                 }
             }
@@ -277,9 +294,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     if(!is_dir($questionImageDir)&&!@mkdir($questionImageDir,0755,true))throw new RuntimeException('De map uploads/questions kon niet worden aangemaakt.');
                     foreach($validTests as $test){
                         $testType='multiple_choice';
+                        $isVocabularyMode=!empty($saved['vocabulary_mode']) && count($validTests)===1;
                         $hasOpen=false;$hasMc=false;
                         foreach($test['questions'] as $q){$hasOpen=$hasOpen||$q['type']==='open';$hasMc=$hasMc||$q['type']==='mc';}
                         if($hasOpen&&$hasMc)$testType='mixed';elseif($hasOpen)$testType='open';
+                        if($isVocabularyMode)$testType='vocabulary';
                         $check=$pdo->prepare("SELECT id FROM tests WHERE topic_id=? AND title=? LIMIT 1");
                         $baseTitle=$test['title'];
                         $title=$baseTitle;
@@ -290,7 +309,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                             $title=$baseTitle.' ('.$suffix.')';
                             $suffix++;
                         }
-                        $testIns->execute([$topicId,$title,$test['description'],$testType,null,null,'both']);
+                        $vocabLanguage=$isVocabularyMode?trim((string)($saved['analysis']['vocabulary_language']??'')):'';
+                        $leftLabel=$isVocabularyMode?($vocabLanguage!==''?$vocabLanguage:'Brontaal'):null;
+                        $rightLabel=$isVocabularyMode?'Nederlands':null;
+                        $testIns->execute([$topicId,$title,$test['description'],$testType,$leftLabel,$rightLabel,'both']);
                         $testId=(int)$pdo->lastInsertId();
                         foreach($test['questions'] as $sort=>$q){
                             $imagePath=null;
