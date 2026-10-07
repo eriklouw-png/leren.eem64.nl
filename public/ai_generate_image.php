@@ -45,17 +45,9 @@ try{
     $filename=null;
     $method='';
 
-    // 1. Eerst zoeken naar een bestaande afbeelding op internet.
-    $searchQuery=trim((string)($job['search_query']??''));
-    if($searchQuery!==''){
-        $webImage=openai_search_image($searchQuery);
-        if(is_array($webImage)&&!empty($webImage['image_url'])){
-            $filename=openai_download_web_image((string)$webImage['image_url'],$dir);
-            if($filename!==null)$method='web';
-        }
-    }
-
-    // 2. Daarna een eenvoudige, door de AI voorbereide SVG proberen.
+    // 1. Eerst een eenvoudige, door de AI voorbereide SVG proberen.
+    // Dit is bewust de snelle route: een webzoekactie mag een afbeeldingsjob
+    // niet blokkeren. Web search blijft als algemene helper beschikbaar.
     if($filename===null){
         $svgCode=trim((string)($job['svg_code']??''));
         if($svgCode!==''){
@@ -64,7 +56,7 @@ try{
         }
     }
 
-    // 3. Alleen als laatste redmiddel echte image generation.
+    // 2. Alleen als laatste redmiddel echte image generation.
     if($filename===null){
         $prompt=trim((string)($job['prompt']??''));
         if($prompt==='')throw new RuntimeException('Er is geen bruikbare afbeelding gevonden en er is geen image_prompt voor de laatste fallback.');
