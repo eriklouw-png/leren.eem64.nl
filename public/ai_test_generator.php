@@ -487,7 +487,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             @rmdir($sessionDir);
         }
     }
-}
 $queryLabel=ai_query_subject_label($query);
 $displayTopicName=$queryLabel!==''?$queryLabel:$topicName;
 $savedRequest=$_SESSION['ai_test_analysis']['request']??['prefix'=>$prefix,'specs'=>$requestedSpecs];
