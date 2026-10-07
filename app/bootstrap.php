@@ -583,7 +583,7 @@ function openai_search_image(string $query):?array{
         ]],
         'tool_choice'=>'required',
         'include'=>['web_search_call.results'],
-        'input'=>'Zoek op internet naar een bruikbare afbeelding voor een educatieve schoolvraag. Zoek specifiek op basis van deze zoekopdracht: '.$query.'. Kies bij voorkeur een eenvoudige, duidelijke afbeelding die inhoudelijk precies past. Geef geen uitleg; de applicatie leest de image_result-items uit de zoekresultaten.'
+        'input'=>'Zoek op internet naar een bruikbare afbeelding voor een educatieve schoolvraag. Zoek specifiek op basis van deze zoekopdracht: '.$query.'. Kies bij voorkeur een eenvoudige, duidelijke afbeelding die inhoudelijk precies past en gebruik waar mogelijk een publiek domein- of open-licentiebron zoals Wikimedia Commons of Openverse. Geef geen uitleg; de applicatie leest de image_result-items uit de zoekresultaten.'
     ];
     $context=stream_context_create(['http'=>[
         'method'=>'POST',
