@@ -144,13 +144,15 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         if($postedPrefix!=='')$prefix=$postedPrefix;
         $vocabularyPairs=is_array($saved['analysis']['vocabulary_pairs']??null)?$saved['analysis']['vocabulary_pairs']:[];
         $isVocabularyList=!empty($saved['analysis']['is_vocabulary_list'])&&count($vocabularyPairs)>0;
-        if($isVocabularyList){
+        $isSentenceList=!empty($saved['analysis']['is_sentence_list'])&&count($vocabularyPairs)>0;
+        $isPracticeList=$isVocabularyList||$isSentenceList;
+        if($isPracticeList){
             $requestedSpecs=[['type'=>'open','count'=>count($vocabularyPairs)*2]];
             $prefix='';
         }
         if(!is_array($saved)||($saved['subject_id']??null)!==$subjectId||($saved['topic_id']??null)!==$topicId){
             $errors[]='De eerdere AI-analyse is verlopen. Analyseer de pagina’s opnieuw.';
-        }elseif(!$isVocabularyList&&!$requestedSpecs){
+        }elseif(!$isPracticeList&&!$requestedSpecs){
             $errors[]='Geef minimaal één sub-test op.';
         }else{
             $capacity=max(0,(int)($saved['analysis']['max_unique_questions']??0));
@@ -159,7 +161,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $errors[]='Je kunt maximaal tien sub-testen tegelijk genereren.';
             }
             if(!$errors){
-                $useSummary=!$isVocabularyList && !empty($_POST['use_summary']) && !empty($saved['images']);
+                $useSummary=!$isPracticeList && !empty($_POST['use_summary']) && !empty($saved['images']);
 
                 if($topicId){
                     $topicSummarySetting=$pdo->prepare("UPDATE topics SET use_summary=? WHERE id=?");
@@ -179,7 +181,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     }
                 }
                 if(!$errors)$_SESSION['ai_test_analysis']['summary_text']=$summaryText;
-                $_SESSION['ai_test_analysis']['request']=['prefix'=>$isVocabularyList?'':$prefix,'specs'=>$requestedSpecs];
+                $_SESSION['ai_test_analysis']['request']=['prefix'=>$isPracticeList?'':$prefix,'specs'=>$requestedSpecs];
                 $requested=[];
                 foreach($requestedSpecs as $i=>$spec){
                     $requested[]=['number'=>$i+1,'type'=>$spec['type'],'type_label'=>ai_type_label($spec['type']),'question_count'=>$spec['count']];
@@ -197,7 +199,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $prompt.='Gebruik afbeeldingen zeer spaarzaam: alleen als een afbeelding de vraag inhoudelijk echt helpt of noodzakelijk is. Bepaal voor iedere vraag met use_image=true exact één image_method: none, web, svg of generate. Gebruik none als geen afbeelding nodig is. Gebruik svg voor eenvoudige, nauwkeurige schematische/vectorafbeeldingen. Een geografische kaart, landkaart, stadskaart, provinciekaart of andere kaart mag óók als SVG worden gemaakt, maar alleen als je de geografische vorm, posities, verhoudingen en relevante locaties voldoende nauwkeurig kunt weergeven. Als je die nauwkeurigheid niet betrouwbaar kunt garanderen, kies dan een andere afbeeldingsmethode. Maak nooit een schematische kaart die inhoudelijk slechts een ruwe of willekeurige benadering is. Voorbeelden die geschikt kunnen zijn voor SVG zijn een tijdlijn, eenvoudige geometrie, diagram, klok, tabelachtige visualisatie en — wanneer nauwkeurig uitvoerbaar — een educatieve kaart. SVG-kwaliteit is belangrijk: maak geen ruwe schets. Bouw de geometrie bewust en mathematisch op, gebruik bij herhaalde of radiale elementen gelijke afstanden, lijn elementen uit op een logisch raster, houd de compositie gecentreerd en geef rondom voldoende marge. Gebruik exact viewBox=\"0 0 1000 1000\", width=\"1000\" en height=\"1000\". Gebruik consistente lijndiktes, bij voorkeur round linecaps/linejoins, duidelijke contrasten en een rustig sans-serif lettertype. Houd tekst en belangrijke onderdelen volledig binnen de viewBox en maak tekst groot genoeg voor een mobiele telefoon. Gebruik geen onnodige decoratie, 3D-effecten of willekeurige handmatige plaatsing wanneer een berekening mogelijk is. Controleer intern vóór het teruggeven of de SVG volledig gesloten, logisch gecentreerd en visueel leesbaar is. Gebruik web wanneer een echte foto, historische afbeelding, kunstwerk, kaart of andere bestaande bronafbeelding inhoudelijk beter is. Gebruik generate alleen als web en SVG niet geschikt zijn. Geef image_reason kort aan waarom de gekozen methode inhoudelijk passend is. Bij image_method=web geef je een concrete image_search_query en laat je svg_code en image_prompt leeg. Bij image_method=svg geef je complete direct bruikbare svg_code en laat je image_search_query en image_prompt leeg. Bij image_method=generate geef je een zelfstandige image_prompt en laat je image_search_query en svg_code leeg. Bij image_method=none zijn alle drie de afbeeldingsvelden leeg. Bij een query zonder bronpagina’s is source_page altijd 1.';
                 $vocabularyPairs=is_array($saved['analysis']['vocabulary_pairs']??null)?$saved['analysis']['vocabulary_pairs']:[];
                 $isVocabularyList=!empty($saved['analysis']['is_vocabulary_list'])&&$vocabularyPairs;
-                if($isVocabularyList){
+                $isSentenceList=!empty($saved['analysis']['is_sentence_list'])&&$vocabularyPairs;
+                $isPracticeList=$isVocabularyList||$isSentenceList;
+                if($isPracticeList){
                     $generatedQuestions=[];
                     $language=trim((string)($saved['analysis']['vocabulary_language']??''));
                     foreach($vocabularyPairs as $pair){
@@ -207,9 +211,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         $generatedQuestions[]=['type'=>'open','question'=>$source,'correct_answer'=>$translation,'options'=>[],'correct_option'=>0,'accepted_answers'=>[$translation],'explanation'=>'Vertaal naar Nederlands.','source_page'=>1,'use_image'=>false,'image_prompt'=>'','image_search_query'=>'','svg_code'=>'','image_method'=>'none','image_reason'=>''];
                         $generatedQuestions[]=['type'=>'open','question'=>$translation,'correct_answer'=>$source,'options'=>[],'correct_option'=>0,'accepted_answers'=>[$source],'explanation'=>'Vertaal naar '.($language!==''?$language:'de brontaal').'.','source_page'=>1,'use_image'=>false,'image_prompt'=>'','image_search_query'=>'','svg_code'=>'','image_method'=>'none','image_reason'=>''];
                     }
-                    $generated=['subtests'=>[['title'=>'Woordjes oefenen','description'=>'Automatisch herkende woordenlijst'.($language!==''?' ('.$language.')':'').' — '.count($generatedQuestions).' vragen, beide richtingen.','questions'=>$generatedQuestions]]];
+                    $generated=['subtests'=>[['title'=>$isSentenceList?'Zinnen oefenen':'Woordjes oefenen','description'=>($isSentenceList?'Automatisch herkende zinnenlijst':'Automatisch herkende woordenlijst').($language!==''?' ('.$language.')':'').' — '.count($generatedQuestions).' vragen, beide richtingen.','questions'=>$generatedQuestions]]];
                     $_SESSION['ai_test_analysis']['generated']=$generated;
                     $_SESSION['ai_test_analysis']['vocabulary_mode']=true;
+                    $_SESSION['ai_test_analysis']['practice_mode']=$isSentenceList?'sentences':'vocabulary';
                 }else{
                     $data=openai_generate_test_questions($prompt,(array)($saved['images']??[]),$query!=='' && empty($saved['images']));
                     if(isset($data['_leren_error']))$errors[]=$data['_leren_error'];
@@ -503,7 +508,9 @@ $queryLabel=ai_query_subject_label($query);
 $displayTopicName=$queryLabel!==''?$queryLabel:$topicName;
 $savedRequest=$_SESSION['ai_test_analysis']['request']??['prefix'=>$prefix,'specs'=>$requestedSpecs];
 $detectedVocabulary=!empty($analysis['is_vocabulary_list'])&&is_array($analysis['vocabulary_pairs']??null)&&count($analysis['vocabulary_pairs'])>0;
-if($detectedVocabulary && empty($_SESSION['ai_test_analysis']['request']['specs'])){
+$detectedSentenceList=!empty($analysis['is_sentence_list'])&&is_array($analysis['vocabulary_pairs']??null)&&count($analysis['vocabulary_pairs'])>0;
+$detectedPracticeList=$detectedVocabulary||$detectedSentenceList;
+if($detectedPracticeList && empty($_SESSION['ai_test_analysis']['request']['specs'])){
     $savedRequest['specs']=[['type'=>'open','count'=>count($analysis['vocabulary_pairs'])*2]];
 }
 $savedSummaryText=(string)($_SESSION['ai_test_analysis']['summary_text']??'');
@@ -586,12 +593,12 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 </div>
 <form method="post" id="generateForm" data-ai-loading="generate">
 <input type="hidden" name="action" value="generate">
-<?php if(!$detectedVocabulary):?><div class="card mb-3"><div class="card-body">
+<?php if(!$detectedPracticeList):?><div class="card mb-3"><div class="card-body">
 <label class="form-label fw-semibold">Prefix voor de sub-testnaam</label>
 <input class="form-control form-control-lg" name="prefix" value="<?=e((string)($savedRequest['prefix']??''))?>" placeholder="Bijvoorbeeld 1.1">
 <div class="form-text">De AI maakt de inhoudelijke titel. De prefix wordt ervoor gezet.</div>
 </div></div><?php endif;?>
-<?php if(!$detectedVocabulary):?><div class="card mb-3"><div class="card-body">
+<?php if(!$detectedPracticeList):?><div class="card mb-3"><div class="card-body">
 <div class="form-check form-switch">
 <input class="form-check-input" type="checkbox" name="use_summary" value="1" id="useSummarySettings" <?=$useSummary?'checked':''?> <?=($query!==''?'disabled':'')?>>
 <label class="form-check-label fw-semibold" for="useSummarySettings">Samenvatting maken</label>
@@ -669,7 +676,7 @@ const input=document.getElementById('pages'),list=document.getElementById('fileL
 function renderFiles(){if(!input||!list)return;const files=[...input.files];list.innerHTML='';if(!files.length){if(analyzeButton)analyzeButton.disabled=true;return;}files.forEach((file,index)=>{const item=document.createElement('div');item.className='upload-file';item.innerHTML='<span>🖼️</span><div class="flex-grow-1 min-w-0"><div class="upload-file-name">'+(index+1)+'. '+file.name.replace(/[<>&"]/g,'')+'</div><div class="small text-secondary">'+Math.round(file.size/1024)+' KB</div></div>';list.appendChild(item)});if(analyzeButton)analyzeButton.disabled=false}
 input?.addEventListener('change',renderFiles);
 document.getElementById('query')?.addEventListener('input',()=>{const q=document.getElementById('query').value.trim();if(analyzeButton)analyzeButton.disabled=!q && !(input?.files?.length);});dropzone?.addEventListener('dragover',e=>{e.preventDefault();dropzone.classList.add('dragover')});dropzone?.addEventListener('dragleave',()=>dropzone.classList.remove('dragover'));dropzone?.addEventListener('drop',e=>{e.preventDefault();dropzone.classList.remove('dragover');if(input&&e.dataTransfer.files.length){input.files=e.dataTransfer.files;renderFiles()}});
-const savedSpecs=<?=json_encode($savedRequest['specs']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;const detectedVocabulary=<?= $detectedVocabulary?'true':'false' ?>;const specDefaults=savedSpecs.length?savedSpecs:[{type:'mixed',count:10}];
+const savedSpecs=<?=json_encode($savedRequest['specs']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;const detectedVocabulary=<?= $detectedPracticeList?'true':'false' ?>;const specDefaults=savedSpecs.length?savedSpecs:[{type:'mixed',count:10}];
 function addSpecRow(container,row,index){const wrap=document.createElement('div');wrap.className='row g-2 align-items-end mb-2 spec-row';wrap.innerHTML='<div class="col-5 col-md-3"><label class="form-label small">Aantal</label><input class="form-control" type="number" name="specs['+index+'][count]" min="1" max="100" value="'+(row.count||10)+'" required></div><div class="col-5 col-md-4"><label class="form-label small">Type</label><select class="form-select" name="specs['+index+'][type]"><option value="mc" '+(row.type==='mc'?'selected':'')+'>Multiple choice</option><option value="open" '+(row.type==='open'?'selected':'')+'>Open vragen</option><option value="mixed" '+(row.type==='mixed'?'selected':'')+'>Combinatie</option></select></div><div class="col-2 col-md-2"><button type="button" class="btn btn-outline-danger w-100 remove-spec">×</button></div>';container.appendChild(wrap);wrap.querySelector('.remove-spec').addEventListener('click',()=>{wrap.remove();updateTotals(container)})}
 function fillSpecs(container,specs){container.innerHTML='';(specs.length?specs:[{type:'mixed',count:10}]).forEach((row,i)=>addSpecRow(container,row,i));updateTotals(container)}
 function updateTotals(container){if(!container)return;let total=0;container.querySelectorAll('input[name$="[count]"]').forEach(el=>total+=Math.max(0,parseInt(el.value||'0',10)));const totalEl=document.getElementById('specTotal');if(totalEl)totalEl.textContent=total}
