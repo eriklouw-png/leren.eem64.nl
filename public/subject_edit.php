@@ -64,7 +64,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             // Bestaande vakregels worden als voorbeelden gebruikt; de beheerder kan ze daarna aanpassen.
             $aiRulesCreated=true;
             if($createdNewSubject){
-                $generatedRules=openai_generate_subject_ai_rules($name);
+                try{
+                    $generatedRules=openai_generate_subject_ai_rules($name);
+                }catch(Throwable $aiError){
+                    $generatedRules=['_leren_error'=>$aiError->getMessage()];
+                }
                 if(isset($generatedRules['_leren_error'])){
                     $aiRulesCreated=false;
                 }else{
