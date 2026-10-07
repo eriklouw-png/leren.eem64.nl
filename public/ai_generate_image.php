@@ -43,6 +43,38 @@ if($questionId<1||!in_array($method,['web','svg','generate'],true)){
     exit;
 }
 
+function ai_validate_svg_quality(string $svg):bool{
+    $svg=trim($svg);
+    if($svg===''||strlen($svg)>150000)return false;
+    if(!preg_match('~^<\\?xml[^>]*>\\s*<svg\\b~is',$svg)&&!preg_match('~^<svg\\b~i',$svg))return false;
+    if(!preg_match('~</svg>\\s*$~i',$svg))return false;
+    if(preg_match('~<(script|iframe|object|embed|foreignObject)\\b|javascript:|on[a-z]+\\s*=|url\\s*\\(|(?:xlink:)?href\\s*=\\s*["\\']https?://~i',$svg))return false;
+
+    // Voor educatieve SVG's eisen we een vaste, voorspelbare tekenruimte.
+    if(!preg_match('~\\bviewBox\\s*=\\s*["\\']\\s*0\\s+0\\s+([0-9]+(?:\\.[0-9]+)?)\\s+([0-9]+(?:\\.[0-9]+)?)\\s*["\\']~i',$svg,$viewBox))return false;
+    $viewWidth=(float)$viewBox[1];
+    $viewHeight=(float)$viewBox[2];
+    if($viewWidth<=0||$viewHeight<=0||$viewWidth>100000||$viewHeight>100000)return false;
+
+    if(!preg_match('~<svg\\b[^>]*\\bwidth\\s*=\\s*["\\']1000["\\'][^>]*\\bheight\\s*=\\s*["\\']1000["\\']~is',$svg))return false;
+
+    if(class_exists('DOMDocument')){
+        $previous=libxml_use_internal_errors(true);
+        $dom=new DOMDocument('1.0','UTF-8');
+        $loaded=$dom->loadXML($svg,LIBXML_NONET|LIBXML_NOBLANKS);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+        if(!$loaded||!$dom->documentElement||strtolower($dom->documentElement->localName)!=='svg')return false;
+
+        $drawable=0;
+        foreach(['circle','ellipse','line','polyline','polygon','path','rect','text','g'] as $tag){
+            $drawable+=$dom->getElementsByTagName($tag)->length;
+        }
+        if($drawable<2)return false;
+    }
+    return true;
+}
+
 try{
     $questionCheck=$pdo->prepare("SELECT q.id,q.image_path,t.topic_id FROM questions q JOIN tests t ON t.id=q.test_id WHERE q.id=? AND t.topic_id=? LIMIT 1");
     $questionCheck->execute([$questionId,(int)($state['topic_id']??0)]);
@@ -63,6 +95,7 @@ try{
         if($filename===null)throw new RuntimeException('Geen geschikte internetafbeelding gevonden of gedownload.');
     }elseif($method==='svg'){
         if($svgCode==='')throw new RuntimeException('De SVG-afbeeldingstaak bevat geen SVG-code.');
+        if(!ai_validate_svg_quality($svgCode))throw new RuntimeException('De gegenereerde SVG voldoet niet aan de technische kwaliteitscontroles. Probeer deze afbeelding opnieuw.');
         $filename=ai_save_svg($svgCode,$dir);
         if($filename===null)throw new RuntimeException('De gegenereerde SVG kon niet veilig worden opgeslagen.');
     }elseif($method==='generate'){
