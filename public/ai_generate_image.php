@@ -120,29 +120,52 @@ try{
             throw new RuntimeException($validation['_leren_error']);
         }
         if(empty($validation['valid'])){
-            @unlink($dir.'/'.$filename);
             $reason=trim((string)($validation['reason']??''));
+            $rejectedFile=$dir.'/'.$filename;
 
-            // Een inhoudelijk afgekeurde SVG/web-afbeelding krijgt één generieke
-            // GPT-afbeeldingsfallback. Ook een GPT-afbeelding mag één keer opnieuw
-            // worden gemaakt; daarna stoppen we om eindeloze kosten te voorkomen.
-            $fallbackPrompt=trim($prompt);
-            if($fallbackPrompt==='')$fallbackPrompt='Maak een eenvoudige educatieve afbeelding die deze schoolvraag correct ondersteunt: '.$questionText.' Het juiste antwoord is: '.$correctAnswer.'. Zorg dat alle relevante posities, relaties, labels en geografische of numerieke informatie inhoudelijk correct zijn. Vermijd decoratie die niet nodig is.';
-            if($reason!=='')$fallbackPrompt.=" De vorige afbeelding werd afgekeurd omdat: ".$reason.". Corrigeer dit expliciet.";
+            // Corrigeer eerst de bestaande afbeelding gericht. GPT krijgt daarmee
+            // zowel de afbeelding als de concrete foutmelding. Dat is veel
+            // betrouwbaarder voor bijvoorbeeld kaarten, klokken en diagrammen.
+            $editPrompt='Corrigeer deze educatieve afbeelding. Behoud de bestaande afbeelding en verander alleen wat inhoudelijk fout is. Maak geen willekeurige nieuwe afbeelding en voeg geen onnodige decoratie toe. De uiteindelijke afbeelding moet exact overeenkomen met de schoolvraag en het juiste antwoord.';
+            if($reason!=='')$editPrompt.=' De controle vond deze fout: '.$reason;
+            $editPrompt.=' VRAAG: '.$questionText.' JUISTE ANTWOORD: '.$correctAnswer;
 
-            $fallback=openai_generate_image($fallbackPrompt,$dir);
-            if($fallback!==null){
-                $fallbackValidation=openai_validate_educational_image($questionText,$correctAnswer,$dir.'/'.$fallback,'generate');
-                if(!empty($fallbackValidation['valid'])){
-                    $filename=$fallback;
+            $edited=openai_edit_image($rejectedFile,$editPrompt,$dir);
+            if($edited!==null){
+                $editedValidation=openai_validate_educational_image($questionText,$correctAnswer,$dir.'/'.$edited,'generate');
+                if(!empty($editedValidation['valid'])){
+                    @unlink($rejectedFile);
+                    $filename=$edited;
                     $method='generate';
                 }else{
-                    @unlink($dir.'/'.$fallback);
-                    $fallbackReason=trim((string)($fallbackValidation['reason']??''));
-                    throw new RuntimeException('De afbeelding werd inhoudelijk afgekeurd en de automatische vervangende afbeelding voldeed ook niet aan de controle.'.($fallbackReason!==''?' '.$fallbackReason:''));
+                    @unlink($dir.'/'.$edited);
+                    $edited=null;
                 }
-            }else{
-                throw new RuntimeException('De afbeelding werd inhoudelijk afgekeurd. '.($reason!==''?$reason:'De afbeelding past niet betrouwbaar bij de vraag.'));
+            }
+
+            if($edited===null){
+                @unlink($rejectedFile);
+
+                // Alleen als gericht bewerken niet lukt, proberen we één volledig
+                // nieuwe afbeelding te maken met de concrete afkeuringsreden.
+                $fallbackPrompt=trim($prompt);
+                if($fallbackPrompt==='')$fallbackPrompt='Maak een eenvoudige educatieve afbeelding die deze schoolvraag correct ondersteunt: '.$questionText.' Het juiste antwoord is: '.$correctAnswer.'. Zorg dat alle relevante posities, relaties, labels en geografische of numerieke informatie inhoudelijk correct zijn. Vermijd decoratie die niet nodig is.';
+                $fallbackPrompt.=' De vorige afbeelding werd inhoudelijk afgekeurd. Corrigeer expliciet deze fout: '.($reason!==''?$reason:'de afbeelding moet inhoudelijk exact overeenkomen met de vraag en het juiste antwoord').'.';
+
+                $fallback=openai_generate_image($fallbackPrompt,$dir);
+                if($fallback!==null){
+                    $fallbackValidation=openai_validate_educational_image($questionText,$correctAnswer,$dir.'/'.$fallback,'generate');
+                    if(!empty($fallbackValidation['valid'])){
+                        $filename=$fallback;
+                        $method='generate';
+                    }else{
+                        @unlink($dir.'/'.$fallback);
+                        $fallbackReason=trim((string)($fallbackValidation['reason']??''));
+                        throw new RuntimeException('De afbeelding werd inhoudelijk afgekeurd en de vervangende afbeelding voldeed ook niet aan de controle.'.($fallbackReason!==''?' '.$fallbackReason:''));
+                    }
+                }else{
+                    throw new RuntimeException('De afbeelding werd inhoudelijk afgekeurd. '.($reason!==''?$reason:'De afbeelding past niet betrouwbaar bij de vraag.'));
+                }
             }
         }
     }
