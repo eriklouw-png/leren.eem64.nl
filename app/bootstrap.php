@@ -511,6 +511,7 @@ function openai_generate_test_questions(string $input,array $imagePaths,bool $us
                                     'title'=>['type'=>'string'],
                                     'questions'=>[
                                         'type'=>'array',
+                                        'minItems'=>1,
                                         'items'=>[
                                             'type'=>'object',
                                             'properties'=>[
