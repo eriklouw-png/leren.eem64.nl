@@ -201,8 +201,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             unset($_SESSION['ai_test_analysis']['generated']);
         }
         $analysis=$_SESSION['ai_test_analysis']['analysis']??$analysis;
-$queryLabel=ai_query_subject_label($query);
-$displayTopicName=$queryLabel!==''?$queryLabel:$topicName;
     }
 
 
@@ -451,6 +449,8 @@ $displayTopicName=$queryLabel!==''?$queryLabel:$topicName;
         }
     }
 }
+$queryLabel=ai_query_subject_label($query);
+$displayTopicName=$queryLabel!==''?$queryLabel:$topicName;
 $savedRequest=$_SESSION['ai_test_analysis']['request']??['prefix'=>$prefix,'specs'=>$requestedSpecs];
 $savedSummaryText=(string)($_SESSION['ai_test_analysis']['summary_text']??'');
 ?>
