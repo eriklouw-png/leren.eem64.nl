@@ -225,10 +225,18 @@ if(!$attempt){
             $x->execute([$studentId,$topicId,$topicId,$studentId,$topicId]);$mistakes=$x->fetchAll();
             if(!$mistakes)redirect('topic.php?id='.$topicId);
         }else{
-            if(!$sourceAttemptId)redirect('subject.php?id='.$test['subject_id']);
-            $x=$pdo->prepare("SELECT id FROM attempts WHERE id=? AND test_id=? AND student_id=? AND status='finished'");
-            $x->execute([$sourceAttemptId,$testId,$studentId]);
-            if(!$x->fetch()){http_response_code(403);exit('Deze poging kan niet worden gebruikt voor foutentraining.');}
+            if($sourceAttemptId){
+                $x=$pdo->prepare("SELECT id FROM attempts WHERE id=? AND test_id=? AND student_id=? AND status='finished' AND mode='normal'");
+                $x->execute([$sourceAttemptId,$testId,$studentId]);
+                $validatedAttempt=$x->fetchColumn();
+                if(!$validatedAttempt){$sourceAttemptId=null;}
+            }
+            if(!$sourceAttemptId){
+                $x=$pdo->prepare("SELECT id FROM attempts WHERE test_id=? AND student_id=? AND status='finished' AND mode='normal' ORDER BY finished_at DESC,id DESC LIMIT 1");
+                $x->execute([$testId,$studentId]);
+                $sourceAttemptId=(int)($x->fetchColumn()?:0);
+            }
+            if(!$sourceAttemptId)redirect('topic.php?id='.(int)$test['topic_id']);
             $x=$pdo->prepare("SELECT q.id,q.sort_order FROM attempt_questions aq JOIN questions q ON q.id=aq.question_id JOIN attempt_answers aa ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id WHERE aq.attempt_id=? AND aa.is_correct=0 ORDER BY aq.sort_order,q.id");
             $x->execute([$sourceAttemptId]);$mistakes=$x->fetchAll();
             if(!$mistakes)redirect('result.php?id='.$sourceAttemptId.'&done=1');
