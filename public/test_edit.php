@@ -7,9 +7,23 @@ if($id){
 }
 $subjects=$pdo->query("SELECT id,name FROM subjects ORDER BY name")->fetchAll();
 $topics=$pdo->query("SELECT id,subject_id,name,is_active FROM topics WHERE is_active=1 ORDER BY subject_id,name")->fetchAll();
+$attempts=[];
+if($id){
+ $a=$pdo->prepare("SELECT a.id,a.student_id,a.score,a.started_at,a.finished_at,a.status,a.mode,COALESCE(NULLIF(u.name,''),'Onbekende gebruiker') AS student_name FROM attempts a LEFT JOIN users u ON u.id=a.student_id WHERE a.test_id=? ORDER BY COALESCE(a.finished_at,a.started_at) DESC,a.id DESC");
+ $a->execute([$id]);$attempts=$a->fetchAll();
+}
 if($_SERVER['REQUEST_METHOD']==='POST'){
  $action=$_POST['action']??'save';
  if(!$id){http_response_code(400);exit('Ongeldig Sub-Test.');}
+ if($action==='delete_attempt'){
+   $attemptId=filter_input(INPUT_POST,'attempt_id',FILTER_VALIDATE_INT);
+   if(!$attemptId){$error='Ongeldige oefensessie.';}
+   else{
+     $s=$pdo->prepare("DELETE FROM attempts WHERE id=? AND test_id=?");
+     $s->execute([$attemptId,$id]);
+     redirect('test_edit.php?id='.$id.'&deleted_attempt=1');
+   }
+ }
  if($action==='delete'){
    $subjectId=(int)($test['subject_id']??0);
    $s=$pdo->prepare("UPDATE tests SET is_active=0 WHERE id=?");
@@ -82,6 +96,22 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 </div>
 <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="shuffle_questions" value="1" id="shuffleQuestions" <?=((int)($test['shuffle_questions']??1)===1)?'checked':''?>><label class="form-check-label" for="shuffleQuestions"><strong>Vragen husselen</strong><br><span class="text-secondary">De vragen worden bij een nieuwe poging in willekeurige volgorde getoond.</span></label></div>
 <label class="form-label">Overhoring</label><select class="form-select mb-3" name="topic_id" required><option value="">Kies een overhoring...</option><?php foreach($topics as $topic):?><option value="<?=$topic['id']?>" <?=isset($test['topic_id'])&&(int)$test['topic_id']===(int)$topic['id']?'selected':''?>><?php $subjectName='';foreach($subjects as $subject)if((int)$subject['id']===(int)$topic['subject_id']){$subjectName=$subject['name'];break;}?><?=e($subjectName.' — '.$topic['name'])?></option><?php endforeach;?></select>
+<div class="border rounded p-3 mt-4 mb-3">
+<label class="form-label"><strong>Oefensessies</strong></label>
+<?php if(!$attempts):?><div class="text-secondary">Er zijn nog geen oefensessies voor deze sub-test.</div><?php else:?>
+<div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Persoon</th><th>Datum</th><th>Tijd</th><th>Resultaat</th><th></th></tr></thead><tbody>
+<?php foreach($attempts as $attempt):?>
+<tr>
+<td><?=e($attempt['student_name'])?></td>
+<td><?=e(date('d-m-Y',strtotime((string)($attempt['finished_at']?:$attempt['started_at']))))?></td>
+<td><?=e(date('H:i',strtotime((string)($attempt['finished_at']?:$attempt['started_at']))))?></td>
+<td><?php if($attempt['score']!==null):?><strong><?=e(number_format((float)$attempt['score'],2,',','.'))?>%</strong><?php else:?><span class="text-secondary"><?=($attempt['status']??'')==='finished'?'Geen resultaat':'Bezig'?></span><?php endif;?><?php if(($attempt['mode']??'normal')==='mistakes'):?> <span class="badge text-bg-secondary">Fouten oefenen</span><?php endif;?></td>
+<td class="text-end"><form method="post" class="m-0" onsubmit="return confirm('Deze oefensessie en de bijbehorende antwoorden verwijderen?');"><input type="hidden" name="action" value="delete_attempt"><input type="hidden" name="attempt_id" value="<?=e((string)$attempt['id'])?>"><button type="submit" class="btn btn-outline-danger btn-sm">Verwijderen</button></form></td>
+</tr>
+<?php endforeach;?>
+</tbody></table></div>
+<?php endif;?>
+</div>
 <div class="border rounded p-3 mt-4 mb-3"><label class="form-label"><strong>Gegevens importeren</strong></label><div id="vocabHelp" class="small text-secondary mb-2">Woordjes: één woordpaar per regel met <code>=</code>.</div><div id="mcHelp" class="small text-secondary mb-2 d-none">Multiple choice: <code>vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg</code></div><div id="mixedHelp" class="small text-secondary mb-2 d-none">Combinatie: <code>mc;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg</code> of <code>open;vraag;juiste_antwoord;;; ;uitleg</code>.</div><textarea class="form-control font-monospace mb-2" name="import_text" rows="8" placeholder=""></textarea><button class="btn btn-outline-primary" type="submit" name="action" value="import">Importeren</button></div>
 <div class="d-flex justify-content-between align-items-center gap-2 mt-4"><button class="btn btn-primary" type="submit" name="action" value="save">Opslaan</button><?php if($id):?><button class="btn btn-outline-danger" type="submit" name="action" value="delete" onclick="return confirm('Weet u zeker dat u deze Sub-Test wilt verwijderen? De Sub-Test verdwijnt uit de website, maar blijft in de database bewaard.');">Verwijderen</button><?php endif;?></div>
 
