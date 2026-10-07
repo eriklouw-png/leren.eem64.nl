@@ -142,9 +142,15 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $postedPrefix=trim((string)($_POST['prefix']??''));
         if($postedSpecs)$requestedSpecs=$postedSpecs;
         if($postedPrefix!=='')$prefix=$postedPrefix;
+        $vocabularyPairs=is_array($saved['analysis']['vocabulary_pairs']??null)?$saved['analysis']['vocabulary_pairs']:[];
+        $isVocabularyList=!empty($saved['analysis']['is_vocabulary_list'])&&count($vocabularyPairs)>0;
+        if($isVocabularyList){
+            $requestedSpecs=[['type'=>'open','count'=>count($vocabularyPairs)*2]];
+            $prefix='';
+        }
         if(!is_array($saved)||($saved['subject_id']??null)!==$subjectId||($saved['topic_id']??null)!==$topicId){
             $errors[]='De eerdere AI-analyse is verlopen. Analyseer de pagina’s opnieuw.';
-        }elseif(!$requestedSpecs){
+        }elseif(!$isVocabularyList&&!$requestedSpecs){
             $errors[]='Geef minimaal één sub-test op.';
         }else{
             $capacity=max(0,(int)($saved['analysis']['max_unique_questions']??0));
@@ -153,7 +159,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $errors[]='Je kunt maximaal tien sub-testen tegelijk genereren.';
             }
             if(!$errors){
-                $useSummary=!empty($_POST['use_summary']) && !empty($saved['images']);
+                $useSummary=!$isVocabularyList && !empty($_POST['use_summary']) && !empty($saved['images']);
 
                 if($topicId){
                     $topicSummarySetting=$pdo->prepare("UPDATE topics SET use_summary=? WHERE id=?");
@@ -173,7 +179,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     }
                 }
                 if(!$errors)$_SESSION['ai_test_analysis']['summary_text']=$summaryText;
-                $_SESSION['ai_test_analysis']['request']=['prefix'=>$prefix,'specs'=>$requestedSpecs];
+                $_SESSION['ai_test_analysis']['request']=['prefix'=>$isVocabularyList?'':$prefix,'specs'=>$requestedSpecs];
                 $requested=[];
                 foreach($requestedSpecs as $i=>$spec){
                     $requested[]=['number'=>$i+1,'type'=>$spec['type'],'type_label'=>ai_type_label($spec['type']),'question_count'=>$spec['count']];
@@ -579,23 +585,22 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 </div>
 <form method="post" id="generateForm" data-ai-loading="generate">
 <input type="hidden" name="action" value="generate">
-<div class="card mb-3"><div class="card-body">
+<?php if(!$detectedVocabulary):?><div class="card mb-3"><div class="card-body">
 <label class="form-label fw-semibold">Prefix voor de sub-testnaam</label>
 <input class="form-control form-control-lg" name="prefix" value="<?=e((string)($savedRequest['prefix']??''))?>" placeholder="Bijvoorbeeld 1.1">
 <div class="form-text">De AI maakt de inhoudelijke titel. De prefix wordt ervoor gezet.</div>
-</div></div>
-<div class="card mb-3"><div class="card-body">
+</div></div><?php endif;?>
+<?php if(!$detectedVocabulary):?><div class="card mb-3"><div class="card-body">
 <div class="form-check form-switch">
 <input class="form-check-input" type="checkbox" name="use_summary" value="1" id="useSummarySettings" <?=$useSummary?'checked':''?> <?=($query!==''?'disabled':'')?>>
 <label class="form-check-label fw-semibold" for="useSummarySettings">Samenvatting maken</label>
 <div class="small text-secondary mt-1"><?=($query!==''?'Bij een query-toets wordt de samenvatting overgeslagen; er zijn geen boekpagina’s als bron.':'De AI maakt een aparte leersamenvatting van deze pagina’s.')?></div>
 </div>
-</div></div>
-<div class="card mb-4"><div class="card-body">
-<?php if($detectedVocabulary):?><div class="alert alert-success mb-3"><strong>Woordenlijst herkend</strong><br><?=count($analysis['vocabulary_pairs'])?> woordparen gevonden. Er wordt automatisch één sub-test <strong>Woordjes oefenen</strong> gemaakt met beide richtingen.</div><?php endif;?>
-<div class="d-flex justify-content-between align-items-center mb-3"><div><strong>Sub-testen</strong><div class="small text-secondary">Bepaal aantal en vraagtype per sub-test.</div></div><?php if(!$detectedVocabulary):?><button type="button" class="btn btn-outline-secondary btn-sm" id="addSpecAfter">+ Sub-test</button><?php endif;?></div>
+</div></div><?php endif;?>
+<?php if($detectedVocabulary):?><div class="alert alert-success mb-4"><strong>Woordenlijst herkend</strong><br><?=count($analysis['vocabulary_pairs'])?> woordparen gevonden. Leren maakt automatisch één sub-test <strong>Woordjes oefenen</strong> met beide richtingen.</div><?php else:?><div class="card mb-4"><div class="card-body">
+<div class="d-flex justify-content-between align-items-center mb-3"><div><strong>Sub-testen</strong><div class="small text-secondary">Bepaal aantal en vraagtype per sub-test.</div></div><button type="button" class="btn btn-outline-secondary btn-sm" id="addSpecAfter">+ Sub-test</button></div>
 <div id="specRowsAfter"></div><div class="small text-secondary mt-2">Totaal gevraagd: <strong id="specTotal">0</strong> vragen.</div>
-</div></div>
+</div></div><?php endif;?>
 <div class="d-flex flex-column flex-sm-row-reverse gap-2">
 <button class="btn btn-primary btn-lg flex-grow-1" type="submit" id="generateButton">Genereer vragen</button>
 </form>
