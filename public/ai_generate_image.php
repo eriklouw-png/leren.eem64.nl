@@ -17,11 +17,11 @@ if(!is_array($state)||!isset($state['jobs'])||!is_array($state['jobs'])){
 }
 
 $jobs=$state['jobs'];
-$total=count($jobs);
+$total=(int)($state['total']??count($jobs));
 if(!$jobs){
     $savedCount=(int)($state['saved_count']??0);
     unset($_SESSION['ai_image_jobs']);
-    echo json_encode(['ok'=>true,'done'=>true,'completed'=>$total,'total'=>$total,'saved_count'=>$savedCount]);
+    echo json_encode(['ok'=>true,'done'=>true,'completed'=>(int)($state['completed']??$total),'total'=>$total,'saved_count'=>$savedCount]);
     exit;
 }
 
