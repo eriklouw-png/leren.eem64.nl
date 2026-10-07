@@ -158,7 +158,7 @@ unset($topicTestList);
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
 <div>
 <strong><?=e($t['title'])?></strong>
-<div class="small text-secondary"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=((($t['test_type']??'mixed')==='vocabulary' && ($t['vocab_direction']??'both')==='both') ? (int)ceil(((int)$t['question_count'])/2) : (int)$t['question_count'])?> <?=($t['test_type']??'mixed')==='vocabulary'?'woorden':'vragen'?> · <?=((int)$t['is_active']?'Actief':'Inactief')?></div>
+<div class="small text-secondary"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=((in_array(($t['test_type']??'mixed'),['vocabulary','sentences'],true) && ($t['vocab_direction']??'both')==='both') ? (int)ceil(((int)$t['question_count'])/2) : (int)$t['question_count'])?> <?=($t['test_type']??'mixed')==='vocabulary'?'woorden':'vragen'?> · <?=((int)$t['is_active']?'Actief':'Inactief')?></div>
 </div>
 <div class="text-nowrap">
 <a class="btn btn-sm btn-outline-primary" href="test_edit.php?id=<?=$t['id']?>">Bewerken</a>
