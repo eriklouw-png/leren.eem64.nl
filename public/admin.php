@@ -122,6 +122,12 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
   .student-tile .admin-action{font-size:.75rem;padding:.3rem .4rem}
 }
 details .chevron{display:inline-block;transition:transform .15s ease;font-size:1.5rem;line-height:1}details[open] .chevron{transform:rotate(180deg)}</style></head><body class="bg-light"><nav class="navbar navbar-dark bg-dark"><div class="container"><a class="navbar-brand" href="admin.php">Leren beheer</a><div><span class="text-white me-3"><?=e($_SESSION['user']['name'])?></span><a class="btn btn-outline-light btn-sm" href="index.php">Website</a> <a class="btn btn-outline-light btn-sm" href="logout.php">Uitloggen</a></div></div></nav><main class="container py-4">
+<?php if(isset($_GET['saved'])):?><div class="alert alert-success">Het vak is opgeslagen.</div><?php endif;?>
+<?php if(isset($_GET['ai_rules'])):?>
+<div class="alert alert-<?=($_GET['ai_rules']==='created'?'success':'warning')?>">
+<?=($_GET['ai_rules']==='created'?'De eerste AI-instructies voor dit vak zijn automatisch aangemaakt. Je kunt ze aanpassen via ‘AI-instructies per vak’.':'Het vak is aangemaakt, maar de AI-instructies konden niet automatisch worden aangemaakt. Je kunt ze handmatig toevoegen via ‘AI-instructies per vak’.')?>
+</div>
+<?php endif;?>
 <div class="d-flex justify-content-between align-items-center mb-3">
 <h1 class="mb-0">Vakken</h1>
 <div><a class="btn btn-outline-primary" href="subject_edit.php">Nieuw vak</a></div>
