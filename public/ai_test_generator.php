@@ -207,9 +207,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     foreach($vocabularyPairs as $pair){
                         $source=trim((string)($pair['source']??''));
                         $translation=trim((string)($pair['translation']??''));
+                        $label=trim((string)($pair['grammatical_label']??''));
+                        if(!in_array($label,['mannelijk','vrouwelijk','meervoud'],true))$label='';
                         if($source===''||$translation==='')continue;
-                        $generatedQuestions[]=['type'=>'open','question'=>$source,'correct_answer'=>$translation,'options'=>[],'correct_option'=>0,'accepted_answers'=>[$translation],'explanation'=>'Vertaal naar Nederlands.','source_page'=>1,'use_image'=>false,'image_prompt'=>'','image_search_query'=>'','svg_code'=>'','image_method'=>'none','image_reason'=>''];
-                        $generatedQuestions[]=['type'=>'open','question'=>$translation,'correct_answer'=>$source,'options'=>[],'correct_option'=>0,'accepted_answers'=>[$source],'explanation'=>'Vertaal naar '.($language!==''?$language:'de brontaal').'.','source_page'=>1,'use_image'=>false,'image_prompt'=>'','image_search_query'=>'','svg_code'=>'','image_method'=>'none','image_reason'=>''];
+                        $translationWithLabel=$translation.($label!==''?' ('.$label.')':'');
+                        $generatedQuestions[]=['type'=>'open','question'=>$source,'correct_answer'=>$translation,'options'=>[],'correct_option'=>0,'accepted_answers'=>[$translation],'explanation'=>'Vertaal naar Nederlands.'.($label!==''?' De bron geeft aan dat dit woord '.$label.' is.':''),'source_page'=>1,'use_image'=>false,'image_prompt'=>'','image_search_query'=>'','svg_code'=>'','image_method'=>'none','image_reason'=>''];
+                        $generatedQuestions[]=['type'=>'open','question'=>$translationWithLabel,'correct_answer'=>$source,'options'=>[],'correct_option'=>0,'accepted_answers'=>[$source],'explanation'=>'Vertaal naar '.($language!==''?$language:'de brontaal').'.','source_page'=>1,'use_image'=>false,'image_prompt'=>'','image_search_query'=>'','svg_code'=>'','image_method'=>'none','image_reason'=>''];
                     }
                     $generated=['subtests'=>[['title'=>$isSentenceList?'Zinnen oefenen':'Woordjes oefenen','description'=>($isSentenceList?'Automatisch herkende zinnenlijst':'Automatisch herkende woordenlijst').($language!==''?' ('.$language.')':'').' — '.count($generatedQuestions).' vragen, beide richtingen.','questions'=>$generatedQuestions]]];
                     $_SESSION['ai_test_analysis']['generated']=$generated;
