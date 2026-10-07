@@ -321,7 +321,7 @@ function ai_usage_log(string $callType,string $model,array $data,float $startedA
 
         $stmt=$pdo->prepare("INSERT INTO ai_usage
             (created_at,user_id,call_type,model,input_tokens,cached_input_tokens,output_tokens,reasoning_tokens,total_tokens,duration_ms,success)
-            VALUES (CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?,?)");
+            VALUES (CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?,?,?)");
         $stmt->execute([
             $userId,$callType,$model,$inputTokens,$cachedInputTokens,$outputTokens,
             $reasoningTokens,$totalTokens,$durationMs,$success
