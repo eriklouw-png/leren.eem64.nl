@@ -106,6 +106,7 @@ if(isset($_SESSION['ai_test_analysis'])&&is_array($_SESSION['ai_test_analysis'])
 if($_SERVER['REQUEST_METHOD']==='POST'){
     $action=$_POST['action']??'';
     if($action==='clear'){
+        unset($_SESSION['ai_image_jobs']);
         ai_cleanup_session();
         redirect('ai_test_generator.php?'.($topicId?'topic_id='.$topicId:'subject_id='.$subjectId));
     }
@@ -456,6 +457,10 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 <div class="progress mb-3" style="height:12px"><div id="imageProgressBar" class="progress-bar" style="width:0%"></div></div>
 <div id="imageProgressCount" class="h5 mb-1">1 van <?= (int)($_SESSION['ai_image_jobs']['total']??0) ?></div>
 <div id="imageProgressText" class="text-secondary">Afbeelding 1 van <?= (int)($_SESSION['ai_image_jobs']['total']??0) ?> wordt gemaakt...</div>
+<form method="post" class="mt-4">
+<input type="hidden" name="action" value="clear">
+<button class="btn btn-outline-secondary btn-lg" type="submit">Annuleren</button>
+</form>
 </div>
 <?php elseif($stage===1):?>
 <div class="upload-intro mb-4">
