@@ -42,8 +42,37 @@ try{
     if(!$question)throw new RuntimeException('De vraag waarvoor de afbeelding bedoeld is bestaat niet meer.');
 
     $dir=__DIR__.'/uploads/questions';
-    $filename=openai_generate_image($prompt,$dir);
-    if(!$filename)throw new RuntimeException('OpenAI kon de afbeelding niet genereren.');
+    $filename=null;
+    $method='';
+
+    // 1. Eerst zoeken naar een bestaande afbeelding op internet.
+    $searchQuery=trim((string)($job['search_query']??''));
+    if($searchQuery!==''){
+        $webImage=openai_search_image($searchQuery);
+        if(is_array($webImage)&&!empty($webImage['image_url'])){
+            $filename=openai_download_web_image((string)$webImage['image_url'],$dir);
+            if($filename!==null)$method='web';
+        }
+    }
+
+    // 2. Daarna een eenvoudige, door de AI voorbereide SVG proberen.
+    if($filename===null){
+        $svgCode=trim((string)($job['svg_code']??''));
+        if($svgCode!==''){
+            $filename=ai_save_svg($svgCode,$dir);
+            if($filename!==null)$method='svg';
+        }
+    }
+
+    // 3. Alleen als laatste redmiddel echte image generation.
+    if($filename===null){
+        $prompt=trim((string)($job['prompt']??''));
+        if($prompt==='')throw new RuntimeException('Er is geen bruikbare afbeelding gevonden en er is geen image_prompt voor de laatste fallback.');
+        $filename=openai_generate_image($prompt,$dir);
+        if($filename!==null)$method='generate';
+    }
+
+    if($filename===null)throw new RuntimeException('Er kon geen geschikte afbeelding worden gemaakt.');
 
     $update=$pdo->prepare("UPDATE questions SET image_path=? WHERE id=?");
     $update->execute([$filename,$questionId]);
@@ -61,7 +90,8 @@ try{
         'done'=>$done,
         'completed'=>$completed,
         'total'=>$total,
-        'saved_count'=>$savedCount
+        'saved_count'=>$savedCount,
+        'method'=>$method
     ]);
 }catch(Throwable $e){
     // Put the current job back so the user can retry without losing progress.
