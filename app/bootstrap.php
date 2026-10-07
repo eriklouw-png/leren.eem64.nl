@@ -660,7 +660,7 @@ function openai_generate_image(string $prompt,string $directory):?string{
         'method'=>'POST',
         'header'=>"Content-Type: application/json\r\nAccept: application/json\r\nAuthorization: Bearer ".$apiKey."\r\n",
         'content'=>json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),
-        'timeout'=>180,
+        'timeout'=>100,
         'ignore_errors'=>true
     ]]);
     $body=@file_get_contents('https://api.openai.com/v1/images/generations',false,$context);
