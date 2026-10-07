@@ -540,7 +540,7 @@ function openai_generate_with_images(string $input,array $imagePaths):?array{
                             ]
                         ]
                     ],
-                    'required'=>['subject','topic','summary','learning_points','max_unique_questions','is_vocabulary_list','vocabulary_language','vocabulary_pairs','subtests'],
+                    'required'=>['subject','topic','summary','learning_points','max_unique_questions','is_vocabulary_list','is_sentence_list','vocabulary_language','vocabulary_pairs','subtests'],
                     'additionalProperties'=>false
                 ]
             ]
