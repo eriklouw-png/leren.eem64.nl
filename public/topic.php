@@ -24,7 +24,7 @@ $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d');
 
 $x=$pdo->prepare("
 SELECT
-    t.id,t.title,t.description,t.test_type,t.vocab_direction,
+    t.id,t.title,t.description,t.test_type,t.vocab_direction,t.created_at,
     COUNT(DISTINCT q.id) question_count,
     ip.id in_progress_attempt_id,
     COALESCE(ip.answered_count,0) in_progress_answered_count,
@@ -253,7 +253,7 @@ $isComplete=$latestScore!==null && $latestScore>=100;
 <?php if($isComplete):?><span class="subtest-check" aria-label="100 procent behaald">✓</span><?php endif;?>
 <strong class="fs-5 subtest-title"><?=e($t['title'])?></strong>
 </div>
-<div class="small text-secondary"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=((($t['test_type']??'mixed')==='vocabulary' && ($t['vocab_direction']??'both')==='both') ? (int)ceil(((int)$t['question_count'])/2) : (int)$t['question_count'])?> <?=($t['test_type']??'mixed')==='vocabulary'?'woorden':'vragen'?></div>
+<div class="small text-secondary"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=((($t['test_type']??'mixed')==='vocabulary' && ($t['vocab_direction']??'both')==='both') ? (int)ceil(((int)$t['question_count'])/2) : (int)$t['question_count'])?> <?=($t['test_type']??'mixed')==='vocabulary'?'woorden':'vragen'?> · Aangemaakt <?=e(date('d-m-Y H:i',strtotime((string)$t['created_at'])))?></div>
 <?php if($t['description']):?><div class="text-secondary mt-1"><?=e($t['description'])?></div><?php endif;?>
 </div>
 
