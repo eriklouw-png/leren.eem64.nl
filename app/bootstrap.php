@@ -330,6 +330,66 @@ function openai_generate(string $input):?array{
     return $data;
 }
 
+function openai_generate_text_analysis(string $input):?array{
+    $apiKey=openai_api_key();
+    if($apiKey==='')return ['_leren_error'=>'OPENAI_API_KEY ontbreekt in de container.'];
+    $payload=[
+        'model'=>openai_model(),
+        'instructions'=>'Je helpt een docent bij het maken van oefentoetsen. Gebruik de gebruikersopdracht als onderwerp en inhoudelijke basis. Gebruik je algemene kennis wanneer er geen schoolboekpagina’s zijn aangeleverd. Verzin geen details over een specifieke methode, boek of bron die niet uit de gebruikersopdracht blijken.',
+        'input'=>[['role'=>'user','content'=>[['type'=>'input_text','text'=>$input]]]],
+        'max_output_tokens'=>4000,
+        'store'=>false,
+        'text'=>['format'=>[
+            'type'=>'json_schema',
+            'name'=>'test_query_analysis',
+            'strict'=>true,
+            'schema'=>[
+                'type'=>'object',
+                'properties'=>[
+                    'subject'=>['type'=>'string'],
+                    'topic'=>['type'=>'string'],
+                    'summary'=>['type'=>'string'],
+                    'learning_points'=>['type'=>'array','items'=>['type'=>'string']],
+                    'max_unique_questions'=>['type'=>'integer','minimum'=>0,'maximum'=>500],
+                    'subtests'=>['type'=>'array','items'=>[
+                        'type'=>'object',
+                        'properties'=>[
+                            'title'=>['type'=>'string'],
+                            'description'=>['type'=>'string'],
+                            'question_count'=>['type'=>'integer','minimum'=>1,'maximum'=>50],
+                            'recommended_types'=>['type'=>'array','items'=>['type'=>'string','enum'=>['mc','open']]]
+                        ],
+                        'required'=>['title','description','question_count','recommended_types'],
+                        'additionalProperties'=>false
+                    ]]
+                ],
+                'required'=>['subject','topic','summary','learning_points','max_unique_questions','subtests'],
+                'additionalProperties'=>false
+            ]
+        ]]
+    ];
+    $context=stream_context_create(['http'=>[
+        'method'=>'POST',
+        'header'=>"Content-Type: application/json\r\nAccept: application/json\r\nAuthorization: Bearer ".$apiKey."\r\n",
+        'content'=>json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),
+        'timeout'=>90,
+        'ignore_errors'=>true
+    ]]);
+    $body=@file_get_contents('https://api.openai.com/v1/responses',false,$context);
+    $statusCode=0;
+    foreach(($http_response_header??[]) as $header){
+        if(preg_match('~^HTTP/\\S+\\s+(\\d+)~i',$header,$m)){$statusCode=(int)$m[1];break;}
+    }
+    if($body===false)return ['_leren_error'=>'Kan geen verbinding maken met OpenAI. HTTP-status '.$statusCode.'.'];
+    $data=json_decode($body,true);
+    if(!is_array($data))return ['_leren_error'=>'OpenAI gaf geen geldige JSON terug. HTTP-status '.$statusCode.'.'];
+    if($statusCode<200||$statusCode>=300){
+        $message=(string)($data['error']['message']??'Onbekende OpenAI API-fout.');
+        return ['_leren_error'=>'OpenAI API HTTP '.$statusCode.': '.$message];
+    }
+    return $data;
+}
+
 function openai_generate_with_images(string $input,array $imagePaths):?array{
     $apiKey=openai_api_key();
     if($apiKey==='')return ['_leren_error'=>'OPENAI_API_KEY ontbreekt in de container.'];
