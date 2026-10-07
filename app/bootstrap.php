@@ -11,7 +11,9 @@ function leren_navbar_html(string $area): string{
     $area=$area==='admin'?'admin':'website';
     $right=$area==='admin'
         ? '<a class="btn btn-outline-light btn-sm" href="index.php">Website</a>'
-        : '<a class="btn btn-outline-light btn-sm" href="admin.php">Beheer</a>';
+        : ((string)($_SESSION['user']['role']??'')==='student'
+            ? '<a class="btn btn-outline-light btn-sm" href="user_edit.php?id='.(int)$_SESSION['user']['id'].'">Beheer</a>'
+            : '<a class="btn btn-outline-light btn-sm" href="admin.php">Beheer</a>');
 
     return '<nav class="navbar navbar-dark bg-dark leren-navbar mb-4"><div class="container">'
         .'<a class="navbar-brand d-flex align-items-center gap-2" href="index.php">'
