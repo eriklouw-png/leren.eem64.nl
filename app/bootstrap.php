@@ -463,7 +463,7 @@ function openai_generate_text_analysis(string $input,string $managedInstructions
     if($apiKey==='')return ['_leren_error'=>'OPENAI_API_KEY ontbreekt in de container.'];
     $payload=[
         'model'=>openai_model(),
-        'instructions'=>'Je helpt een docent bij het maken van oefentoetsen. Gebruik de gebruikersopdracht als onderwerp en inhoudelijke basis. Gebruik algemene kennis wanneer er geen schoolboekpagina’s zijn aangeleverd. Verzin geen details over een specifieke methode, boek of bron die niet uit de gebruikersopdracht blijken. Als er vakregels zijn meegegeven, gebruik die uitsluitend voor het herkennen en configureren van het passende type. '.$managedInstructions',
+        'instructions'=>'Je helpt een docent bij het maken van oefentoetsen. Gebruik de gebruikersopdracht als onderwerp en inhoudelijke basis. Gebruik algemene kennis wanneer er geen schoolboekpagina’s zijn aangeleverd. Verzin geen details over een specifieke methode, boek of bron die niet uit de gebruikersopdracht blijken. Als er vakregels zijn meegegeven, gebruik die uitsluitend voor het herkennen en configureren van het passende type. '.$managedInstructions,
         'input'=>[['role'=>'user','content'=>[['type'=>'input_text','text'=>$input]]]],
         'max_output_tokens'=>4000,
         'store'=>false,
