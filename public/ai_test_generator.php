@@ -548,7 +548,23 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 <div class="d-flex justify-content-between align-items-start gap-2 mb-2"><span class="question-number">Vraag <?=($qi+1)?></span><span class="badge rounded-pill text-bg-light"><?=e($q['type']==='mc'?'Multiple choice':'Open')?></span></div>
 <div class="question-text mb-3"><?=e($q['question'])?></div>
 <div class="question-meta">
-<div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="tests[<?=$si?>][questions][<?=$qi?>][use_image]" value="1" id="img<?=$si?>_<?=$qi?>" <?=$q['use_image']?'checked':''?>><label class="form-check-label small" for="img<?=$si?>_<?=$qi?>">Afbeelding gebruiken</label></div>
+<div>
+<div class="small fw-semibold mb-1">Afbeelding bij deze vraag</div>
+<div class="d-flex flex-wrap gap-3">
+<div class="form-check">
+<input class="form-check-input" type="radio" name="tests[<?=$si?>][questions][<?=$qi?>][use_image]" value="0" id="imgNo<?=$si?>_<?=$qi?>" <?=(!$q['use_image']||($q['image_method']??'none')==='none')?'checked':''?>>
+<label class="form-check-label small" for="imgNo<?=$si?>_<?=$qi?>">Geen afbeelding</label>
+</div>
+<div class="form-check">
+<input class="form-check-input" type="radio" name="tests[<?=$si?>][questions][<?=$qi?>][use_image]" value="1" id="imgYes<?=$si?>_<?=$qi?>" <?=($q['use_image']&&($q['image_method']??'none')!=='none')?'checked':''?> <?=($q['image_method']??'none')==='none'?'disabled':''?>>
+<label class="form-check-label small" for="imgYes<?=$si?>_<?=$qi?>">Afbeelding gebruiken</label>
+</div>
+</div>
+<div class="small text-secondary mt-1">
+<?php $methodLabel=['web'=>'Internetafbeelding','svg'=>'SVG','generate'=>'GPT-afbeelding','none'=>'Geen afbeelding'][$q['image_method']??'none']??'Onbekend';?>
+Voorgestelde methode: <?=e($methodLabel)?><?=($q['image_reason']??'')!==''?' · '.e((string)$q['image_reason']):''?>
+</div>
+</div>
 <span class="small text-secondary">Bronpagina <?=e((string)($q['source_page']??1))?></span>
 </div>
 <input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][type]" value="<?=e($q['type'])?>">
