@@ -113,10 +113,9 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
   .admin-tile .admin-action{font-size:.75rem;padding:.3rem .4rem}
   .student-grid{--bs-gutter-x:.65rem;--bs-gutter-y:.65rem}
   .student-grid>.student-col{width:50%;padding-left:calc(var(--bs-gutter-x)*.5);padding-right:calc(var(--bs-gutter-x)*.5)}
-  .student-tile{aspect-ratio:1/1;overflow:hidden}
-  .student-tile .subject-card-image{height:100%;min-height:0}
-  .student-tile .card-body{height:100%;padding:0!important}
+  .student-tile{aspect-ratio:1/1!important;height:auto!important;min-height:0!important;overflow:hidden;align-self:flex-start}
   .student-tile .student-card-body{min-height:0!important;padding:.8rem!important}
+  .student-tile .card-body{height:auto!important;min-height:0!important}
   .student-tile .student-title{font-size:1.15rem}
   .student-tile .student-stats{font-size:.7rem;line-height:1.1}
   .student-tile .student-stats .p-2{padding:.35rem!important}
@@ -180,8 +179,7 @@ $students=$pdo->query("
 <?php foreach($students as $student):?>
 <div class="col-6 col-md-6 col-lg-4 student-col">
 <a href="student.php?id=<?=(int)$student['id']?>" class="text-decoration-none text-dark">
-<div class="card shadow-sm h-100 admin-tile student-tile overflow-hidden">
-<div class="subject-card-image" style="background-image:<?=($student['image_mime']?'url(\'student_image.php?id='.(int)$student['id'].'\')':'none')?>;">
+<div class="card shadow-sm admin-tile student-tile overflow-hidden subject-card-image" style="background-image:<?=($student['image_mime']?'url(\'student_image.php?id='.(int)$student['id'].'\')':'none')?>;">
 <div class="subject-card-overlay"></div>
 <div class="card-body position-relative d-flex flex-column justify-content-end subject-card-body">
 <h2 class="h4 text-white mb-1 subject-card-title"><?=e($student['name'])?></h2>
