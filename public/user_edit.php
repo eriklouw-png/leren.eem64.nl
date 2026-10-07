@@ -1,8 +1,15 @@
 <?php
 require __DIR__.'/../app/bootstrap.php';
-require_admin();
+require_login();
 
+$currentUser=current_user();
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT)?:0;
+if(!$id)$id=(int)$currentUser['id'];
+
+if($currentUser['role']!=='admin' && $id!==(int)$currentUser['id']){
+    http_response_code(403);
+    exit('Geen toegang.');
+}
 $student=null;
 if($id){
     $x=$pdo->prepare("SELECT id,name,email,image_mime FROM users WHERE id=? AND role='student'");
