@@ -163,7 +163,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $prompt.='Bepaal per sub-test zelf een korte, duidelijke inhoudelijke titel zonder prefix. Bij meerdere vergelijkbare sub-tests moeten de titels uniek zijn. Maak per sub-test precies het gevraagde aantal vragen. ';
                 $prompt.='Bij mc zijn alle vragen multiple choice met exact vier antwoorden en exact één correct antwoord. Bij open zijn alle vragen open en moet accepted_answers minimaal één inhoudelijk geldig antwoord bevatten. Bij combinatie moet je een evenwichtige mix van mc en open maken. ';
                 $prompt.='Gebruik de broninformatie gerust opnieuw in een andere vraagvorm. source_page is de pagina uit de geüploade set waarop de vraag het duidelijkst gebaseerd is. ';
-                $prompt.='Gebruik afbeeldingen spaarzaam: alleen als een afbeelding de vraag inhoudelijk echt helpt of noodzakelijk is. Bij een vraag waarvoor een afbeelding nodig is, zet use_image op true. Geef dan altijd een concrete image_search_query waarmee op internet naar precies de benodigde afbeelding kan worden gezocht; geef de voorkeur aan publiek domein of open-licentiebronnen zoals Wikimedia Commons en Openverse wanneer die beschikbaar zijn. Geef daarnaast image_prompt als zelfstandige beschrijving voor een eventuele laatste fallback naar GPT-afbeeldingsgeneratie. Als een eenvoudige schematische/vectorafbeelding passend is, geef dan ook complete, direct bruikbare svg_code. De volgorde bij het opslaan is altijd: eerst proberen een geschikte afbeelding via web search te vinden, daarna een veilige SVG gebruiken als die beschikbaar is, en pas als laatste GPT-image generation. Bij een vraag waarvoor geen afbeelding nodig is, zet use_image op false, image_search_query op een lege string, svg_code op een lege string en image_prompt op een lege string. Bij een query zonder bronpagina’s is source_page altijd 1.';
+                $prompt.='Gebruik afbeeldingen zeer spaarzaam: alleen als een afbeelding de vraag inhoudelijk echt helpt of noodzakelijk is. Bepaal voor iedere vraag met use_image=true exact één image_method: none, web, svg of generate. Gebruik none als geen afbeelding nodig is. Gebruik svg voor een eenvoudige, nauwkeurige schematische/vectorafbeelding die je zelf als veilige SVG kunt beschrijven, bijvoorbeeld een tijdlijn, eenvoudige geometrie, diagram of vergelijkbare educatieve illustratie. Gebruik web wanneer een echte foto, historische afbeelding, kunstwerk, kaart of andere bestaande bronafbeelding inhoudelijk beter is. Gebruik generate alleen als web en SVG niet geschikt zijn. Geef image_reason kort aan waarom de gekozen methode inhoudelijk passend is. Bij image_method=web geef je een concrete image_search_query en laat je svg_code en image_prompt leeg. Bij image_method=svg geef je complete direct bruikbare svg_code en laat je image_search_query en image_prompt leeg. Bij image_method=generate geef je een zelfstandige image_prompt en laat je image_search_query en svg_code leeg. Bij image_method=none zijn alle drie de afbeeldingsvelden leeg. Bij een query zonder bronpagina’s is source_page altijd 1.';
                 $data=openai_generate_test_questions($prompt,(array)($saved['images']??[]),$query!=='' && empty($saved['images']));
                 if(isset($data['_leren_error']))$errors[]=$data['_leren_error'];
                 else{
@@ -234,7 +234,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         $correct=implode(' | ',$accepted);
                     }
                     $generatedQuestion=$generated[$si]['questions'][$qi];
-                    $validQuestions[]=['type'=>$type,'question'=>$question,'correct'=>$correct,'options'=>$options,'correct_option'=>$type==='mc'?(int)$q['correct_option']:0,'explanation'=>$explanation,'source_page'=>$sourcePage,'use_image'=>$useImage,'image_prompt'=>trim((string)($generatedQuestion['image_prompt']??'')),'image_search_query'=>trim((string)($generatedQuestion['image_search_query']??'')),'svg_code'=>trim((string)($generatedQuestion['svg_code']??''))];
+                    $validQuestions[]=['type'=>$type,'question'=>$question,'correct'=>$correct,'options'=>$options,'correct_option'=>$type==='mc'?(int)$q['correct_option']:0,'explanation'=>$explanation,'source_page'=>$sourcePage,'use_image'=>$useImage,'image_prompt'=>trim((string)($generatedQuestion['image_prompt']??'')),'image_search_query'=>trim((string)($generatedQuestion['image_search_query']??'')),'svg_code'=>trim((string)($generatedQuestion['svg_code']??'')),'image_method'=>trim((string)($generatedQuestion['image_method']??'none')),'image_reason'=>trim((string)($generatedQuestion['image_reason']??''))];
                 }
                 if($validQuestions)$validTests[]=['title'=>$title,'description'=>$description,'questions'=>$validQuestions];
             }
@@ -274,15 +274,22 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                                 $searchQuery=trim((string)($q['image_search_query']??''));
                                 $svgCode=trim((string)($q['svg_code']??''));
                                 $imagePrompt=trim((string)($q['image_prompt']??''));
-                                if($searchQuery===''&&$svgCode===''&&$imagePrompt===''){
-                                    throw new RuntimeException('Een vraag is gemarkeerd voor een afbeelding, maar bevat geen zoekopdracht, SVG of image_prompt.');
+                                $imageMethod=trim((string)($q['image_method']??'none'));
+                                if($imageMethod==='none'){
+                                    $q['use_image']=false;
+                                }elseif(!in_array($imageMethod,['web','svg','generate'],true)){
+                                    throw new RuntimeException('Ongeldige afbeeldingsmethode bij een gegenereerde vraag.');
+                                }elseif(($imageMethod==='web'&&$searchQuery==='')||($imageMethod==='svg'&&$svgCode==='')||($imageMethod==='generate'&&$imagePrompt==='')){
+                                    throw new RuntimeException('De gekozen afbeeldingsmethode heeft geen bijbehorende afbeeldingsdata.');
                                 }
                             }
                             $qIns->execute([$testId,$q['question'],$imagePath,$q['type']==='mc'?'multiple_choice':'open',$q['explanation'],$sort+1]);
                             $qid=(int)$pdo->lastInsertId();
-                            if($q['use_image'] && $imagePath===null && trim((string)($q['image_prompt']??''))!==''){
+                            if($q['use_image'] && $imagePath===null && (string)($q['image_method']??'none')!=='none'){
                                 $pendingImageJobs[]=[
                                     'question_id'=>$qid,
+                                    'method'=>(string)($q['image_method']??'none'),
+                                    'reason'=>(string)($q['image_reason']??''),
                                     'search_query'=>(string)($q['image_search_query']??''),
                                     'svg_code'=>(string)($q['svg_code']??''),
                                     'prompt'=>(string)($q['image_prompt']??'')
