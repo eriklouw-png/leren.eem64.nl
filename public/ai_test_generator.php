@@ -48,6 +48,22 @@ function ai_type_label(string $type):string{
 }
 $requestedSpecs=ai_requested_specs($requestedSpecs);
 
+function ai_query_subject_label(string $query):string{
+    $label=trim(preg_replace('/\\s+/u',' ',$query));
+    $patterns=[
+        '/^maak\\s+(?:een\\s+)?(?:toets|overhoring|quiz)\\s+(?:over|van)\\s+/iu',
+        '/^maak\\s+(?:een\\s+)?(?:toets|overhoring|quiz)\\s+(?:om te leren|voor)\\s+/iu',
+        '/^(?:toets|overhoring|quiz)\\s+(?:over|van)\\s+/iu'
+    ];
+    foreach($patterns as $pattern){
+        $label=preg_replace($pattern,'',$label,1);
+    }
+    $label=trim($label," \\t\\n\\r\\\"'.,:;-");
+    if($label==='')return '';
+    if(mb_strlen($label)>70)$label=mb_substr($label,0,67).'...';
+    return $label;
+}
+
 function ai_summary_image_dir(int $topicId):string{
     return __DIR__.'/../storage/summaries/'.(int)$topicId;
 }
@@ -185,6 +201,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             unset($_SESSION['ai_test_analysis']['generated']);
         }
         $analysis=$_SESSION['ai_test_analysis']['analysis']??$analysis;
+$queryLabel=ai_query_subject_label($query);
+$displayTopicName=$queryLabel!==''?$queryLabel:$topicName;
     }
 
 
@@ -452,7 +470,7 @@ $savedSummaryText=(string)($_SESSION['ai_test_analysis']['summary_text']??'');
 <a href="subject_manage.php?id=<?=$subjectId?>">&larr; <?=e($subjectName)?></a>
 <div class="card shadow-sm mt-3"><div class="card-body p-4">
 <h1 class="h3 mb-1">AI toets maken</h1>
-<div class="text-secondary mb-4">Vak: <strong><?=e($subjectName)?></strong> · <strong><?=e($topicName)?></strong></div>
+<div class="text-secondary mb-4">Vak: <strong><?=e($subjectName)?></strong> · <strong><?=e($displayTopicName)?></strong></div>
 <?php foreach($errors as $error):?><div class="alert alert-danger"><?=e($error)?></div><?php endforeach;?>
 
 <?php
