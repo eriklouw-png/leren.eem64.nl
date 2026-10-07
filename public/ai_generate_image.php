@@ -27,11 +27,12 @@ if(!$jobs){
 
 $job=array_shift($jobs);
 $questionId=(int)($job['question_id']??0);
+$method=trim((string)($job['method']??''));
 $searchQuery=trim((string)($job['search_query']??''));
 $svgCode=trim((string)($job['svg_code']??''));
 $prompt=trim((string)($job['prompt']??''));
 
-if($questionId<1||($searchQuery===''&&$svgCode===''&&$prompt==='')){
+if($questionId<1||!in_array($method,['web','svg','generate'],true)){
     $_SESSION['ai_image_jobs']['jobs']=$jobs;
     echo json_encode([
         'ok'=>false,
@@ -51,31 +52,23 @@ try{
     $dir=__DIR__.'/uploads/questions';
     $filename=null;
 
-    // 1. Eerst op internet zoeken. Dit is de voorkeursroute voor echte,
-    // inhoudelijk passende afbeeldingen.
-    if($filename===null&&$searchQuery!==''){
+    // Voer uitsluitend de door de AI gekozen methode uit.
+    if($method==='web'){
+        if($searchQuery==='')throw new RuntimeException('De web-afbeeldingstaak bevat geen zoekopdracht.');
         $webImage=openai_search_image($searchQuery);
         if(is_array($webImage)){
             $imageUrl=trim((string)($webImage['image_url']??''));
-            if($imageUrl!==''){
-                $filename=openai_download_web_image($imageUrl,$dir);
-                if($filename!==null)$method='web';
-            }
+            if($imageUrl!=='')$filename=openai_download_web_image($imageUrl,$dir);
         }
-    }
-
-    // 2. Als er geen geschikte internetafbeelding gevonden of gedownload
-    // kon worden, probeer een eenvoudige veilige SVG.
-    if($filename===null&&$svgCode!==''){
+        if($filename===null)throw new RuntimeException('Geen geschikte internetafbeelding gevonden of gedownload.');
+    }elseif($method==='svg'){
+        if($svgCode==='')throw new RuntimeException('De SVG-afbeeldingstaak bevat geen SVG-code.');
         $filename=ai_save_svg($svgCode,$dir);
-        if($filename!==null)$method='svg';
-    }
-
-    // 3. Laatste fallback: een nieuwe afbeelding met GPT genereren.
-    if($filename===null){
-        if($prompt==='')throw new RuntimeException('Er is geen geschikte internetafbeelding gevonden en er is geen image_prompt voor de laatste fallback.');
+        if($filename===null)throw new RuntimeException('De gegenereerde SVG kon niet veilig worden opgeslagen.');
+    }elseif($method==='generate'){
+        if($prompt==='')throw new RuntimeException('De AI-afbeeldingstaak bevat geen image_prompt.');
         $filename=openai_generate_image($prompt,$dir);
-        if($filename!==null)$method='generate';
+        if($filename===null)throw new RuntimeException('De AI-afbeelding kon niet worden gemaakt.');
     }
 
     if($filename===null)throw new RuntimeException('Er kon geen geschikte afbeelding worden gevonden of gemaakt.');
