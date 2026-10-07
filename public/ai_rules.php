@@ -40,7 +40,7 @@ $seedRules=[
  ['duits','sentences','Zinnen oefenen',1,0,0,0,1,'Herken pagina’s waarop volledige zinnen of voorbeeldzinnen met vertaling centraal staan. De zinnen hoeven niet in twee kolommen te staan.','Neem volledige zinnen letterlijk over en maak beide vertaalrichtingen. Behoud relevante leestekens en verander de inhoud van bronzinnen niet.',2],
  ['duits','grammar','Grammatica',1,0,0,1,1,'Herken grammatica-uitleg, regels, tabellen, vervoegingen en grammaticale voorbeelden. Behandel een pagina niet als woorden- of zinnenlijst wanneer grammatica duidelijk het hoofddoel is.','Maak toepassingsgerichte vragen over de regels en voorbeelden uit de bron. Gebruik zowel open vragen als multiple choice wanneer dat is toegestaan. Gebruik uitsluitend informatie uit de bron.',3]
 ];
-$insert=$pdo->prepare("INSERT IGNORE INTO ai_test_rules(subject_id,test_type,label,enabled,allow_summary,allow_images,allow_multiple_choice,allow_open,recognition_instructions,generation_instructions,sort_order) SELECT id,?,?,?,?,?,?,?,?,? FROM subjects WHERE LOWER(name)=?");
+$insert=$pdo->prepare("INSERT IGNORE INTO ai_test_rules(subject_id,test_type,label,enabled,allow_summary,allow_images,allow_multiple_choice,allow_open,recognition_instructions,generation_instructions,sort_order) SELECT id,?,?,?,?,?,?,?,?,?,? FROM subjects WHERE LOWER(name)=?");
 foreach($seedRules as $r){
   $insert->execute([$r[1],$r[2],$r[3],$r[4],$r[5],$r[6],$r[7],$r[8],$r[9],$r[10],$r[0]]);
 }
