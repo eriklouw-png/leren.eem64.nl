@@ -18,7 +18,7 @@ function leren_navbar_html(string $area): string{
     return '<nav class="navbar navbar-dark bg-dark leren-navbar mb-4"><div class="container">'
         .'<a class="navbar-brand d-flex align-items-center gap-2" href="index.php">'
         .'<img src="/assets/leren-logo.svg" alt="" width="40" height="40" class="leren-logo">'
-        .'<span>Leren</span></a>'
+        .'<span>'.($area==='admin'?'Beheren':'Leren').'</span></a>'
         .'<div><span class="text-white me-3 leren-user-name">'.$name.'</span>'
         .'<a class="btn btn-outline-light btn-sm me-2" href="logout.php">Uitloggen</a>'.$right.'</div>'
         .'</div></nav>';
