@@ -44,6 +44,13 @@ $insert=$pdo->prepare("INSERT IGNORE INTO ai_test_rules(subject_id,test_type,lab
 foreach($seedRules as $r){
   $insert->execute([$r[1],$r[2],$r[3],$r[4],$r[5],$r[6],$r[7],$r[8],$r[9],$r[10],$r[0]]);
 }
+$copyRules=$pdo->query("SELECT * FROM ai_test_rules WHERE subject_id=(SELECT id FROM subjects WHERE LOWER(name)='duits' LIMIT 1) ORDER BY sort_order")->fetchAll();
+$copyStmt=$pdo->prepare("INSERT IGNORE INTO ai_test_rules(subject_id,test_type,label,enabled,allow_summary,allow_images,allow_multiple_choice,allow_open,recognition_instructions,generation_instructions,sort_order) SELECT id,?,?,?,?,?,?,?,?,?,? FROM subjects WHERE LOWER(name)=?");
+foreach(['engels','spaans'] as $target){
+    foreach($copyRules as $r){
+        $copyStmt->execute([$r['test_type'],$r['label'],$r['enabled'],$r['allow_summary'],$r['allow_images'],$r['allow_multiple_choice'],$r['allow_open'],$r['recognition_instructions'],$r['generation_instructions'],$r['sort_order'],$target]);
+    }
+}
 $rules=$pdo->query("SELECT * FROM ai_test_rules ORDER BY subject_id,sort_order,label")->fetchAll();
 $bySubject=[];foreach($rules as $r)$bySubject[(int)$r['subject_id']][]=$r;
 ?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI-instructies per vak</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
