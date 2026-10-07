@@ -20,6 +20,8 @@ if($topicId){
 }
 
 $errors=[];$analysis=null;
+$imageGenerationMode=false;
+if(isset($_SESSION['ai_image_jobs'])&&is_array($_SESSION['ai_image_jobs'])&&($_SESSION['ai_image_jobs']['topic_id']??null)===$topicId){$imageGenerationMode=true;}
 $prefix=trim((string)($_POST['prefix']??''));
 $query=trim((string)($_POST['query']??''));
 $requestedSpecs=$_POST['specs']??[];
@@ -244,6 +246,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     $testIns=$pdo->prepare("INSERT INTO tests(topic_id,title,description,test_type,vocab_left_label,vocab_right_label,vocab_direction,is_active) VALUES(?,?,?,?,?,?,?,1)");
                     $savedCount=0;
                     $createdQuestionImages=[];
+                    $pendingImageJobs=[];
                     $questionImageDir=__DIR__.'/uploads/questions';
                     if(!is_dir($questionImageDir)&&!@mkdir($questionImageDir,0755,true))throw new RuntimeException('De map uploads/questions kon niet worden aangemaakt.');
                     foreach($validTests as $test){
@@ -275,15 +278,17 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                                     $imagePath=$filename;
                                     $createdQuestionImages[]=$questionImageDir.'/'.$filename;
                                 }elseif(trim((string)($q['image_prompt']??''))!==''){
-                                    $imagePath=openai_generate_image((string)$q['image_prompt'],$questionImageDir);
-                                    if(!$imagePath)throw new RuntimeException('De benodigde afbeelding kon niet door OpenAI worden gegenereerd.');
-                                    $createdQuestionImages[]=$questionImageDir.'/'.$imagePath;
+                                    // Generated images are created asynchronously after the test itself has been saved.
+                                    $imagePath=null;
                                 }else{
                                     throw new RuntimeException('Een vraag is gemarkeerd voor een afbeelding, maar bevat geen image_prompt.');
                                 }
                             }
                             $qIns->execute([$testId,$q['question'],$imagePath,$q['type']==='mc'?'multiple_choice':'open',$q['explanation'],$sort+1]);
                             $qid=(int)$pdo->lastInsertId();
+                            if($q['use_image'] && $imagePath===null && trim((string)($q['image_prompt']??''))!==''){
+                                $pendingImageJobs[]=['question_id'=>$qid,'prompt'=>(string)$q['image_prompt']];
+                            }
                             if($q['type']==='mc'){
                                 foreach($q['options'] as $oi=>$option)$optIns->execute([$qid,$option,$oi===$q['correct_option']?1:0,$oi+1]);
                             }else{
@@ -311,6 +316,16 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     }
                     $pdo->commit();
                     ai_cleanup_session();
+                    if($pendingImageJobs){
+                        $_SESSION['ai_image_jobs']=[
+                            'topic_id'=>$topicId,
+                            'subject_id'=>$subjectId,
+                            'jobs'=>$pendingImageJobs,
+                            'total'=>count($pendingImageJobs),
+                            'completed'=>0
+                        ];
+                        redirect('ai_test_generator.php?topic_id='.$topicId.'&ai_images=1');
+                    }
                     redirect('subject_manage.php?id='.$subjectId.'&ai_saved='.$savedCount);
                 }catch(Throwable $e){
                     if($pdo->inTransaction())$pdo->rollBack();
@@ -434,7 +449,16 @@ $stage=$hasGenerated?3:($analysis?2:1);
 <?php endforeach;?>
 </div>
 
-<?php if($stage===1):?>
+<?php if($imageGenerationMode):?>
+<div class="ai-image-progress text-center py-5">
+<div class="display-5 mb-3">🖼️</div>
+<h2 class="h4 mb-2">Afbeeldingen maken</h2>
+<p class="text-secondary mb-4">De toets is opgeslagen. Leren maakt nu alleen de afbeeldingen die echt nodig zijn.</p>
+<div class="progress mb-3" style="height:12px"><div id="imageProgressBar" class="progress-bar" style="width:0%"></div></div>
+<div id="imageProgressCount" class="h5 mb-1">0 van 0</div>
+<div id="imageProgressText" class="text-secondary">Voorbereiden...</div>
+</div>
+<?php elseif($stage===1):?>
 <div class="upload-intro mb-4">
 <h2 class="h4 mb-2">1. Toetsbron kiezen</h2>
 <p class="text-secondary mb-3">Upload boekpagina’s óf geef hieronder een onderwerp/opdracht. De AI gebruikt daarna de gekozen bron om de toets te maken.</p>
@@ -547,4 +571,42 @@ function updateTotals(container){if(!container)return;let total=0;container.quer
 const afterContainer=document.getElementById('specRowsAfter');if(afterContainer){fillSpecs(afterContainer,specDefaults);document.getElementById('addSpecAfter')?.addEventListener('click',()=>{addSpecRow(afterContainer,{type:'mixed',count:10},afterContainer.children.length);updateTotals(afterContainer)});afterContainer.addEventListener('input',()=>updateTotals(afterContainer));afterContainer.addEventListener('change',()=>updateTotals(afterContainer))}
 const aiLoading=document.getElementById('aiLoading'),aiLoadingTitle=document.getElementById('aiLoadingTitle'),aiLoadingText=document.getElementById('aiLoadingText');let aiLoadingTimer=null;function showAiLoading(kind){if(!aiLoading)return;clearInterval(aiLoadingTimer);if(kind==='analyze'){aiLoadingTitle.textContent='Pagina’s analyseren...';aiLoadingText.textContent='De AI leest de boekpagina’s. Dit kan even duren.'}else if(kind==='generate'){aiLoadingTitle.textContent='Toets maken...';aiLoadingText.textContent='GPT maakt de gevraagde vragen en eventuele samenvatting.'}else{aiLoadingTitle.textContent='Toets opslaan...';const messages=['Leren verwerkt de gegenereerde vragen...','GPT maakt eenvoudige afbeeldingen voor vragen die dat nodig hebben...','De afbeeldingen worden opgeslagen bij de vragen...','Bijna klaar — Leren rondt de toets af...'];let i=0;aiLoadingText.textContent=messages[0];aiLoadingTimer=setInterval(()=>{i=(i+1)%messages.length;aiLoadingText.textContent=messages[i]},2800)}aiLoading.classList.remove('d-none');document.body.style.overflow='hidden'}
 document.getElementById('analyzeForm')?.addEventListener('submit',()=>showAiLoading('analyze'));document.getElementById('generateForm')?.addEventListener('submit',()=>showAiLoading('generate'));document.getElementById('saveForm')?.addEventListener('submit',e=>{const submit=e.submitter;if(submit&&submit.name==='action'&&submit.value==='clear')return;showAiLoading('save');if(submit){submit.disabled=true;submit.dataset.originalText=submit.textContent;submit.textContent='Opslaan...'}});
+<?php if($imageGenerationMode):?>
+<script>
+(async function(){
+  const bar=document.getElementById('imageProgressBar');
+  const count=document.getElementById('imageProgressCount');
+  const text=document.getElementById('imageProgressText');
+  async function nextImage(){
+    try{
+      text.textContent='Afbeelding wordt gemaakt...';
+      const response=await fetch('ai_generate_image.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Accept':'application/json'},body:'action=next'});
+      const data=await response.json();
+      if(!response.ok||!data.ok)throw new Error(data.error||'De afbeelding kon niet worden gemaakt.');
+      const done=Number(data.completed||0), total=Number(data.total||0);
+      const percent=total?Math.round(done/total*100):100;
+      bar.style.width=percent+'%';
+      count.textContent=done+' van '+total;
+      if(data.done){
+        text.textContent='Alle afbeeldingen zijn klaar. De toets wordt geopend...';
+        setTimeout(()=>{window.location.href='subject_manage.php?id=<?= (int)$subjectId ?>&ai_saved='+(data.saved_count||0)},700);
+        return;
+      }
+      text.textContent='Afbeelding '+(done+1)+' van '+total+' wordt gemaakt...';
+      setTimeout(nextImage,250);
+    }catch(error){
+      text.textContent=error.message||'Er ging iets mis.';
+      count.textContent='Pauze';
+      bar.classList.add('bg-danger');
+      const retry=document.createElement('button');
+      retry.className='btn btn-primary mt-3';
+      retry.textContent='Opnieuw proberen';
+      retry.onclick=()=>{retry.remove();bar.classList.remove('bg-danger');nextImage()};
+      document.querySelector('.ai-image-progress')?.appendChild(retry);
+    }
+  }
+  nextImage();
+})();
+</script>
+<?php endif;?>
 </script></body></html>
