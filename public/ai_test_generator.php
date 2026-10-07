@@ -27,6 +27,7 @@ if(isset($_SESSION['ai_image_jobs'])&&is_array($_SESSION['ai_image_jobs'])&&($_S
 $prefix=trim((string)($_POST['prefix']??''));
 $query=trim((string)($_POST['query']??''));
 $requestedSpecs=$_POST['specs']??[];
+$action=$_POST['action']??'';
 
 function ai_requested_specs(mixed $input):array{
     $result=[];
