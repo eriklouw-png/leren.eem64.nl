@@ -32,3 +32,7 @@ FROM attempts a
 JOIN questions q ON q.test_id=a.test_id
 LEFT JOIN attempt_questions aq ON aq.attempt_id=a.id AND aq.question_id=q.id
 WHERE aq.attempt_id IS NULL;
+
+
+-- Zinnen oefenen als apart sub-testtype
+ALTER TABLE tests MODIFY COLUMN test_type ENUM('vocabulary','sentences','multiple_choice','open','mixed') NOT NULL DEFAULT 'mixed';
