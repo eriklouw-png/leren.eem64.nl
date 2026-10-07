@@ -463,6 +463,26 @@ function openai_generate_subject_ai_rules(string $subjectName):array{
     $apiKey=openai_api_key();
     if($apiKey==='')return ['_leren_error'=>'OPENAI_API_KEY ontbreekt in de container.'];
 
+    // Zorg dat de configuratietabel ook bestaat wanneer het eerste nieuwe vak wordt aangemaakt.
+    $pdo->exec("CREATE TABLE IF NOT EXISTS ai_test_rules (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        subject_id INT UNSIGNED NOT NULL,
+        test_type VARCHAR(40) NOT NULL,
+        label VARCHAR(120) NOT NULL,
+        enabled TINYINT(1) NOT NULL DEFAULT 1,
+        allow_summary TINYINT(1) NOT NULL DEFAULT 0,
+        allow_images TINYINT(1) NOT NULL DEFAULT 0,
+        allow_multiple_choice TINYINT(1) NOT NULL DEFAULT 0,
+        allow_open TINYINT(1) NOT NULL DEFAULT 1,
+        recognition_instructions TEXT NULL,
+        generation_instructions TEXT NULL,
+        sort_order INT NOT NULL DEFAULT 0,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NULL,
+        UNIQUE KEY uq_ai_test_rules_subject_type(subject_id,test_type),
+        KEY idx_ai_test_rules_subject(subject_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
     // Gebruik bestaande AI-regels als voorbeelden. Zo blijft een nieuw vak qua
     // opzet zoveel mogelijk aansluiten bij vergelijkbare vakken.
     $examples=[];
