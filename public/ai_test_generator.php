@@ -20,6 +20,8 @@ if($topicId){
 }
 
 $errors=[];$analysis=null;
+$aiRules=ai_test_rules_for_subject($subjectId);
+$aiRulesPrompt=ai_test_rules_prompt($aiRules);
 $imageGenerationMode=false;
 if(isset($_SESSION['ai_image_jobs'])&&is_array($_SESSION['ai_image_jobs'])&&($_SESSION['ai_image_jobs']['topic_id']??null)===$topicId){$imageGenerationMode=true;}
 $prefix=trim((string)($_POST['prefix']??''));
@@ -168,7 +170,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     $topicSummarySetting->execute([$useSummary?1:0,$topicId]);
                 }
                 $summaryText=null;
-                if($useSummary){
+                if($useSummary && $ruleSummaryAllowed){
                     try{
                         $summaryPrompt='Maak een complete, zelfstandige samenvatting van deze geüploade schoolboekpagina’s voor deze overhoring. Deze samenvatting wordt één afzonderlijke samenvatting binnen de overhoring en mag dus alleen de informatie uit deze nieuwe upload bevatten. Gebruik uitsluitend informatie uit de pagina’s. Neem belangrijke begrippen, namen, processen, voorbeelden en jaartallen mee. Schrijf in duidelijk Nederlands op het niveau van ongeveer 12-15 jaar. Deel de samenvatting logisch op in duidelijke onderwerpen. IEDER nieuw onderwerp moet beginnen met een Markdown-kopje op exact deze manier: "## Onderwerp". Gebruik dus letterlijk twee hekjes, gevolgd door één spatie en daarna de titel van het onderwerp, bijvoorbeeld "## Stofwisseling". Gebruik geen andere Markdown-kopniveaus zoals # of ###. Zet onder ieder kopje de bijbehorende uitleg in korte, duidelijke alinea’s. Verzin niets en vul ontbrekende informatie niet aan.';
                         $summaryData=openai_generate_topic_summary($summaryPrompt,(array)($saved['images']??[]));
@@ -186,40 +188,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 foreach($requestedSpecs as $i=>$spec){
                     $requested[]=['number'=>$i+1,'type'=>$spec['type'],'type_label'=>ai_type_label($spec['type']),'question_count'=>$spec['count']];
                 }
-                $prompt='Maak nu concrete oefentoetsvragen voor precies deze gevraagde sub-tests. ';
-                if($query!=='')$prompt.='De gebruiker gaf de volgende opdracht/het volgende onderwerp: '.$query.'. Gebruik dit als inhoudelijke basis en gebruik algemene kennis. Er zijn geen schoolboekpagina’s aangeleverd. ';
-                else $prompt.='Gebruik uitsluitend de informatie uit de schoolboekpagina’s. ';
-                $prompt.='Probeer het gevraagde aantal daadwerkelijk te halen, ook als de eerdere analyse een lagere schatting van het aantal unieke vragen gaf. Gebruik de bron zo volledig mogelijk en maak binnen één sub-test verschillende vraagvormen en invalshoeken. ';
-                $prompt.='Bij grammatica, tabellen, vervoegingen, begrippen en korte teksten mag dezelfde broninformatie meerdere keren worden bevraagd als de vraag wezenlijk anders is. Verzin geen informatie die niet uit de bron volgt; als het gevraagde aantal echt niet haalbaar is zonder verzinnen of vrijwel identieke vragen, maak dan zoveel goede vragen als verantwoord mogelijk. ';
-                $prompt.='Maak exact '.count($requested).' sub-tests met de gevraagde aantallen vragen. De gewenste opdrachten zijn: '.json_encode($requested,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'. ';
-                $prompt.='Dezelfde leerstof en feiten mogen in verschillende sub-tests opnieuw worden gebruikt. Binnen iedere afzonderlijke sub-test moeten de vragen voldoende van elkaar verschillen. ';
-                $prompt.='Bepaal per sub-test zelf een korte, duidelijke inhoudelijke titel zonder prefix. Bij meerdere vergelijkbare sub-tests moeten de titels uniek zijn. Maak per sub-test precies het gevraagde aantal vragen. ';
-                $prompt.='Bij mc zijn alle vragen multiple choice met exact vier antwoorden en exact één correct antwoord. Bij open zijn alle vragen open en moet accepted_answers minimaal één inhoudelijk geldig antwoord bevatten. Bij combinatie moet je een evenwichtige mix van mc en open maken. ';
-                $prompt.='Gebruik de broninformatie gerust opnieuw in een andere vraagvorm. source_page is de pagina uit de geüploade set waarop de vraag het duidelijkst gebaseerd is. ';
-                $prompt.='Gebruik afbeeldingen zeer spaarzaam: alleen als een afbeelding de vraag inhoudelijk echt helpt of noodzakelijk is. Bepaal voor iedere vraag met use_image=true exact één image_method: none, web, svg of generate. Gebruik none als geen afbeelding nodig is. Gebruik svg voor eenvoudige, nauwkeurige schematische/vectorafbeeldingen. Een geografische kaart, landkaart, stadskaart, provinciekaart of andere kaart mag óók als SVG worden gemaakt, maar alleen als je de geografische vorm, posities, verhoudingen en relevante locaties voldoende nauwkeurig kunt weergeven. Als je die nauwkeurigheid niet betrouwbaar kunt garanderen, kies dan een andere afbeeldingsmethode. Maak nooit een schematische kaart die inhoudelijk slechts een ruwe of willekeurige benadering is. Voorbeelden die geschikt kunnen zijn voor SVG zijn een tijdlijn, eenvoudige geometrie, diagram, klok, tabelachtige visualisatie en — wanneer nauwkeurig uitvoerbaar — een educatieve kaart. SVG-kwaliteit is belangrijk: maak geen ruwe schets. Bouw de geometrie bewust en mathematisch op, gebruik bij herhaalde of radiale elementen gelijke afstanden, lijn elementen uit op een logisch raster, houd de compositie gecentreerd en geef rondom voldoende marge. Gebruik exact viewBox=\"0 0 1000 1000\", width=\"1000\" en height=\"1000\". Gebruik consistente lijndiktes, bij voorkeur round linecaps/linejoins, duidelijke contrasten en een rustig sans-serif lettertype. Houd tekst en belangrijke onderdelen volledig binnen de viewBox en maak tekst groot genoeg voor een mobiele telefoon. Gebruik geen onnodige decoratie, 3D-effecten of willekeurige handmatige plaatsing wanneer een berekening mogelijk is. Controleer intern vóór het teruggeven of de SVG volledig gesloten, logisch gecentreerd en visueel leesbaar is. Gebruik web wanneer een echte foto, historische afbeelding, kunstwerk, kaart of andere bestaande bronafbeelding inhoudelijk beter is. Gebruik generate alleen als web en SVG niet geschikt zijn. Geef image_reason kort aan waarom de gekozen methode inhoudelijk passend is. Bij image_method=web geef je een concrete image_search_query en laat je svg_code en image_prompt leeg. Bij image_method=svg geef je complete direct bruikbare svg_code en laat je image_search_query en image_prompt leeg. Bij image_method=generate geef je een zelfstandige image_prompt en laat je image_search_query en svg_code leeg. Bij image_method=none zijn alle drie de afbeeldingsvelden leeg. Bij een query zonder bronpagina’s is source_page altijd 1.';
-                $vocabularyPairs=is_array($saved['analysis']['vocabulary_pairs']??null)?$saved['analysis']['vocabulary_pairs']:[];
-                $isVocabularyList=!empty($saved['analysis']['is_vocabulary_list'])&&$vocabularyPairs;
-                $isSentenceList=!empty($saved['analysis']['is_sentence_list'])&&$vocabularyPairs;
-                $isPracticeList=$isVocabularyList||$isSentenceList;
-                if($isPracticeList){
-                    $generatedQuestions=[];
-                    $language=trim((string)($saved['analysis']['vocabulary_language']??''));
-                    foreach($vocabularyPairs as $pair){
-                        $source=trim((string)($pair['source']??''));
-                        $translation=trim((string)($pair['translation']??''));
-                        $label=trim((string)($pair['grammatical_label']??''));
-                        if(!in_array($label,['mannelijk','vrouwelijk','meervoud'],true))$label='';
-                        if($source===''||$translation==='')continue;
-                        $translationWithLabel=$translation.($label!==''?' ('.$label.')':'');
-                        $generatedQuestions[]=['type'=>'open','question'=>$source,'correct_answer'=>$translation,'options'=>[],'correct_option'=>0,'accepted_answers'=>[$translation],'explanation'=>'Vertaal naar Nederlands.'.($label!==''?' De bron geeft aan dat dit woord '.$label.' is.':''),'source_page'=>1,'use_image'=>false,'image_prompt'=>'','image_search_query'=>'','svg_code'=>'','image_method'=>'none','image_reason'=>''];
-                        $generatedQuestions[]=['type'=>'open','question'=>$translationWithLabel,'correct_answer'=>$source,'options'=>[],'correct_option'=>0,'accepted_answers'=>[$source],'explanation'=>'Vertaal naar '.($language!==''?$language:'de brontaal').'.','source_page'=>1,'use_image'=>false,'image_prompt'=>'','image_search_query'=>'','svg_code'=>'','image_method'=>'none','image_reason'=>''];
-                    }
-                    $generated=['subtests'=>[['title'=>$isSentenceList?'Zinnen oefenen':'Woordjes oefenen','description'=>($isSentenceList?'Automatisch herkende zinnenlijst':'Automatisch herkende woordenlijst').($language!==''?' ('.$language.')':'').' — '.count($generatedQuestions).' vragen, beide richtingen.','questions'=>$generatedQuestions]]];
-                    $_SESSION['ai_test_analysis']['generated']=$generated;
-                    $_SESSION['ai_test_analysis']['vocabulary_mode']=true;
-                    $_SESSION['ai_test_analysis']['practice_mode']=$isSentenceList?'sentences':'vocabulary';
-                }else{
-                    $data=openai_generate_test_questions($prompt,(array)($saved['images']??[]),$query!=='' && empty($saved['images']));
+                $prompt='Maak concrete oefentoetsvragen voor precies de gevraagde sub-tests. Gebruik uitsluitend de bron wanneer er boekpagina’s zijn aangeleverd; gebruik bij een query de gebruikersopdracht en algemene kennis. Pas de beheerde vak- en sub-testconfiguratie toe. Maak exact het gevraagde aantal sub-tests en vragen. Bij mc zijn er exact vier opties en één correct antwoord. Bij open zijn er inhoudelijk geldige accepted_answers. Bij combinatie een evenwichtige mix. Verzin geen informatie die niet uit de bron of opdracht volgt.'.$aiRulesPrompt.' De gewenste opdrachten zijn: '.json_encode($requested,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'.';
+                                $data=openai_generate_test_questions($prompt,(array)($saved['images']??[]),$query!=='' && empty($saved['images']));
                     if(isset($data['_leren_error']))$errors[]=$data['_leren_error'];
                     else{
                         $generated=openai_output_json($data);
@@ -460,11 +430,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
         if(!$errors){
             if($query!==''){
-                $prompt='Analyseer het onderwerp/de opdracht van de gebruiker voor het maken van een oefentoets. De gebruiker wil de volgende leerstof of opdracht: "'.$query.'". Gebruik algemene kennis om het onderwerp af te bakenen, formuleer de belangrijkste leerpunten en bepaal welke verschillende zinvolle vragen over dit onderwerp kunnen worden gemaakt. Stel enkele logische inhoudelijke sub-testtitels voor. Geef alleen JSON volgens het opgegeven schema.';
-                $data=openai_generate_text_analysis($prompt);
+                $prompt='Analyseer het onderwerp/de opdracht van de gebruiker voor het maken van een oefentoets. Bepaal vak, onderwerp, leerpunten en passende sub-testtypen. Gebruik de beheerde vakconfiguratie om te bepalen of een specifiek type van toepassing is. Geef alleen JSON volgens het opgegeven schema.'.$aiRulesPrompt;
+                $data=openai_generate_text_analysis($prompt,$aiRulesPrompt);
             }else{
-                $prompt='Analyseer de geüploade schoolboekpagina’s voor het maken van oefentoetsen. Identificeer het vak en onderwerp, vat de stof kort samen en geef de belangrijkste leerpunten. Gebruik uitsluitend informatie uit de pagina’s. Bepaal daarnaast zo realistisch mogelijk hoeveel verschillende, inhoudelijk zinvolle vragen maximaal binnen één afzonderlijke sub-test uit deze bron kunnen worden gemaakt zonder leerstof te verzinnen. Kijk daarbij niet alleen naar unieke feiten, maar ook naar verschillende geldige vraagvormen en invalshoeken die de bron daadwerkelijk ondersteunt. Bij grammatica, vervoegingen, woordlijsten en tabellen mag bijvoorbeeld iedere relevante vorm afzonderlijk worden bevraagd en mag dezelfde leerstof worden getoetst via betekenis, persoonsvorm, invulling, herkenning, vertaling, correcte toepassing of een korte contextzin, zolang de vragen voor een leerling inhoudelijk duidelijk van elkaar verschillen. Tel zulke wezenlijk verschillende vraagvormen dus mee. Vermijd alleen vrijwel identieke vragen die alleen enkele woorden omwisselen. Dezelfde leerstof mag in meerdere sub-tests opnieuw worden gebruikt en mag bijvoorbeeld zowel als multiple-choicevraag als als open vraag worden bevraagd. Wees realistisch, maar niet onnodig conservatief: het doel is het maximale aantal goede oefenvragen dat deze specifieke bron daadwerkelijk ondersteunt. Stel ook enkele logische inhoudelijke sub-testtitels voor. Geef alleen JSON volgens het opgegeven schema.';
-                $data=openai_generate_with_images($prompt,$valid);
+                $prompt='Analyseer de geüploade schoolboekpagina’s voor het maken van oefentoetsen. Identificeer vak en onderwerp, bepaal leerpunten en herken welke beheerde sub-testtypen bij de pagina’s passen. Gebruik uitsluitend informatie uit de pagina’s. Bepaal per passend type hoeveel verschillende, inhoudelijk zinvolle vragen de bron realistisch ondersteunt. Geef alleen JSON volgens het opgegeven schema.'.$aiRulesPrompt;
+                $data=openai_generate_with_images($prompt,$valid,$aiRulesPrompt);
             }
 
             if(isset($data['_leren_error'])){
@@ -477,13 +447,19 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     $pairCount=count($analysis['vocabulary_pairs']);
                     $language=trim((string)($analysis['vocabulary_language']??''));
                     $analysis['subtests']=[[
-                        'title'=>'Woordjes oefenen',
+                        'title'=>'Woordjes oefenen','recognized_type'=>'vocabulary',
                         'description'=>'Automatisch herkende woordenlijst'.($language!==''?' ('.$language.')':'').' met '.$pairCount.' woordparen.',
                         'question_count'=>$pairCount,
                         'recommended_types'=>['open']
                     ]];
                     $analysis['max_unique_questions']=$pairCount;
                     $analysis['summary']='Er is een woordenlijst herkend met '.$pairCount.' woordparen.'.($language!==''?' Brontaal: '.$language.'.':'');
+                }
+                if($analysis&&is_array($analysis)&&!empty($analysis['is_sentence_list'])&&is_array($analysis['vocabulary_pairs']??null)&&count($analysis['vocabulary_pairs'])>0){
+                    $pairCount=count($analysis['vocabulary_pairs']);$language=trim((string)($analysis['vocabulary_language']??''));
+                    $analysis['subtests']=[['title'=>'Zinnen oefenen','recognized_type'=>'sentences','description'=>'Automatisch herkende zinnenlijst'.($language!==''?' ('.$language.')':'').' met '.$pairCount.' zinnen.','question_count'=>$pairCount,'recommended_types'=>['open']]];
+                    $analysis['max_unique_questions']=$pairCount;
+                    $analysis['summary']='Er is een zinnenlijst herkend met '.$pairCount.' zinnen.'.($language!==''?' Brontaal: '.$language.'.':'');
                 }
                 if(!$analysis||!isset($analysis['subtests'])||!is_array($analysis['subtests'])||count($analysis['subtests'])===0){
                     foreach($valid as $path)@unlink($path);                    if($sessionDir&&is_dir($sessionDir))@rmdir($sessionDir);
@@ -517,7 +493,11 @@ $displayTopicName=$queryLabel!==''?$queryLabel:$topicName;
 $savedRequest=$_SESSION['ai_test_analysis']['request']??['prefix'=>$prefix,'specs'=>$requestedSpecs];
 $detectedVocabulary=!empty($analysis['is_vocabulary_list'])&&is_array($analysis['vocabulary_pairs']??null)&&count($analysis['vocabulary_pairs'])>0;
 $detectedSentenceList=!empty($analysis['is_sentence_list'])&&is_array($analysis['vocabulary_pairs']??null)&&count($analysis['vocabulary_pairs'])>0;
-$detectedPracticeList=$detectedVocabulary||$detectedSentenceList;
+$detectedPracticeList=$detectedVocabulary||$detectedSentenceList;$detectedTypes=[]; if(is_array($analysis['subtests']??null)){foreach($analysis['subtests'] as $st){$t=trim((string)($st['recognized_type']??''));if($t!=='')$detectedTypes[]=$t;}}
+$ruleSummaryAllowed=true;
+foreach($detectedTypes as $type){$rule=ai_test_rule_for_type($aiRules,$type);if($rule!==null && !(int)$rule['allow_summary']){$ruleSummaryAllowed=false;break;}}
+if($aiRules&&!$detectedTypes){$ruleSummaryAllowed=false;foreach($aiRules as $rule){if((int)$rule['allow_summary']){$ruleSummaryAllowed=true;break;}}}
+
 if($detectedPracticeList && empty($_SESSION['ai_test_analysis']['request']['specs'])){
     $savedRequest['specs']=[['type'=>'open','count'=>count($analysis['vocabulary_pairs'])*2]];
 }
@@ -608,9 +588,9 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 </div></div><?php endif;?>
 <?php if(!$detectedPracticeList):?><div class="card mb-3"><div class="card-body">
 <div class="form-check form-switch">
-<input class="form-check-input" type="checkbox" name="use_summary" value="1" id="useSummarySettings" <?=$useSummary?'checked':''?> <?=($query!==''?'disabled':'')?>>
+<input class="form-check-input" type="checkbox" name="use_summary" value="1" id="useSummarySettings" <?=$useSummary?'checked':''?> <?=($query!==''||!$ruleSummaryAllowed?'disabled':'')?>>
 <label class="form-check-label fw-semibold" for="useSummarySettings">Samenvatting maken</label>
-<div class="small text-secondary mt-1"><?=($query!==''?'Bij een query-toets wordt de samenvatting overgeslagen; er zijn geen boekpagina’s als bron.':'De AI maakt een aparte leersamenvatting van deze pagina’s.')?></div>
+<div class="small text-secondary mt-1"><?=($query!==''?'Bij een query-toets wordt de samenvatting overgeslagen; er zijn geen boekpagina’s als bron.':(!$ruleSummaryAllowed?'Voor dit vak/type is in de AI-configuratie geen samenvatting toegestaan.':'De AI maakt een aparte leersamenvatting van deze pagina’s.'))?></div>
 </div>
 </div></div><?php endif;?>
 <?php if($detectedPracticeList):?><div class="alert alert-success mb-4"><strong><?= $detectedSentenceList?'Zinnenlijst':'Woordenlijst' ?> herkend</strong><br><?=count($analysis['vocabulary_pairs'])?> <?= $detectedSentenceList?'zinnen':'woordparen' ?> gevonden. Leren maakt automatisch één sub-test <strong><?= $detectedSentenceList?'Zinnen oefenen':'Woordjes oefenen' ?></strong> met beide richtingen.</div><?php else:?><div class="card mb-4"><div class="card-body">
