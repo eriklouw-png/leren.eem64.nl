@@ -431,6 +431,18 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $errors[]=$data['_leren_error'];
             }else{
                 $analysis=openai_output_json($data);
+                if($analysis&&is_array($analysis)&&!empty($analysis['is_vocabulary_list'])&&is_array($analysis['vocabulary_pairs']??null)&&count($analysis['vocabulary_pairs'])>0){
+                    $pairCount=count($analysis['vocabulary_pairs']);
+                    $language=trim((string)($analysis['vocabulary_language']??''));
+                    $analysis['subtests']=[[
+                        'title'=>'Woordjes oefenen',
+                        'description'=>'Automatisch herkende woordenlijst'.($language!==''?' ('.$language.')':'').' met '.$pairCount.' woordparen.',
+                        'question_count'=>$pairCount,
+                        'recommended_types'=>['open']
+                    ]];
+                    $analysis['max_unique_questions']=$pairCount;
+                    $analysis['summary']='Er is een woordenlijst herkend met '.$pairCount.' woordparen.'.($language!==''?' Brontaal: '.$language.'.':'');
+                }
                 if(!$analysis||!isset($analysis['subtests'])||!is_array($analysis['subtests'])||count($analysis['subtests'])===0){
                     foreach($valid as $path)@unlink($path);                    if($sessionDir&&is_dir($sessionDir))@rmdir($sessionDir);
                     $reason=(string)($data['incomplete_details']['reason']??'');
