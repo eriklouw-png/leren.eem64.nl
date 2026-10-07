@@ -250,6 +250,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $generated=$saved['generated']['subtests'];
             $sourceImages=(array)($saved['images']??[]);
             $isVocabularyMode=!empty($saved['vocabulary_mode']);
+            $practiceMode=(string)($saved['practice_mode']??($isVocabularyMode?'vocabulary':''));
+            $isPracticeMode=in_array($practiceMode,['vocabulary','sentences'],true);
             $validTests=[];
             foreach($posted as $si=>$test){                if(!isset($generated[$si])||!is_array($test))continue;
                 $rawTitle=trim((string)($test['title']??''));
@@ -296,6 +298,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             if(!$errors){
                 $pdo->beginTransaction();
                 try{
+                    if($isPracticeMode){
+                        $pdo->exec("ALTER TABLE tests MODIFY COLUMN test_type ENUM('vocabulary','sentences','multiple_choice','open','mixed') NOT NULL DEFAULT 'mixed'");
+                    }
                     $qIns=$pdo->prepare("INSERT INTO questions(test_id,question_text,image_path,question_type,explanation,sort_order) VALUES(?,?,?,?,?,?)");
                     $optIns=$pdo->prepare("INSERT INTO question_options(question_id,option_text,is_correct,sort_order) VALUES(?,?,?,?)");
                     $oaIns=$pdo->prepare("INSERT INTO open_question_answers(question_id,answer_text,sort_order) VALUES(?,?,?)");
@@ -310,7 +315,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         $hasOpen=false;$hasMc=false;
                         foreach($test['questions'] as $q){$hasOpen=$hasOpen||$q['type']==='open';$hasMc=$hasMc||$q['type']==='mc';}
                         if($hasOpen&&$hasMc)$testType='mixed';elseif($hasOpen)$testType='open';
-                        if($isVocabularyMode)$testType='vocabulary';
+                        if($isPracticeMode)$testType=$practiceMode;
                         $check=$pdo->prepare("SELECT id FROM tests WHERE topic_id=? AND title=? LIMIT 1");
                         $baseTitle=$test['title'];
                         $title=$baseTitle;
@@ -321,9 +326,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                             $title=$baseTitle.' ('.$suffix.')';
                             $suffix++;
                         }
-                        $vocabLanguage=$isVocabularyMode?trim((string)($saved['analysis']['vocabulary_language']??'')):'';
-                        $leftLabel=$isVocabularyMode?($vocabLanguage!==''?$vocabLanguage:'Brontaal'):null;
-                        $rightLabel=$isVocabularyMode?'Nederlands':null;
+                        $vocabLanguage=$isPracticeMode?trim((string)($saved['analysis']['vocabulary_language']??'')):'';
+                        $leftLabel=$isPracticeMode?($vocabLanguage!==''?$vocabLanguage:'Brontaal'):null;
+                        $rightLabel=$isPracticeMode?'Nederlands':null;
                         $testIns->execute([$topicId,$title,$test['description'],$testType,$leftLabel,$rightLabel,'both']);
                         $testId=(int)$pdo->lastInsertId();
                         foreach($test['questions'] as $sort=>$q){
@@ -605,7 +610,7 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 <div class="small text-secondary mt-1"><?=($query!==''?'Bij een query-toets wordt de samenvatting overgeslagen; er zijn geen boekpagina’s als bron.':'De AI maakt een aparte leersamenvatting van deze pagina’s.')?></div>
 </div>
 </div></div><?php endif;?>
-<?php if($detectedVocabulary):?><div class="alert alert-success mb-4"><strong>Woordenlijst herkend</strong><br><?=count($analysis['vocabulary_pairs'])?> woordparen gevonden. Leren maakt automatisch één sub-test <strong>Woordjes oefenen</strong> met beide richtingen.</div><?php else:?><div class="card mb-4"><div class="card-body">
+<?php if($detectedPracticeList):?><div class="alert alert-success mb-4"><strong><?= $detectedSentenceList?'Zinnenlijst':'Woordenlijst' ?> herkend</strong><br><?=count($analysis['vocabulary_pairs'])?> <?= $detectedSentenceList?'zinnen':'woordparen' ?> gevonden. Leren maakt automatisch één sub-test <strong><?= $detectedSentenceList?'Zinnen oefenen':'Woordjes oefenen' ?></strong> met beide richtingen.</div><?php else:?><div class="card mb-4"><div class="card-body">
 <div class="d-flex justify-content-between align-items-center mb-3"><div><strong>Sub-testen</strong><div class="small text-secondary">Bepaal aantal en vraagtype per sub-test.</div></div><button type="button" class="btn btn-outline-secondary btn-sm" id="addSpecAfter">+ Sub-test</button></div>
 <div id="specRowsAfter"></div><div class="small text-secondary mt-2">Totaal gevraagd: <strong id="specTotal">0</strong> vragen.</div>
 </div></div><?php endif;?>
