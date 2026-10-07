@@ -111,6 +111,16 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
   .admin-tile .subject-card-title{font-size:1.15rem}
   .admin-tile .subject-card-description{font-size:.82rem;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .admin-tile .admin-action{font-size:.75rem;padding:.3rem .4rem}
+  .student-grid{--bs-gutter-x:.65rem;--bs-gutter-y:.65rem}
+  .student-grid>.student-col{width:50%;padding-left:calc(var(--bs-gutter-x)*.5);padding-right:calc(var(--bs-gutter-x)*.5)}
+  .student-tile{aspect-ratio:1/1;overflow:hidden}
+  .student-tile .student-card-image{height:100%;min-height:0}
+  .student-tile .student-card-body{height:100%;min-height:0!important;padding:.8rem!important}
+  .student-tile .student-title{font-size:1.15rem}
+  .student-tile .student-email{display:none}
+  .student-tile .student-stats{font-size:.7rem}
+  .student-tile .student-stats .p-2{padding:.35rem!important}
+  .student-tile .admin-action{font-size:.75rem;padding:.3rem .4rem}
 }
 details .chevron{display:inline-block;transition:transform .15s ease;font-size:1.5rem;line-height:1}details[open] .chevron{transform:rotate(180deg)}</style></head><body class="bg-light"><nav class="navbar navbar-dark bg-dark"><div class="container"><a class="navbar-brand" href="admin.php">Leren beheer</a><div><span class="text-white me-3"><?=e($_SESSION['user']['name'])?></span><a class="btn btn-outline-light btn-sm" href="index.php">Website</a> <a class="btn btn-outline-light btn-sm" href="logout.php">Uitloggen</a></div></div></nav><main class="container py-4">
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -166,29 +176,21 @@ $students=$pdo->query("
 <?php if(!$students):?>
 <div class="alert alert-secondary">Er zijn nog geen studenten.</div>
 <?php else:?>
-<div class="row g-3">
+<div class="row g-3 student-grid">
 <?php foreach($students as $student):?>
-<div class="col-12 col-md-6 col-lg-4">
+<div class="col-6 col-md-6 col-lg-4 student-col">
 <a href="student.php?id=<?=(int)$student['id']?>" class="text-decoration-none text-dark">
-<div class="card shadow-sm h-100">
-<div class="card-body p-3">
-<div class="d-flex align-items-center gap-3">
-<?php if($student['image_mime']):?>
-<img src="student_image.php?id=<?=(int)$student['id']?>" class="rounded flex-shrink-0" style="width:86px;height:86px;object-fit:cover" alt="<?=e($student['name'])?>">
-<?php else:?>
-<div class="rounded bg-secondary-subtle d-flex align-items-center justify-content-center flex-shrink-0" style="width:86px;height:86px;font-size:2rem">👤</div>
-<?php endif;?>
-<div class="min-w-0">
-<h2 class="h4 mb-1"><?=e($student['name'])?></h2>
-<div class="text-secondary small student-email"><?=e($student['email'])?></div>
+<div class="card shadow-sm h-100 student-tile overflow-hidden">
+<div class="student-card-image subject-card-image" style="background-image:<?=($student['image_mime']?'url(\'student_image.php?id='.(int)$student['id'].'\')':'none')?>;">
+<div class="subject-card-overlay"></div>
+<div class="card-body position-relative d-flex flex-column justify-content-end student-card-body">
+<h2 class="h4 text-white mb-1 subject-card-title student-title"><?=e($student['name'])?></h2>
+<div class="row g-1 mt-1 small student-stats">
+<div class="col-4"><div class="bg-light bg-opacity-75 rounded p-2 text-center"><strong><?=e((string)$student['completed_tests'])?></strong><div class="text-secondary">toetsen</div></div></div>
+<div class="col-4"><div class="bg-light bg-opacity-75 rounded p-2 text-center"><strong><?=e(rtrim(rtrim(number_format((float)$student['average_score'],0,',','.'),'0'),','))?>%</strong><div class="text-secondary">gem.</div></div></div>
+<div class="col-4"><div class="bg-light bg-opacity-75 rounded p-2 text-center"><strong><?=e((string)intdiv((int)$student['active_seconds'],60))?></strong><div class="text-secondary">min.</div></div></div>
 </div>
-</div>
-<div class="row g-2 mt-3 small admin-stats">
-<div class="col-4"><div class="bg-light rounded p-2 text-center"><strong><?=e((string)$student['completed_tests'])?></strong><div class="text-secondary">toetsen</div></div></div>
-<div class="col-4"><div class="bg-light rounded p-2 text-center"><strong><?=e(rtrim(rtrim(number_format((float)$student['average_score'],0,',','.'),'0'),','))?>%</strong><div class="text-secondary">gem.</div></div></div>
-<div class="col-4"><div class="bg-light rounded p-2 text-center"><strong><?=e((string)intdiv((int)$student['active_seconds'],60))?></strong><div class="text-secondary">min.</div></div></div>
-</div>
-<div class="btn btn-primary w-100 mt-3 admin-action">Naar <?=e($student['name'])?> →</div>
+<div class="btn btn-primary w-100 admin-action mt-2">Naar <?=e($student['name'])?> →</div>
 </div>
 </div>
 </a>
