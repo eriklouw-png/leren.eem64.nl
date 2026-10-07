@@ -274,7 +274,60 @@ function openai_model():string{
     return trim((string)($config['ai']['openai_model']??'gpt-6-luna'));
 }
 
+
+/*
+ * AI usage logging.
+ * We store the usage returned by OpenAI for every API call so that
+ * token consumption and processing time can be analysed later.
+ */
+function ai_usage_log(string $callType,string $model,array $data,float $startedAt):void{
+    global $pdo;
+    try{
+        static $tableReady=false;
+        if(!$tableReady){
+            $pdo->exec("CREATE TABLE IF NOT EXISTS ai_usage (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                call_type VARCHAR(80) NOT NULL,
+                model VARCHAR(120) NOT NULL,
+                input_tokens INT UNSIGNED NULL,
+                cached_input_tokens INT UNSIGNED NULL,
+                output_tokens INT UNSIGNED NULL,
+                reasoning_tokens INT UNSIGNED NULL,
+                total_tokens INT UNSIGNED NULL,
+                duration_ms INT UNSIGNED NULL,
+                success TINYINT(1) NOT NULL DEFAULT 1,
+                PRIMARY KEY (id),
+                KEY idx_ai_usage_created_at (created_at),
+                KEY idx_ai_usage_call_type (call_type),
+                KEY idx_ai_usage_model (model)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            $tableReady=true;
+        }
+
+        $usage=is_array($data['usage']??null)?$data['usage']:[];
+        $inputTokens=isset($usage['input_tokens'])?(int)$usage['input_tokens']:null;
+        $cachedInputTokens=isset($usage['input_tokens_details']['cached_tokens'])?(int)$usage['input_tokens_details']['cached_tokens']:null;
+        $outputTokens=isset($usage['output_tokens'])?(int)$usage['output_tokens']:null;
+        $reasoningTokens=isset($usage['output_tokens_details']['reasoning_tokens'])?(int)$usage['output_tokens_details']['reasoning_tokens']:null;
+        $totalTokens=isset($usage['total_tokens'])?(int)$usage['total_tokens']:null;
+        $durationMs=max(0,(int)round((microtime(true)-$startedAt)*1000));
+        $success=isset($data['_leren_error'])?0:1;
+
+        $stmt=$pdo->prepare("INSERT INTO ai_usage
+            (call_type,model,input_tokens,cached_input_tokens,output_tokens,reasoning_tokens,total_tokens,duration_ms,success)
+            VALUES (?,?,?,?,?,?,?,?,?)");
+        $stmt->execute([
+            $callType,$model,$inputTokens,$cachedInputTokens,$outputTokens,
+            $reasoningTokens,$totalTokens,$durationMs,$success
+        ]);
+    }catch(Throwable $e){
+        // Usage logging must never make an AI request fail.
+    }
+}
+
 function openai_generate(string $input):?array{
+    $aiStartedAt=microtime(true);
     $apiKey=openai_api_key();
     if($apiKey==='')return ['_leren_error'=>'OPENAI_API_KEY ontbreekt in de container.'];
 
@@ -341,10 +394,12 @@ function openai_generate(string $input):?array{
         $message=(string)($data['error']['message']??'Onbekende OpenAI API-fout.');
         return ['_leren_error'=>'OpenAI API HTTP '.$statusCode.': '.$message];
     }
+    ai_usage_log('open_answer_grade',openai_model(),$data,$aiStartedAt);
     return $data;
 }
 
 function openai_generate_text_analysis(string $input):?array{
+    $aiStartedAt=microtime(true);
     $apiKey=openai_api_key();
     if($apiKey==='')return ['_leren_error'=>'OPENAI_API_KEY ontbreekt in de container.'];
     $payload=[
@@ -401,10 +456,12 @@ function openai_generate_text_analysis(string $input):?array{
         $message=(string)($data['error']['message']??'Onbekende OpenAI API-fout.');
         return ['_leren_error'=>'OpenAI API HTTP '.$statusCode.': '.$message];
     }
+    ai_usage_log('test_query_analysis',openai_model(),$data,$aiStartedAt);
     return $data;
 }
 
 function openai_generate_with_images(string $input,array $imagePaths):?array{
+    $aiStartedAt=microtime(true);
     $apiKey=openai_api_key();
     if($apiKey==='')return ['_leren_error'=>'OPENAI_API_KEY ontbreekt in de container.'];
 
@@ -486,10 +543,12 @@ function openai_generate_with_images(string $input,array $imagePaths):?array{
         $message=(string)($data['error']['message']??'Onbekende OpenAI API-fout.');
         return ['_leren_error'=>'OpenAI API HTTP '.$statusCode.': '.$message];
     }
+    ai_usage_log('test_source_analysis',openai_model(),$data,$aiStartedAt);
     return $data;
 }
 
 function openai_generate_test_questions(string $input,array $imagePaths,bool $useGeneralKnowledge=false):?array{
+    $aiStartedAt=microtime(true);
     $apiKey=openai_api_key();
     if($apiKey==='')return ['_leren_error'=>'OPENAI_API_KEY ontbreekt in de container.'];
 
@@ -580,10 +639,12 @@ function openai_generate_test_questions(string $input,array $imagePaths,bool $us
         $message=(string)($data['error']['message']??'Onbekende OpenAI API-fout.');
         return ['_leren_error'=>'OpenAI API HTTP '.$statusCode.': '.$message];
     }
+    ai_usage_log('generated_test_questions',openai_model(),$data,$aiStartedAt);
     return $data;
 }
 
 function openai_search_image(string $query):?array{
+    $aiStartedAt=microtime(true);
     $apiKey=openai_api_key();
     $query=trim($query);
     if($apiKey===''||$query==='')return null;
@@ -616,6 +677,7 @@ function openai_search_image(string $query):?array{
             if(($result['type']??'')!=='image_result')continue;
             $url=trim((string)($result['image_url']??''));
             if($url!==''&&preg_match('~^https://~i',$url)){
+                ai_usage_log('image_web_search',openai_model(),$data,$aiStartedAt);
                 return ['image_url'=>$url,'source_url'=>trim((string)($result['source_website_url']??'')),'caption'=>trim((string)($result['caption']??''))];
             }
         }
@@ -657,6 +719,7 @@ function ai_save_svg(string $svg,string $directory):?string{
 }
 
 function openai_generate_image(string $prompt,string $directory):?string{
+    $aiStartedAt=microtime(true);
     $apiKey=openai_api_key();
     if($apiKey==='')return null;
     $prompt=trim($prompt);
@@ -715,7 +778,8 @@ function openai_generate_image(string $prompt,string $directory):?string{
 
     if($body===false||$body==='')return null;
     $data=json_decode($body,true);
-    if(!is_array($data))return null;
+        if(!is_array($data))return null;
+        ai_usage_log('image_generation','gpt-image-2',$data,$aiStartedAt);
     $b64=$data['data'][0]['b64_json']??null;
     if(!is_string($b64)||$b64==='')return null;
     $bytes=base64_decode($b64,true);
@@ -727,6 +791,7 @@ function openai_generate_image(string $prompt,string $directory):?string{
 }
 
 function openai_generate_topic_summary(string $input,array $imagePaths):?array{
+    $aiStartedAt=microtime(true);
     $apiKey=openai_api_key();
     if($apiKey==='')return ['_leren_error'=>'OPENAI_API_KEY ontbreekt in de container.'];
 
@@ -788,6 +853,7 @@ function openai_generate_topic_summary(string $input,array $imagePaths):?array{
         $message=(string)($data['error']['message']??'Onbekende OpenAI API-fout.');
         return ['_leren_error'=>'OpenAI API HTTP '.$statusCode.': '.$message];
     }
+    ai_usage_log('topic_summary',openai_model(),$data,$aiStartedAt);
     return $data;
 }
 
