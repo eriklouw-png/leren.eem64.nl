@@ -84,7 +84,7 @@ foreach($rows as $row){
     $byUser[$userKey]['calls']++;
     $byUser[$userKey]['tokens']+=(int)($row['total_tokens']??0);
     $byUser[$userKey]['cost']+=$cost;
-    $page=$row['page_name']?:'Onbekende locatie';
+    $page=isset($row['page_name'])&&$row['page_name']!==''?(string)$row['page_name']:'Onbekende locatie';
     if(!isset($byPage[$page]))$byPage[$page]=['calls'=>0,'tokens'=>0,'cost'=>0.0];
     $byPage[$page]['calls']++;
     $byPage[$page]['tokens']+=(int)($row['total_tokens']??0);
@@ -238,7 +238,7 @@ function ai_pct(?float $n):string{return $n===null?'—':(($n>0?'+':'').number_f
 <h2 class="h5">Laatste AI-opdrachten</h2>
 <div class="table-responsive"><table class="table table-sm ai-table mb-0"><thead><tr><th>Datum</th><th>Opdracht</th><th>Gebruiker</th><th>Model</th><th class="text-end">Tokens</th><th class="text-end">Kosten</th><th>Status</th></tr></thead><tbody>
 <?php foreach($recent as $item):$row=$item['row'];?><tr>
-<td><?=e(date('d-m H:i',strtotime($row['created_at'])))?></td><td><?=e(ai_type_name((string)$row['call_type']))?></td><td><?=e($row['user_name']?:'Onbekend')?></td><td><?=e($row['model'])?></td><td class="text-end"><?=ai_tokens((int)($row['total_tokens']??0))?></td><td class="text-end"><?=ai_money($item['cost'])?></td><td><?=((int)$row['success']===1)?'✓':'Mislukt'?></td>
+<td><?=e(date('d-m H:i',strtotime($row['created_at'])))?></td><td><?=e(ai_type_name((string)$row['call_type']))?></td><td><?=e(($row['user_name']??'')?:'Onbekend')?></td><td><?=e($row['model'])?></td><td class="text-end"><?=ai_tokens((int)($row['total_tokens']??0))?></td><td class="text-end"><?=ai_money($item['cost'])?></td><td><?=((int)$row['success']===1)?'✓':'Mislukt'?></td>
 </tr><?php endforeach;?>
 <?php if(!$recent):?><tr><td colspan="7" class="text-secondary">Geen recente AI-opdrachten.</td></tr><?php endif;?>
 </tbody></table></div>
