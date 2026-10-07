@@ -524,10 +524,10 @@ function openai_generate_test_questions(string $input,array $imagePaths,bool $us
                                                 'explanation'=>['type'=>'string'],
                                                 'source_page'=>['type'=>'integer','minimum'=>1,'maximum'=>10],
                                                 'use_image'=>['type'=>'boolean'],
-                                                'clock_hour'=>['type'=>'integer','minimum'=>1,'maximum'=>12],
-                                                'clock_minute'=>['type'=>'integer','minimum'=>0,'maximum'=>59]
+                                                'clock_hour'=>['type'=>['integer','null'],'minimum'=>1,'maximum'=>12],
+                                                'clock_minute'=>['type'=>['integer','null'],'minimum'=>0,'maximum'=>59]
                                             ],
-                                            'required'=>['type','question','correct_answer','options','correct_option','accepted_answers','explanation','source_page','use_image'],
+                                            'required'=>['type','question','correct_answer','options','correct_option','accepted_answers','explanation','source_page','use_image','clock_hour','clock_minute'],
                                             'additionalProperties'=>false
                                         ]
                                     ]
