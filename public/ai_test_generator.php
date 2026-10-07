@@ -49,19 +49,28 @@ function ai_type_label(string $type):string{
 $requestedSpecs=ai_requested_specs($requestedSpecs);
 
 function ai_query_subject_label(string $query):string{
-    $label=trim(preg_replace('/\\s+/u',' ',$query));
+    $label=trim((string)(preg_replace('/\\s+/u',' ',$query)??$query));
     $patterns=[
         '/^maak\\s+(?:een\\s+)?(?:toets|overhoring|quiz)\\s+(?:over|van)\\s+/iu',
         '/^maak\\s+(?:een\\s+)?(?:toets|overhoring|quiz)\\s+(?:om te leren|voor)\\s+/iu',
         '/^(?:toets|overhoring|quiz)\\s+(?:over|van)\\s+/iu'
     ];
-    foreach($patterns as $pattern){
-        $label=preg_replace($pattern,'',$label,1);
-    }
+    foreach($patterns as $pattern)$label=preg_replace($pattern,'',$label,1);
     $label=trim($label," \\t\\n\\r\\\"'.,:;-");
     if($label==='')return '';
-    if(mb_strlen($label)>70)$label=mb_substr($label,0,67).'...';
-    return $label;
+
+    // Houd het onderwerp op het scherm kort: maximaal twee inhoudelijke woorden.
+    $stop=['de','het','een','en','van','voor','over','met','op','in','uit','bij','naar','toets','overhoring','quiz','maak','maken','leren','om','te'];
+    $words=preg_split('/\\s+/u',$label,-1,PREG_SPLIT_NO_EMPTY)?:[];
+    $meaningful=[];
+    foreach($words as $word){
+        $clean=trim($word," \\t\\n\\r\\\"'.,:;-");
+        if($clean===''||in_array(mb_strtolower($clean,'UTF-8'),$stop,true))continue;
+        $meaningful[]=$clean;
+        if(count($meaningful)>=2)break;
+    }
+    if($meaningful)return implode(' ',$meaningful);
+    return mb_substr($label,0,40);
 }
 
 function ai_summary_image_dir(int $topicId):string{
@@ -453,6 +462,8 @@ $queryLabel=ai_query_subject_label($query);
 $displayTopicName=$queryLabel!==''?$queryLabel:$topicName;
 $savedRequest=$_SESSION['ai_test_analysis']['request']??['prefix'=>$prefix,'specs'=>$requestedSpecs];
 $savedSummaryText=(string)($_SESSION['ai_test_analysis']['summary_text']??'');
+$queryLabel=ai_query_subject_label($query);
+$displayTopicName=$queryLabel!==''?$queryLabel:$topicName;
 ?>
 <!doctype html>
 <html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
