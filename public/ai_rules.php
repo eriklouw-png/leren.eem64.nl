@@ -35,10 +35,20 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
  if($action==='delete'){ $id=filter_var($_POST['id']??null,FILTER_VALIDATE_INT);if($id)$pdo->prepare("DELETE FROM ai_test_rules WHERE id=?")->execute([$id]);redirect('ai_rules.php?saved=1');}
 }
 $subjects=$pdo->query("SELECT id,name FROM subjects ORDER BY name")->fetchAll();
+$seedRules=[
+ ['duits','vocabulary','Woordjes oefenen',1,0,0,0,1,'Herken woordenlijsten en woordparen, ook wanneer ze niet in twee kolommen staan. Herken meerdere blokken en secties. Neem expliciet vermelde meervouden en vrouwelijke vormen als afzonderlijke leeritems op.','Maak beide richtingen tussen de brontaal en Nederlands. Voeg alleen als de bron dit duidelijk aangeeft (mannelijk), (vrouwelijk) of (meervoud) toe. Verzin geen grammaticale vormen.',1],
+ ['duits','sentences','Zinnen oefenen',1,0,0,0,1,'Herken pagina’s waarop volledige zinnen of voorbeeldzinnen met vertaling centraal staan. De zinnen hoeven niet in twee kolommen te staan.','Neem volledige zinnen letterlijk over en maak beide vertaalrichtingen. Behoud relevante leestekens en verander de inhoud van bronzinnen niet.',2],
+ ['duits','grammar','Grammatica',1,0,0,1,1,'Herken grammatica-uitleg, regels, tabellen, vervoegingen en grammaticale voorbeelden. Behandel een pagina niet als woorden- of zinnenlijst wanneer grammatica duidelijk het hoofddoel is.','Maak toepassingsgerichte vragen over de regels en voorbeelden uit de bron. Gebruik zowel open vragen als multiple choice wanneer dat is toegestaan. Gebruik uitsluitend informatie uit de bron.',3]
+];
+$insert=$pdo->prepare("INSERT IGNORE INTO ai_test_rules(subject_id,test_type,label,enabled,allow_summary,allow_images,allow_multiple_choice,allow_open,recognition_instructions,generation_instructions,sort_order) SELECT id,?,?,?,?,?,?,?,?,? FROM subjects WHERE LOWER(name)=?");
+foreach($seedRules as $r){
+  $insert->execute([$r[1],$r[2],$r[3],$r[4],$r[5],$r[6],$r[7],$r[8],$r[9],$r[10],$r[0]]);
+}
 $rules=$pdo->query("SELECT * FROM ai_test_rules ORDER BY subject_id,sort_order,label")->fetchAll();
 $bySubject=[];foreach($rules as $r)$bySubject[(int)$r['subject_id']][]=$r;
-?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI-instructies per vak</title>
-<style>.rule-card{border:1px solid #465149;border-radius:14px;padding:1rem;margin-bottom:1rem;background:#202722}.rule-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.rule-options{display:flex;flex-wrap:wrap;gap:.75rem 1.25rem;margin:.75rem 0}.rule-type{font-size:.8rem;opacity:.75;text-transform:uppercase;letter-spacing:.04em}@media(max-width:767px){.rule-grid{grid-template-columns:1fr}}</style></head><body><main class="container py-4">
+?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI-instructies per vak</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>.rule-card{border:1px solid #465149;border-radius:14px;padding:1rem;margin-bottom:1rem;background:#202722}.rule-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.rule-options{display:flex;flex-wrap:wrap;gap:.75rem 1.25rem;margin:.75rem 0}.rule-type{font-size:.8rem;opacity:.75;text-transform:uppercase;letter-spacing:.04em}@media(max-width:767px){.rule-grid{grid-template-columns:1fr}}.rule-card input.form-control{min-width:220px}.rule-card textarea{min-height:140px}.rule-card{box-shadow:0 2px 8px rgba(0,0,0,.12)}
+</style></head><body><main class="container py-4">
 <div class="d-flex justify-content-between align-items-center mb-4"><div><h1 class="mb-1">AI-instructies per vak</h1><div class="text-secondary">Beheer per vak en type sub-test de AI-herkenning, opties en instructies.</div></div><a class="btn btn-outline-light" href="admin.php">← Beheer</a></div>
 <?php if(isset($_GET['saved'])):?><div class="alert alert-success">De AI-instructies zijn opgeslagen.</div><?php endif;?>
 <form method="post"><input type="hidden" name="action" value="save">
