@@ -3,6 +3,19 @@ require __DIR__.'/../app/bootstrap.php';
 require_admin();
 
 $days=(int)($_GET['days']??30);
+
+// Upgrade bestaande AI-log automatisch. Oude installaties hebben nog geen user_id.
+try{
+    $hasUserId=$pdo->query("SHOW COLUMNS FROM ai_usage LIKE 'user_id'")->fetch();
+    if(!$hasUserId){
+        $pdo->exec("ALTER TABLE ai_usage ADD COLUMN user_id INT UNSIGNED NULL AFTER created_at");
+    }
+    try{$pdo->exec("ALTER TABLE ai_usage ADD KEY idx_ai_usage_user(created_at,user_id)");}catch(Throwable $ignored){}
+}catch(Throwable $e){
+    // De pagina kan ook zonder gebruikerskoppeling de historische totalen tonen.
+}
+
+$days=(int)($_GET['days']??30);
 if(!in_array($days,[7,30,90,365],true))$days=30;
 
 function ai_usage_cost(array $row):float{
