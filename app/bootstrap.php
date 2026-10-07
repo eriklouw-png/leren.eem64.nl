@@ -575,9 +575,11 @@ function openai_generate_image(string $prompt,string $directory):?string{
     if(!is_dir($directory)&&!@mkdir($directory,0755,true))return null;
     $payload=[
         'model'=>'gpt-image-2',
-        'prompt'=>$prompt,
+        'prompt'=>'Maak een eenvoudige educatieve illustratie voor een schoolvraag. Gebruik een rustige, duidelijke compositie, weinig details en geen decoratieve elementen. Zet geen tekst, labels of antwoorden in de afbeelding tenzij de afbeelding dat inhoudelijk noodzakelijk maakt. De afbeelding moet vooral functioneel en direct herkenbaar zijn.\n\n'.$prompt,
         'size'=>'1024x1024',
-        'output_format'=>'png'
+        'quality'=>'low',
+        'output_format'=>'jpeg',
+        'output_compression'=>65
     ];
     $context=stream_context_create(['http'=>[
         'method'=>'POST',
@@ -593,7 +595,7 @@ function openai_generate_image(string $prompt,string $directory):?string{
     if(!is_string($b64)||$b64==='')return null;
     $bytes=base64_decode($b64,true);
     if($bytes===false)return null;
-    $filename='ai_'.bin2hex(random_bytes(12)).'.png';
+    $filename='ai_'.bin2hex(random_bytes(12)).'.jpg';
     if(@file_put_contents($directory.'/'.$filename,$bytes)===false)return null;
     return $filename;
 }
