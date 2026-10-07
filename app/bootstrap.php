@@ -599,9 +599,11 @@ function openai_generate_test_questions(string $input,array $imagePaths,bool $us
                                                 'use_image'=>['type'=>'boolean'],
                                                 'image_prompt'=>['type'=>'string'],
                                                 'image_search_query'=>['type'=>'string'],
-                                                'svg_code'=>['type'=>'string']
+                                                'svg_code'=>['type'=>'string'],
+                                                'image_method'=>['type'=>'string','enum'=>['none','web','svg','generate']],
+                                                'image_reason'=>['type'=>'string']
                                             ],
-                                            'required'=>['type','question','correct_answer','options','correct_option','accepted_answers','explanation','source_page','use_image','image_prompt','image_search_query','svg_code'],
+                                            'required'=>['type','question','correct_answer','options','correct_option','accepted_answers','explanation','source_page','use_image','image_prompt','image_search_query','svg_code','image_method','image_reason'],
                                             'additionalProperties'=>false
                                         ]
                                     ]
