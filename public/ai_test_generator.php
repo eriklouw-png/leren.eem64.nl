@@ -87,6 +87,31 @@ function ai_cleanup_source_images(array $paths):void{
     }
 }
 
+function ai_create_clock_svg(int $hour,int $minute,string $directory):string{
+    $hour=$hour===12?12:$hour%12;
+    if($hour<1)$hour=1;
+    $minute=max(0,min(59,$minute));
+    if(!is_dir($directory)&&!@mkdir($directory,0755,true))throw new RuntimeException('De map voor klokafbeeldingen kon niet worden aangemaakt.');
+    $filename='clock_'.bin2hex(random_bytes(12)).'.svg';
+    $path=$directory.'/'.$filename;
+    $cx=200;$cy=200;$r=170;
+    $minuteAngle=($minute/60)*360-90;
+    $hourAngle=((($hour%12)+$minute/60)/12)*360-90;
+    $mx=$cx+130*cos(deg2rad($minuteAngle));$my=$cy+130*sin(deg2rad($minuteAngle));
+    $hx=$cx+95*cos(deg2rad($hourAngle));$hy=$cy+95*sin(deg2rad($hourAngle));
+    $ticks='';
+    for($i=0;$i<60;$i++){
+        $a=deg2rad($i*6-90);
+        $outer=168;$inner=($i%5===0)?153:160;
+        $x1=$cx+$inner*cos($a);$y1=$cy+$inner*sin($a);
+        $x2=$cx+$outer*cos($a);$y2=$cy+$outer*sin($a);
+        $ticks.='<line x1="'.round($x1,2).'" y1="'.round($y1,2).'" x2="'.round($x2,2).'" y2="'.round($y2,2).'" stroke="#222" stroke-width="'.($i%5===0?4:2).'" stroke-linecap="round"/>';
+    }
+    $svg='<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" rx="24" fill="white"/><circle cx="200" cy="200" r="172" fill="white" stroke="#222" stroke-width="6"/>'.$ticks.'<text x="200" y="52" text-anchor="middle" font-family="Arial,sans-serif" font-size="25" font-weight="700">12</text><text x="348" y="208" text-anchor="middle" font-family="Arial,sans-serif" font-size="25" font-weight="700">3</text><text x="200" y="365" text-anchor="middle" font-family="Arial,sans-serif" font-size="25" font-weight="700">6</text><text x="52" y="208" text-anchor="middle" font-family="Arial,sans-serif" font-size="25" font-weight="700">9</text><line x1="200" y1="200" x2="'.round($hx,2).'" y2="'.round($hy,2).'" stroke="#222" stroke-width="10" stroke-linecap="round"/><line x1="200" y1="200" x2="'.round($mx,2).'" y2="'.round($my,2).'" stroke="#222" stroke-width="6" stroke-linecap="round"/><circle cx="200" cy="200" r="9" fill="#222"/></svg>';
+    if(@file_put_contents($path,$svg)===false)throw new RuntimeException('De klokafbeelding kon niet worden opgeslagen.');
+    return $filename;
+}
+
 function ai_cleanup_session():void{
     if(isset($_SESSION['ai_test_analysis']['images']) && is_array($_SESSION['ai_test_analysis']['images'])){
         ai_cleanup_source_images($_SESSION['ai_test_analysis']['images']);
@@ -152,7 +177,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 }
                 $prompt=($query!==''
                     ? 'De gebruiker gaf de volgende opdracht/onderwerp voor de toets: "'.$query.'". Gebruik dit als inhoudelijke basis en gebruik algemene kennis om de vragen te maken. Beperk je niet tot schoolboekpagina’s, want er zijn geen pagina’s aangeleverd. '
-                    : '').'Maak nu concrete oefentoetsvragen voor precies deze gevraagde sub-tests. '.($query!=='' ? 'Omdat dit een query-toets zonder geüploade schoolboekpagina’s is, baseer je de vragen op de gebruikersopdracht en gebruik je algemene kennis. ' : 'Gebruik uitsluitend de informatie uit de schoolboekpagina’s. ').'Probeer het gevraagde aantal daadwerkelijk te halen, ook als de eerdere analyse een lagere schatting van het aantal unieke vragen gaf. Gebruik de bron zo volledig mogelijk en maak binnen één sub-test verschillende vraagvormen en invalshoeken. Bij grammatica, tabellen, vervoegingen, begrippen en korte teksten mag dezelfde broninformatie meerdere keren worden bevraagd als de vraag wezenlijk anders is. Verzin geen informatie die niet uit de bron volgt; als het gevraagde aantal echt niet haalbaar is zonder verzinnen of vrijwel identieke vragen, maak dan zoveel goede vragen als verantwoord mogelijk en leg dat in de titel/description niet uit maar lever de vragen. Maak exact '.count($requested).' sub-tests met de gevraagde aantallen vragen. De gewenste opdrachten zijn: '.json_encode($requested,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'. Dezelfde leerstof en feiten mogen in verschillende sub-tests opnieuw worden gebruikt: een multiple-choice-sub-test en een open-vragen-sub-test mogen dus inhoudelijk op dezelfde broninformatie zijn gebaseerd. Ook mogen verschillende sub-tests dezelfde leerstof behandelen. Binnen iedere afzonderlijke sub-test moeten de vragen wel voldoende van elkaar verschillen en niet vrijwel identiek zijn. Bepaal per sub-test zelf een korte, duidelijke titel op basis van de leerstof; voeg geen prefix toe en gebruik geen algemene titels zoals "Toets 1" als een inhoudelijke titel mogelijk is. Bij meerdere vergelijkbare sub-tests moeten de titels uniek zijn. Maak per sub-test precies het gevraagde aantal vragen. Bij mc zijn alle vragen multiple choice met exact vier antwoorden en exact één correct antwoord. Bij open zijn alle vragen open en moet accepted_answers minimaal één inhoudelijk geldig antwoord bevatten. Bij combinatie moet je een evenwichtige mix van mc en open maken. Gebruik de broninformatie dus gerust opnieuw in een andere vraagvorm; probeer niet kunstmatig alle sub-tests samen tot één unieke vragenpool te beperken. source_page is de pagina uit de geüploade set waarop de vraag het duidelijkst gebaseerd is. Bij een query zonder geüploade pagina’s is source_page altijd 1 en use_image altijd false. Zet use_image alleen op true als een afbeelding, kaart, schema of foto op die pagina echt relevant is voor het beantwoorden van de vraag.';
+                    : '').'Maak nu concrete oefentoetsvragen voor precies deze gevraagde sub-tests. '.($query!=='' ? 'Omdat dit een query-toets zonder geüploade schoolboekpagina’s is, baseer je de vragen op de gebruikersopdracht en gebruik je algemene kennis. ' : 'Gebruik uitsluitend de informatie uit de schoolboekpagina’s. ').'Probeer het gevraagde aantal daadwerkelijk te halen, ook als de eerdere analyse een lagere schatting van het aantal unieke vragen gaf. Gebruik de bron zo volledig mogelijk en maak binnen één sub-test verschillende vraagvormen en invalshoeken. Bij grammatica, tabellen, vervoegingen, begrippen en korte teksten mag dezelfde broninformatie meerdere keren worden bevraagd als de vraag wezenlijk anders is. Verzin geen informatie die niet uit de bron volgt; als het gevraagde aantal echt niet haalbaar is zonder verzinnen of vrijwel identieke vragen, maak dan zoveel goede vragen als verantwoord mogelijk en leg dat in de titel/description niet uit maar lever de vragen. Maak exact '.count($requested).' sub-tests met de gevraagde aantallen vragen. De gewenste opdrachten zijn: '.json_encode($requested,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'. Dezelfde leerstof en feiten mogen in verschillende sub-tests opnieuw worden gebruikt: een multiple-choice-sub-test en een open-vragen-sub-test mogen dus inhoudelijk op dezelfde broninformatie zijn gebaseerd. Ook mogen verschillende sub-tests dezelfde leerstof behandelen. Binnen iedere afzonderlijke sub-test moeten de vragen wel voldoende van elkaar verschillen en niet vrijwel identiek zijn. Bepaal per sub-test zelf een korte, duidelijke titel op basis van de leerstof; voeg geen prefix toe en gebruik geen algemene titels zoals "Toets 1" als een inhoudelijke titel mogelijk is. Bij meerdere vergelijkbare sub-tests moeten de titels uniek zijn. Maak per sub-test precies het gevraagde aantal vragen. Bij mc zijn alle vragen multiple choice met exact vier antwoorden en exact één correct antwoord. Bij open zijn alle vragen open en moet accepted_answers minimaal één inhoudelijk geldig antwoord bevatten. Bij combinatie moet je een evenwichtige mix van mc en open maken. Gebruik de broninformatie dus gerust opnieuw in een andere vraagvorm; probeer niet kunstmatig alle sub-tests samen tot één unieke vragenpool te beperken. source_page is de pagina uit de geüploade set waarop de vraag het duidelijkst gebaseerd is. Bij een query over klokkijken moet iedere vraag waarbij de leerling een tijd op een wijzerplaat moet aflezen use_image op true zetten en clock_hour en clock_minute invullen met exact de getoonde tijd. Gebruik voor zulke vragen altijd source_page 1. Bij andere query-vragen is use_image false en source_page 1. Zet use_image alleen op true als een afbeelding, kaart, schema of foto op die pagina echt relevant is voor het beantwoorden van de vraag.';
                 $data=openai_generate_test_questions($prompt,(array)($saved['images']??[]),$query!=='' && empty($saved['images']));
                 if(isset($data['_leren_error']))$errors[]=$data['_leren_error'];
                 else{
@@ -222,7 +247,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         if(!$accepted)$accepted=[$correct];
                         $correct=implode(' | ',$accepted);
                     }
-                    $validQuestions[]=['type'=>$type,'question'=>$question,'correct'=>$correct,'options'=>$options,'correct_option'=>$type==='mc'?(int)$q['correct_option']:0,'explanation'=>$explanation,'source_page'=>$sourcePage,'use_image'=>$useImage];
+                    $validQuestions[]=['type'=>$type,'question'=>$question,'correct'=>$correct,'options'=>$options,'correct_option'=>$type==='mc'?(int)$q['correct_option']:0,'explanation'=>$explanation,'source_page'=>$sourcePage,'use_image'=>$useImage,'clock_hour'=>(int)($q['clock_hour']??0),'clock_minute'=>(int)($q['clock_minute']??0)];
                 }
                 if($validQuestions)$validTests[]=['title'=>$title,'description'=>$description,'questions'=>$validQuestions];
             }
@@ -258,6 +283,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         foreach($test['questions'] as $sort=>$q){
                             $imagePath=null;
                             if($q['use_image']){
+                                if(($saved['query']??'')!=='' && (int)($q['clock_hour']??0)>=1){
+                                    $imagePath=ai_create_clock_svg((int)$q['clock_hour'],(int)($q['clock_minute']??0),$questionImageDir);
+                                    $createdQuestionImages[]=$questionImageDir.'/'.$imagePath;
+                                }else{
                                 $source=$sourceImages[$q['source_page']-1]??null;
                                 if($source&&is_file($source)){
                                     $mime=(string)(@mime_content_type($source)?:'');
@@ -266,6 +295,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                                     if(!@copy($source,$questionImageDir.'/'.$filename))throw new RuntimeException('Afbeelding kon niet aan een vraag worden gekoppeld.');
                                     $imagePath=$filename;
                                     $createdQuestionImages[]=$questionImageDir.'/'.$filename;
+                                }
                                 }
                             }
                             $qIns->execute([$testId,$q['question'],$imagePath,$q['type']==='mc'?'multiple_choice':'open',$q['explanation'],$sort+1]);
