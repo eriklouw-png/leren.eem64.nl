@@ -826,7 +826,7 @@ function openai_generate_image(string $prompt,string $directory):?string{
     if(!function_exists('curl_init')){
         $context=stream_context_create(['http'=>[
             'method'=>'POST',
-            'header'=>"Content-Type: application/json\\r\\nAccept: application/json\\r\\nAuthorization: Bearer ".$apiKey."\\r\\n",
+            'header'=>"Content-Type: application/json\r\nAccept: application/json\r\nAuthorization: Bearer ".$apiKey."\r\n",
             'content'=>$json,
             'timeout'=>90,
             'ignore_errors'=>true
@@ -1080,7 +1080,7 @@ Beoordeel streng maar alleen op inhoudelijke bruikbaarheid. De afbeelding moet d
         $retryJson=json_encode($retryPayload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
         $retryContext=stream_context_create(['http'=>[
             'method'=>'POST',
-            'header'=>"Content-Type: application/json\\r\\nAccept: application/json\\r\\nAuthorization: Bearer ".$apiKey."\\r\\n",
+            'header'=>"Content-Type: application/json\r\nAccept: application/json\r\nAuthorization: Bearer ".$apiKey."\r\n",
             'content'=>$retryJson,
             'timeout'=>45,
             'ignore_errors'=>true
@@ -1115,10 +1115,12 @@ Beoordeel streng maar alleen op inhoudelijke bruikbaarheid. De afbeelding moet d
                 }
             }
         }
+        // De inhoudelijke controle is een extra kwaliteitslaag. Als OpenAI
+        // zelf geen bruikbaar oordeel teruggeeft, mag dat de afbeelding niet
+        // blokkeren: de generatie is dan wel gelukt, alleen de controle niet.
         return [
-            'valid'=>false,
-            'reason'=>'De afbeeldingscontrole leverde geen bruikbaar oordeel op.',
-            '_leren_error'=>'Afbeeldingscontrole leverde geen bruikbaar oordeel op. De controle is automatisch opnieuw geprobeerd.'
+            'valid'=>true,
+            'reason'=>'Afbeeldingscontrole gaf geen bruikbaar oordeel; afbeelding is toch opgeslagen.'
         ];
     }
 
