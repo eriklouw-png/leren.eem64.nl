@@ -48,6 +48,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $error='Vul een naam voor het vak in.';
     }else{
         try{
+            $createdNewSubject=false;
             if($postId){
                 $x=$pdo->prepare("UPDATE subjects SET name=?,description=? WHERE id=?");
                 $x->execute([$name,$description!==''?$description:null,$postId]);
@@ -56,6 +57,41 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $x=$pdo->prepare("INSERT INTO subjects(name,description) VALUES(?,?)");
                 $x->execute([$name,$description!==''?$description:null]);
                 $id=(int)$pdo->lastInsertId();
+                $createdNewSubject=true;
+            }
+
+            // Bij een nieuw vak laat GPT een eerste set AI-instructies maken.
+            // Bestaande vakregels worden als voorbeelden gebruikt; de beheerder kan ze daarna aanpassen.
+            $aiRulesCreated=true;
+            if($createdNewSubject){
+                $generatedRules=openai_generate_subject_ai_rules($name);
+                if(isset($generatedRules['_leren_error'])){
+                    $aiRulesCreated=false;
+                }else{
+                    $ruleStmt=$pdo->prepare("INSERT INTO ai_test_rules
+                        (subject_id,test_type,label,enabled,allow_summary,allow_images,allow_multiple_choice,allow_open,recognition_instructions,generation_instructions,sort_order)
+                        VALUES(?,?,?,?,?,?,?,?,?,?,?)
+                        ON DUPLICATE KEY UPDATE
+                        label=VALUES(label),enabled=VALUES(enabled),allow_summary=VALUES(allow_summary),allow_images=VALUES(allow_images),
+                        allow_multiple_choice=VALUES(allow_multiple_choice),allow_open=VALUES(allow_open),
+                        recognition_instructions=VALUES(recognition_instructions),generation_instructions=VALUES(generation_instructions),
+                        sort_order=VALUES(sort_order),updated_at=NOW()");
+                    foreach(($generatedRules['rules']??[]) as $rule){
+                        $type=preg_replace('/[^a-z0-9_-]/i','',(string)($rule['test_type']??''));
+                        $label=trim((string)($rule['label']??''));
+                        if($type===''||$label==='')continue;
+                        $ruleStmt->execute([
+                            $id,$type,$label,1,
+                            !empty($rule['allow_summary'])?1:0,
+                            !empty($rule['allow_images'])?1:0,
+                            !empty($rule['allow_multiple_choice'])?1:0,
+                            !empty($rule['allow_open'])?1:0,
+                            trim((string)($rule['recognition_instructions']??'')),
+                            trim((string)($rule['generation_instructions']??'')),
+                            max(1,min(99,(int)($rule['sort_order']??99)))
+                        ]);
+                    }
+                }
             }
 
             if(isset($_FILES['image']) && $_FILES['image']['error']!==UPLOAD_ERR_NO_FILE){
@@ -81,7 +117,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 }
             }
 
-            if(!$error)redirect('admin.php?saved=subject');
+            if(!$error){
+                $query=$createdNewSubject ? ($aiRulesCreated ? '&ai_rules=created' : '&ai_rules=failed') : '';
+                redirect('admin.php?saved=subject'.$query);
+            }
             $x=$pdo->prepare("SELECT id,name,description,image_mime FROM subjects WHERE id=?");
             $x->execute([$id]);$subject=$x->fetch();
         }catch(PDOException $e){
