@@ -113,9 +113,9 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
   .admin-tile .admin-action{font-size:.75rem;padding:.3rem .4rem}
   .student-grid{--bs-gutter-x:.65rem;--bs-gutter-y:.65rem;display:flex;flex-wrap:wrap}
   .student-grid>.student-col{flex:0 0 50%;max-width:50%;width:50%;padding-left:calc(var(--bs-gutter-x)*.5);padding-right:calc(var(--bs-gutter-x)*.5)}
-  .student-tile{width:100%;height:100%;aspect-ratio:1/1;overflow:hidden}
-  .student-tile .student-card-image{height:100%;min-height:0}
-  .student-tile .student-card-body{height:100%;min-height:0!important;padding:.8rem!important}
+  .student-tile{position:relative;width:100%;height:auto;aspect-ratio:1/1;overflow:hidden}
+  .student-tile .student-card-image{position:absolute;inset:0;width:100%;height:100%;min-height:0}
+  .student-tile .student-card-body{position:relative;z-index:1;height:100%;min-height:0!important;padding:.8rem!important}
   .student-tile .student-title{font-size:1.15rem}
   .student-tile .student-email{display:none}
   .student-tile .student-stats{font-size:.7rem}
@@ -123,7 +123,7 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
   .student-tile .admin-action{font-size:.75rem;padding:.3rem .4rem}
 }
 details .chevron{display:inline-block;transition:transform .15s ease;font-size:1.5rem;line-height:1}details[open] .chevron{transform:rotate(180deg)}.student-grid>.student-col{display:flex}
-.student-tile{width:100%}
+.student-tile{width:100%;height:auto}
 @media(min-width:768px){
   .student-grid>.student-col{flex-basis:50%;max-width:50%}
 }
