@@ -457,6 +457,142 @@ function openai_generate(string $input):?array{
     return $data;
 }
 
+function openai_generate_subject_ai_rules(string $subjectName):array{
+    global $pdo;
+    $startedAt=microtime(true);
+    $apiKey=openai_api_key();
+    if($apiKey==='')return ['_leren_error'=>'OPENAI_API_KEY ontbreekt in de container.'];
+
+    // Gebruik bestaande AI-regels als voorbeelden. Zo blijft een nieuw vak qua
+    // opzet zoveel mogelijk aansluiten bij vergelijkbare vakken.
+    $examples=[];
+    try{
+        $rows=$pdo->query("SELECT s.name,r.test_type,r.label,r.allow_summary,r.allow_images,r.allow_multiple_choice,r.allow_open,r.recognition_instructions,r.generation_instructions
+            FROM ai_test_rules r JOIN subjects s ON s.id=r.subject_id
+            ORDER BY s.name,r.sort_order,r.label")->fetchAll();
+        foreach($rows as $row){
+            $examples[]=$row;
+        }
+    }catch(Throwable $e){}
+
+    $exampleText='';
+    foreach($examples as $r){
+        $exampleText.="
+Vak: ".(string)$r['name'].
+            "
+Type: ".(string)$r['test_type'].
+            "
+Label: ".(string)$r['label'].
+            "
+Samenvatting: ".((int)$r['allow_summary']?'ja':'nee').
+            "
+Afbeeldingen: ".((int)$r['allow_images']?'ja':'nee').
+            "
+Multiple choice: ".((int)$r['allow_multiple_choice']?'ja':'nee').
+            "
+Open vragen: ".((int)$r['allow_open']?'ja':'nee').
+            "
+Herkenning: ".(string)$r['recognition_instructions'].
+            "
+Generatie: ".(string)$r['generation_instructions']."
+";
+    }
+
+    $instructions='Je maakt een eerste set beheerde AI-instructies voor een nieuw schoolvak in een Nederlandse oefentoets-app.
+Het nieuwe vak heet: "'.str_replace('"','',trim($subjectName)).'".
+
+Gebruik de bestaande vakconfiguraties hieronder als voorbeelden. Zoek vooral een inhoudelijk vergelijkbaar vak en neem daarvan de structuur en het detailniveau over. Bijvoorbeeld: talen kunnen lijken op Duits; aardrijkskunde kan qua algemene leerstrategie lijken op Biologie. Pas de inhoud uiteraard aan het nieuwe vak aan.
+
+Maak alleen typen die voor dit vak logisch zijn. Een type kan bijvoorbeeld mixed, grammar, vocabulary of sentences zijn, maar verzin geen aparte types zonder duidelijke reden.
+Gebruik bij taalvakken de bestaande taalstructuur als uitgangspunt.
+Voor gewone schoolvakken is meestal één mixed-regel voldoende.
+Neem samenvattingen, afbeeldingen, multiple choice en open vragen alleen op als ze voor het vak zinvol zijn.
+Schrijf compacte, concrete Nederlandse instructies die een docent direct kan bewerken.
+Verzin geen specifieke methode, lesboek of leerstof die je niet uit de vaknaam kunt afleiden.
+
+Geef uitsluitend JSON terug volgens het gevraagde schema.
+
+BESTAANDE CONFIGURATIES:
+'.$exampleText;
+
+    $payload=[
+        'model'=>openai_model(),
+        'instructions'=>$instructions,
+        'input'=>[['role'=>'user','content'=>[['type'=>'input_text','text'=>'Maak de AI-regels voor het vak: '.$subjectName]]]],
+        'max_output_tokens'=>2500,
+        'store'=>false,
+        'text'=>['format'=>[
+            'type'=>'json_schema',
+            'name'=>'subject_ai_rules',
+            'strict'=>true,
+            'schema'=>[
+                'type'=>'object',
+                'properties'=>[
+                    'rules'=>['type'=>'array','minItems'=>1,'maxItems'=>6,'items'=>[
+                        'type'=>'object',
+                        'properties'=>[
+                            'test_type'=>['type'=>'string'],
+                            'label'=>['type'=>'string'],
+                            'allow_summary'=>['type'=>'boolean'],
+                            'allow_images'=>['type'=>'boolean'],
+                            'allow_multiple_choice'=>['type'=>'boolean'],
+                            'allow_open'=>['type'=>'boolean'],
+                            'recognition_instructions'=>['type'=>'string'],
+                            'generation_instructions'=>['type'=>'string'],
+                            'sort_order'=>['type'=>'integer','minimum'=>1,'maximum'=>99]
+                        ],
+                        'required'=>['test_type','label','allow_summary','allow_images','allow_multiple_choice','allow_open','recognition_instructions','generation_instructions','sort_order'],
+                        'additionalProperties'=>false
+                    ]]
+                ],
+                'required'=>['rules'],
+                'additionalProperties'=>false
+            ]
+        ]]
+    ];
+
+    $context=stream_context_create(['http'=>[
+        'method'=>'POST',
+        'header'=>"Content-Type: application/json
+Accept: application/json
+Authorization: Bearer ".$apiKey."
+",
+        'content'=>json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),
+        'timeout'=>60,
+        'ignore_errors'=>true
+    ]]);
+    $body=@file_get_contents('https://api.openai.com/v1/responses',false,$context);
+    $statusCode=0;
+    foreach(($http_response_header??[]) as $header){
+        if(preg_match('~^HTTP/\S+\s+(\d+)~i',$header,$m)){$statusCode=(int)$m[1];break;}
+    }
+    if($body===false)return ['_leren_error'=>'Kan geen verbinding maken met OpenAI. HTTP-status '.$statusCode.'.'];
+    $data=json_decode($body,true);
+    if(!is_array($data))return ['_leren_error'=>'OpenAI gaf geen geldige JSON terug. HTTP-status '.$statusCode.'.'];
+    if($statusCode<200||$statusCode>=300){
+        $message=(string)($data['error']['message']??'Onbekende OpenAI API-fout.');
+        ai_usage_log('subject_ai_rules_generation',openai_model(),array_merge($data,['_leren_error'=>$message]),$startedAt);
+        return ['_leren_error'=>'OpenAI API HTTP '.$statusCode.': '.$message];
+    }
+
+    ai_usage_log('subject_ai_rules_generation',openai_model(),$data,$startedAt);
+
+    $text='';
+    if(isset($data['output'])&&is_array($data['output'])){
+        foreach($data['output'] as $item){
+            foreach(($item['content']??[]) as $part){
+                if(isset($part['text'])&&is_string($part['text']))$text.=$part['text'];
+                elseif(isset($part['parsed'])&&is_array($part['parsed']))return $part['parsed'];
+            }
+        }
+    }
+    if($text!==''){
+        $decoded=json_decode(trim($text),true);
+        if(is_array($decoded)&&isset($decoded['rules'])&&is_array($decoded['rules']))return $decoded;
+    }
+    return ['_leren_error'=>'OpenAI gaf geen bruikbare AI-vakregels terug.'];
+}
+
 function openai_generate_text_analysis(string $input,string $managedInstructions=''):?array{
     $aiStartedAt=microtime(true);
     $apiKey=openai_api_key();
