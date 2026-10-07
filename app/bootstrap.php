@@ -730,6 +730,80 @@ function ai_save_svg(string $svg,string $directory):?string{
     return $filename;
 }
 
+function openai_edit_image(string $filePath,string $prompt,string $directory):?string{
+    $apiKey=openai_api_key();
+    if($apiKey===''||!is_file($filePath)||trim($prompt)==='')return null;
+    if(!is_dir($directory)&&!@mkdir($directory,0755,true))return null;
+
+    $inputPath=$filePath;
+    $temporaryPath=null;
+    $mime=(string)(@mime_content_type($filePath)?:'');
+    if($mime==='image/svg+xml'){
+        if(!class_exists('Imagick'))return null;
+        try{
+            $im=new Imagick();
+            $im->setBackgroundColor(new ImagickPixel('white'));
+            $im->readImage($filePath);
+            $im->setImageFormat('png');
+            $temporaryPath=sys_get_temp_dir().'/leren_ai_edit_'.bin2hex(random_bytes(8)).'.png';
+            $im->writeImage($temporaryPath);
+            $im->clear();$im->destroy();
+            $inputPath=$temporaryPath;
+            $mime='image/png';
+        }catch(Throwable $e){
+            if($temporaryPath&&is_file($temporaryPath))@unlink($temporaryPath);
+            return null;
+        }
+    }
+    if(!in_array($mime,['image/jpeg','image/png','image/webp'],true)){
+        if($temporaryPath&&is_file($temporaryPath))@unlink($temporaryPath);
+        return null;
+    }
+
+    $started=microtime(true);
+    $curl=curl_init('https://api.openai.com/v1/images/edits');
+    if(!$curl){
+        if($temporaryPath&&is_file($temporaryPath))@unlink($temporaryPath);
+        return null;
+    }
+    $post=[
+        'model'=>'gpt-image-2',
+        'image[]'=>new CURLFile($inputPath,$mime,basename($inputPath)),
+        'prompt'=>$prompt,
+        'quality'=>'low',
+        'output_format'=>'jpeg',
+        'output_compression'=>'65',
+        'size'=>'1024x1024',
+        'n'=>'1'
+    ];
+    curl_setopt_array($curl,[
+        CURLOPT_POST=>true,
+        CURLOPT_RETURNTRANSFER=>true,
+        CURLOPT_HTTPHEADER=>['Authorization: Bearer '.$apiKey],
+        CURLOPT_POSTFIELDS=>$post,
+        CURLOPT_CONNECTTIMEOUT=>10,
+        CURLOPT_TIMEOUT=>90
+    ]);
+    $body=curl_exec($curl);
+    $status=(int)curl_getinfo($curl,CURLINFO_HTTP_CODE);
+    curl_close($curl);
+    if($temporaryPath&&is_file($temporaryPath))@unlink($temporaryPath);
+    if($body===false||$status<200||$status>=300)return null;
+
+    $data=json_decode((string)$body,true);
+    if(!is_array($data))return null;
+    ai_usage_log('image_edit', 'gpt-image-2', $data, $started);
+    $b64=(string)($data['data'][0]['b64_json']??'');
+    if($b64==='')return null;
+    $bytes=base64_decode($b64,true);
+    if($bytes===false||$bytes==='')return null;
+
+    $filename='ai_edit_'.bin2hex(random_bytes(8)).'.jpg';
+    $target=rtrim($directory,'/').'/'.$filename;
+    if(@file_put_contents($target,$bytes)===false)return null;
+    return $filename;
+}
+
 function openai_generate_image(string $prompt,string $directory):?string{
     $aiStartedAt=microtime(true);
     $apiKey=openai_api_key();
