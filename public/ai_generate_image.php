@@ -122,7 +122,28 @@ try{
         if(empty($validation['valid'])){
             @unlink($dir.'/'.$filename);
             $reason=trim((string)($validation['reason']??''));
-            throw new RuntimeException('De afbeelding is inhoudelijk afgekeurd. '.($reason!==''?$reason:'De afbeelding past niet betrouwbaar bij de vraag.'));
+
+            // Een inhoudelijk afgekeurde SVG/web-afbeelding krijgt één generieke
+            // GPT-afbeeldingsfallback. Ook een GPT-afbeelding mag één keer opnieuw
+            // worden gemaakt; daarna stoppen we om eindeloze kosten te voorkomen.
+            $fallbackPrompt=trim($prompt);
+            if($fallbackPrompt==='')$fallbackPrompt='Maak een eenvoudige educatieve afbeelding die deze schoolvraag correct ondersteunt: '.$questionText.' Het juiste antwoord is: '.$correctAnswer.'. Zorg dat alle relevante posities, relaties, labels en geografische of numerieke informatie inhoudelijk correct zijn. Vermijd decoratie die niet nodig is.';
+            if($reason!=='')$fallbackPrompt.=" De vorige afbeelding werd afgekeurd omdat: ".$reason.". Corrigeer dit expliciet.";
+
+            $fallback=openai_generate_image($fallbackPrompt,$dir);
+            if($fallback!==null){
+                $fallbackValidation=openai_validate_educational_image($questionText,$correctAnswer,$dir.'/'.$fallback,'generate');
+                if(!empty($fallbackValidation['valid'])){
+                    $filename=$fallback;
+                    $method='generate';
+                }else{
+                    @unlink($dir.'/'.$fallback);
+                    $fallbackReason=trim((string)($fallbackValidation['reason']??''));
+                    throw new RuntimeException('De afbeelding werd inhoudelijk afgekeurd en de automatische vervangende afbeelding voldeed ook niet aan de controle.'.($fallbackReason!==''?' '.$fallbackReason:''));
+                }
+            }else{
+                throw new RuntimeException('De afbeelding werd inhoudelijk afgekeurd. '.($reason!==''?$reason:'De afbeelding past niet betrouwbaar bij de vraag.'));
+            }
         }
     }
 
