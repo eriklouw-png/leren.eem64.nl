@@ -524,9 +524,11 @@ function openai_generate_test_questions(string $input,array $imagePaths,bool $us
                                                 'explanation'=>['type'=>'string'],
                                                 'source_page'=>['type'=>'integer','minimum'=>1,'maximum'=>10],
                                                 'use_image'=>['type'=>'boolean'],
-                                                'image_prompt'=>['type'=>'string']
+                                                'image_prompt'=>['type'=>'string'],
+                                                'image_search_query'=>['type'=>'string'],
+                                                'svg_code'=>['type'=>'string']
                                             ],
-                                            'required'=>['type','question','correct_answer','options','correct_option','accepted_answers','explanation','source_page','use_image','image_prompt'],
+                                            'required'=>['type','question','correct_answer','options','correct_option','accepted_answers','explanation','source_page','use_image','image_prompt','image_search_query','svg_code'],
                                             'additionalProperties'=>false
                                         ]
                                     ]
@@ -565,6 +567,79 @@ function openai_generate_test_questions(string $input,array $imagePaths,bool $us
         return ['_leren_error'=>'OpenAI API HTTP '.$statusCode.': '.$message];
     }
     return $data;
+}
+
+function openai_search_image(string $query):?array{
+    $apiKey=openai_api_key();
+    $query=trim($query);
+    if($apiKey===''||$query==='')return null;
+    $payload=[
+        'model'=>openai_model(),
+        'tools'=>[[
+            'type'=>'web_search',
+            'search_content_types'=>['image','text'],
+            'image_settings'=>['max_results'=>3,'caption'=>true],
+            'search_context_size'=>'low'
+        ]],
+        'tool_choice'=>'required',
+        'include'=>['web_search_call.results'],
+        'input'=>'Zoek op internet naar een bruikbare afbeelding voor een educatieve schoolvraag. Zoek specifiek op basis van deze zoekopdracht: '.$query.'. Kies bij voorkeur een eenvoudige, duidelijke afbeelding die inhoudelijk precies past. Geef geen uitleg; de applicatie leest de image_result-items uit de zoekresultaten.'
+    ];
+    $context=stream_context_create(['http'=>[
+        'method'=>'POST',
+        'header'=>"Content-Type: application/json\r\nAccept: application/json\r\nAuthorization: Bearer ".$apiKey."\r\n",
+        'content'=>json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),
+        'timeout'=>30,
+        'ignore_errors'=>true
+    ]]);
+    $body=@file_get_contents('https://api.openai.com/v1/responses',false,$context);
+    if($body===false)return null;
+    $data=json_decode($body,true);
+    if(!is_array($data))return null;
+    foreach(($data['output']??[]) as $item){
+        if(($item['type']??'')!=='web_search_call')continue;
+        foreach(($item['results']??[]) as $result){
+            if(($result['type']??'')!=='image_result')continue;
+            $url=trim((string)($result['image_url']??''));
+            if($url!==''&&preg_match('~^https://~i',$url)){
+                return ['image_url'=>$url,'source_url'=>trim((string)($result['source_website_url']??'')),'caption'=>trim((string)($result['caption']??''))];
+            }
+        }
+    }
+    return null;
+}
+
+function openai_download_web_image(string $url,string $directory):?string{
+    if(!preg_match('~^https://~i',trim($url)))return null;
+    if(!is_dir($directory)&&!@mkdir($directory,0755,true))return null;
+    $context=stream_context_create(['http'=>[
+        'method'=>'GET',
+        'header'=>"User-Agent: Leren/1.0\r\nAccept: image/avif,image/webp,image/apng,image/*,*/*;q=0.8\r\n",
+        'timeout'=>20,
+        'ignore_errors'=>true
+    ]]);
+    $bytes=@file_get_contents($url,false,$context);
+    if($bytes===false||strlen($bytes)<100||strlen($bytes)>8*1024*1024)return null;
+    $info=@getimagesizefromstring($bytes);
+    if(!is_array($info))return null;
+    $mime=(string)($info['mime']??'');
+    $ext=['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp','image/gif'=>'gif'][$mime]??null;
+    if($ext===null)return null;
+    $filename='web_'.bin2hex(random_bytes(12)).'.'.$ext;
+    if(@file_put_contents($directory.'/'.$filename,$bytes)===false)return null;
+    return $filename;
+}
+
+function ai_save_svg(string $svg,string $directory):?string{
+    $svg=trim($svg);
+    if($svg===''||strlen($svg)>150000)return null;
+    if(!preg_match('~^<\?xml[^>]*>\s*<svg\b~is',$svg)&&!preg_match('~^<svg\b~i',$svg))return null;
+    if(!preg_match('~</svg>\s*$~i',$svg))return null;
+    if(preg_match('~<(script|iframe|object|embed|foreignObject)\b|javascript:|on[a-z]+\s*=~i',$svg))return null;
+    if(!is_dir($directory)&&!@mkdir($directory,0755,true))return null;
+    $filename='svg_'.bin2hex(random_bytes(12)).'.svg';
+    if(@file_put_contents($directory.'/'.$filename,$svg)===false)return null;
+    return $filename;
 }
 
 function openai_generate_image(string $prompt,string $directory):?string{
