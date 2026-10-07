@@ -97,19 +97,20 @@ foreach($sessions as $s){
 ksort($sessionGroups);
 function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds%60;return $m.' min '.str_pad((string)$s,2,'0',STR_PAD_LEFT).' sec';}
 ?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Beheer - Leren</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><style>
+.subject-card-image{position:relative;background-size:cover;background-position:center;min-height:180px;background-color:#6c757d}
+.subject-card-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,.76))}
+.subject-card-title{font-weight:700;font-size:1.6rem;text-shadow:0 2px 5px rgba(0,0,0,.75)}
+.subject-card-description{font-weight:600;color:#fff!important;text-shadow:0 1px 4px rgba(0,0,0,.9)}
 @media(max-width:767.98px){
   .admin-grid{--bs-gutter-x:.65rem;--bs-gutter-y:.65rem}
   .admin-grid>.admin-col{width:50%;padding-left:calc(var(--bs-gutter-x)*.5);padding-right:calc(var(--bs-gutter-x)*.5)}
   .admin-tile{aspect-ratio:1/1;overflow:hidden}
-  .admin-tile .card-body{height:100%;padding:.7rem!important;display:flex;flex-direction:column}
-  .admin-tile .admin-tile-top{display:block!important}
-  .admin-tile .admin-tile-top img,
-  .admin-tile .admin-tile-top .admin-placeholder{width:100%!important;height:auto!important;aspect-ratio:1/1;display:block!important;margin-bottom:.55rem;object-fit:cover}
-  .admin-tile .admin-tile-info h2{font-size:1.05rem!important;line-height:1.15}
-  .admin-tile .admin-tile-info p,
-  .admin-tile .admin-tile-info .student-email{display:none}
-  .admin-tile .admin-stats{margin-top:auto!important}
-  .admin-tile .admin-action{font-size:.8rem;padding:.35rem .4rem}
+  .admin-tile .subject-card-image{height:100%;min-height:0}
+  .admin-tile .card-body{height:100%;padding:0!important}
+  .admin-tile .subject-card-body{min-height:0!important;padding:.8rem!important}
+  .admin-tile .subject-card-title{font-size:1.15rem}
+  .admin-tile .subject-card-description{font-size:.82rem;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .admin-tile .admin-action{font-size:.75rem;padding:.3rem .4rem}
 }
 details .chevron{display:inline-block;transition:transform .15s ease;font-size:1.5rem;line-height:1}details[open] .chevron{transform:rotate(180deg)}</style></head><body class="bg-light"><nav class="navbar navbar-dark bg-dark"><div class="container"><a class="navbar-brand" href="admin.php">Leren beheer</a><div><span class="text-white me-3"><?=e($_SESSION['user']['name'])?></span><a class="btn btn-outline-light btn-sm" href="index.php">Website</a> <a class="btn btn-outline-light btn-sm" href="logout.php">Uitloggen</a></div></div></nav><main class="container py-4">
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -121,20 +122,14 @@ details .chevron{display:inline-block;transition:transform .15s ease;font-size:1
 <?php foreach($subjects as $subject):?>
 <div class="col-6 col-md-6 col-lg-4 admin-col">
 <a href="subject_manage.php?id=<?=(int)$subject['id']?>" class="text-decoration-none text-dark">
-<div class="card shadow-sm h-100 admin-tile">
-<div class="card-body p-3">
-<div class="d-flex align-items-center gap-3 admin-tile-top">
-<?php if($subject['image_mime']):?>
-<img src="subject_image.php?id=<?=(int)$subject['id']?>" class="rounded flex-shrink-0" style="width:86px;height:86px;object-fit:cover" alt="<?=e($subject['name'])?>">
-<?php else:?>
-<div class="rounded bg-secondary-subtle d-flex align-items-center justify-content-center flex-shrink-0 admin-placeholder" style="width:86px;height:86px;font-size:2rem">📚</div>
-<?php endif;?>
-<div class="min-w-0 admin-tile-info">
-<h2 class="h4 mb-1"><?=e($subject['name'])?></h2>
-<?php if($subject['description']):?><p class="text-secondary mb-0 small"><?=e($subject['description'])?></p><?php endif;?>
+<div class="card shadow-sm h-100 admin-tile overflow-hidden">
+<div class="subject-card-image" style="background-image:<?=($subject['image_mime']?'url(\'subject_image.php?id='.(int)$subject['id'].'\')':'none')?>;">
+<div class="subject-card-overlay"></div>
+<div class="card-body position-relative d-flex flex-column justify-content-end subject-card-body" style="min-height:180px;">
+<h2 class="h4 text-white mb-1 subject-card-title"><?=e($subject['name'])?></h2>
+<?php if($subject['description']):?><p class="mb-2 subject-card-description"><?=e($subject['description'])?></p><?php endif;?>
+<div class="btn btn-primary w-100 admin-action mt-1">Naar <?=e($subject['name'])?> →</div>
 </div>
-</div>
-<div class="btn btn-primary w-100 mt-3 admin-action">Naar <?=e($subject['name'])?> →</div>
 </div>
 </div>
 </a>
