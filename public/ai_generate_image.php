@@ -2,6 +2,8 @@
 require __DIR__.'/../app/bootstrap.php';
 require_admin();
 
+// Dit endpoint communiceert uitsluitend via JSON; PHP-waarschuwingen mogen de JSON-respons niet vervuilen.
+ini_set('display_errors','0');
 header('Content-Type: application/json; charset=utf-8');
 
 if(($_SERVER['REQUEST_METHOD']??'GET')!=='POST' || ($_POST['action']??'')!=='next'){
@@ -46,18 +48,18 @@ if($questionId<1||!in_array($method,['web','svg','generate'],true)){
 function ai_validate_svg_quality(string $svg):bool{
     $svg=trim($svg);
     if($svg===''||strlen($svg)>150000)return false;
-    if(!preg_match('~^<\\?xml[^>]*>\\s*<svg\\b~is',$svg)&&!preg_match('~^<svg\\b~i',$svg))return false;
-    if(!preg_match('~</svg>\\s*$~i',$svg))return false;
-    if(preg_match('~<(script|iframe|object|embed|foreignObject)\\b|javascript:|on[a-z]+\\s*=|url\\s*\\(|(?:xlink:)?href\\s*=\\s*["\\']https?://~i',$svg))return false;
+    if(stripos($svg,'<svg')===false||stripos($svg,'</svg>')===false)return false;
+    foreach(['<script','<iframe','<object','<embed','<foreignobject','javascript:','onload=','onclick=','onerror=','url(','href="http://','href="https://','href=\'http://','href=\'https://'] as $blocked){
+        if(stripos($svg,$blocked)!==false)return false;
+    }
 
-    // Voor educatieve SVG's eisen we een vaste, voorspelbare tekenruimte.
-    if(!preg_match('~\\bviewBox\\s*=\\s*["\\']\\s*0\\s+0\\s+([0-9]+(?:\\.[0-9]+)?)\\s+([0-9]+(?:\\.[0-9]+)?)\\s*["\\']~i',$svg,$viewBox))return false;
+    if(!preg_match("/\\bviewBox\\s*=\\s*[\\\"']\\s*0\\s+0\\s+([0-9]+(?:\\.[0-9]+)?)\\s+([0-9]+(?:\\.[0-9]+)?)\\s*[\\\"']/i",$svg,$viewBox))return false;
     $viewWidth=(float)$viewBox[1];
     $viewHeight=(float)$viewBox[2];
     if($viewWidth<=0||$viewHeight<=0||$viewWidth>100000||$viewHeight>100000)return false;
 
-    if(!preg_match('~<svg\\b[^>]*\\bwidth\\s*=\\s*["\\']1000["\\']~is',$svg))return false;
-    if(!preg_match('~<svg\\b[^>]*\\bheight\\s*=\\s*["\\']1000["\\']~is',$svg))return false;
+    if(!preg_match("/<svg\\b[^>]*\\bwidth\\s*=\\s*[\\\"']1000[\\\"']/is",$svg))return false;
+    if(!preg_match("/<svg\\b[^>]*\\bheight\\s*=\\s*[\\\"']1000[\\\"']/is",$svg))return false;
 
     if(class_exists('DOMDocument')){
         $previous=libxml_use_internal_errors(true);
