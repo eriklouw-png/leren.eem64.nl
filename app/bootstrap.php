@@ -312,7 +312,7 @@ function ai_usage_log(string $callType,string $model,array $data,float $startedA
         $reasoningTokens=isset($usage['output_tokens_details']['reasoning_tokens'])?(int)$usage['output_tokens_details']['reasoning_tokens']:null;
         $totalTokens=isset($usage['total_tokens'])?(int)$usage['total_tokens']:null;
         $durationMs=max(0,(int)round((microtime(true)-$startedAt)*1000));
-        $success=isset($data['_leren_error'])?0:1;
+        $success=(isset($data['_leren_error'])||isset($data['error']))?0:1;
 
         $stmt=$pdo->prepare("INSERT INTO ai_usage
             (call_type,model,input_tokens,cached_input_tokens,output_tokens,reasoning_tokens,total_tokens,duration_ms,success)
