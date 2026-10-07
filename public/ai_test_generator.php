@@ -244,13 +244,14 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         }else{
             $generated=$saved['generated']['subtests'];
             $sourceImages=(array)($saved['images']??[]);
+            $isVocabularyMode=!empty($saved['vocabulary_mode']);
             $validTests=[];
             foreach($posted as $si=>$test){                if(!isset($generated[$si])||!is_array($test))continue;
                 $rawTitle=trim((string)($test['title']??''));
                 $prefixToUse=trim((string)(($saved['request']['prefix']??'')??''));
                 $title=$prefixToUse!==''?$prefixToUse.' '.$rawTitle:$rawTitle;
                 $description=trim((string)($test['description']??''));
-                $questions=$test['questions']??[];
+                $questions=$isVocabularyMode?($generated[$si]['questions']??[]):($test['questions']??[]);
                 if($title===''){ $errors[]='Elke sub-test moet een titel hebben.'; continue; }
                 if(!is_array($questions)||!$questions){$errors[]='Sub-test "'.$title.'" bevat geen vragen.';continue;}
                 $validQuestions=[];
@@ -300,7 +301,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     if(!is_dir($questionImageDir)&&!@mkdir($questionImageDir,0755,true))throw new RuntimeException('De map uploads/questions kon niet worden aangemaakt.');
                     foreach($validTests as $test){
                         $testType='multiple_choice';
-                        $isVocabularyMode=!empty($saved['vocabulary_mode']) && count($validTests)===1;
                         $hasOpen=false;$hasMc=false;
                         foreach($test['questions'] as $q){$hasOpen=$hasOpen||$q['type']==='open';$hasMc=$hasMc||$q['type']==='mc';}
                         if($hasOpen&&$hasMc)$testType='mixed';elseif($hasOpen)$testType='open';
@@ -629,6 +629,9 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 <div class="generated-question">
 <div class="d-flex justify-content-between align-items-start gap-2 mb-2"><span class="question-number">Vraag <?=($qi+1)?></span><span class="badge rounded-pill text-bg-light"><?=e($q['type']==='mc'?'Multiple choice':'Open')?></span></div>
 <div class="question-text mb-3"><?=e($q['question'])?></div>
+<?php if(!empty($saved['vocabulary_mode'])):?>
+<div class="small text-secondary mt-2">Dit is een automatisch herkende woordenlijst. De woordparen worden rechtstreeks uit de AI-analyse opgeslagen.</div>
+<?php else:?>
 <div class="question-meta">
 <div>
 <div class="small fw-semibold mb-1">Afbeelding bij deze vraag</div>
@@ -661,6 +664,7 @@ Voorgestelde methode: <?=e($methodLabel)?><?=($q['image_reason']??'')!==''?' · 
 <?php if($q['type']==='mc'):?><?php foreach(($q['options']??[]) as $oi=>$option):?><input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][options][<?=$oi?>]" value="<?=e($option)?>"><?php endforeach;?><input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][correct_option]" value="<?=e((string)($q['correct_option']??0))?>">
 <?php else:?><input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][accepted_answers]" value="<?=e(implode(' | ',(array)($q['accepted_answers']??[$q['correct_answer']??''])))?>"><?php endif;?>
 <input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][explanation]" value="<?=e($q['explanation']??'')?>">
+<?php endif;?>
 </div>
 <?php endforeach;?>
 </div></div>
