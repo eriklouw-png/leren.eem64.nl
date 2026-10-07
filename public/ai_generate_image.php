@@ -27,11 +27,18 @@ if(!$jobs){
 
 $job=array_shift($jobs);
 $questionId=(int)($job['question_id']??0);
+$searchQuery=trim((string)($job['search_query']??''));
+$svgCode=trim((string)($job['svg_code']??''));
 $prompt=trim((string)($job['prompt']??''));
-if($questionId<1||$prompt===''){
+
+if($questionId<1||($searchQuery===''&&$svgCode===''&&$prompt==='')){
     $_SESSION['ai_image_jobs']['jobs']=$jobs;
-    $_SESSION['ai_image_jobs']['completed']=(int)($state['completed']??0)+1;
-    echo json_encode(['ok'=>false,'error'=>'Een afbeeldingstaak is ongeldig.']);
+    echo json_encode([
+        'ok'=>false,
+        'error'=>'Een afbeeldingstaak bevat geen zoekopdracht, SVG of image_prompt.',
+        'completed'=>(int)($state['completed']??0),
+        'total'=>$total
+    ]);
     exit;
 }
 
@@ -45,26 +52,34 @@ try{
     $filename=null;
     $method='';
 
-    // 1. Eerst een eenvoudige, door de AI voorbereide SVG proberen.
-    // Dit is bewust de snelle route: een webzoekactie mag een afbeeldingsjob
-    // niet blokkeren. Web search blijft als algemene helper beschikbaar.
-    if($filename===null){
-        $svgCode=trim((string)($job['svg_code']??''));
-        if($svgCode!==''){
-            $filename=ai_save_svg($svgCode,$dir);
-            if($filename!==null)$method='svg';
+    // 1. Eerst op internet zoeken. Dit is de voorkeursroute voor echte,
+    // inhoudelijk passende afbeeldingen.
+    if($filename===null&&$searchQuery!==''){
+        $webImage=openai_search_image($searchQuery);
+        if(is_array($webImage)){
+            $imageUrl=trim((string)($webImage['image_url']??''));
+            if($imageUrl!==''){
+                $filename=openai_download_web_image($imageUrl,$dir);
+                if($filename!==null)$method='web';
+            }
         }
     }
 
-    // 2. Alleen als laatste redmiddel echte image generation.
+    // 2. Als er geen geschikte internetafbeelding gevonden of gedownload
+    // kon worden, probeer een eenvoudige veilige SVG.
+    if($filename===null&&$svgCode!==''){
+        $filename=ai_save_svg($svgCode,$dir);
+        if($filename!==null)$method='svg';
+    }
+
+    // 3. Laatste fallback: een nieuwe afbeelding met GPT genereren.
     if($filename===null){
-        $prompt=trim((string)($job['prompt']??''));
-        if($prompt==='')throw new RuntimeException('Er is geen bruikbare afbeelding gevonden en er is geen image_prompt voor de laatste fallback.');
+        if($prompt==='')throw new RuntimeException('Er is geen geschikte internetafbeelding gevonden en er is geen image_prompt voor de laatste fallback.');
         $filename=openai_generate_image($prompt,$dir);
         if($filename!==null)$method='generate';
     }
 
-    if($filename===null)throw new RuntimeException('Er kon geen geschikte afbeelding worden gemaakt.');
+    if($filename===null)throw new RuntimeException('Er kon geen geschikte afbeelding worden gevonden of gemaakt.');
 
     $update=$pdo->prepare("UPDATE questions SET image_path=? WHERE id=?");
     $update->execute([$filename,$questionId]);
