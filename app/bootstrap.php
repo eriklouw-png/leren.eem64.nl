@@ -110,6 +110,20 @@ body.leren-admin .border-bottom,body.leren-admin .border-start{border-color:#465
 body.leren-admin hr{border-color:#56635a!important;opacity:1}
 body.leren-admin .modal-backdrop{background-color:#000}
 body.leren-admin .btn-close{filter:invert(1) grayscale(1)}
+body.leren-admin .form-check-input{
+  background-color:#3a453e!important;
+  border-color:#819087!important;
+  background-image:radial-gradient(circle at 25% 50%,#fff 0 34%,transparent 36%)!important;
+}
+body.leren-admin .form-check-input:checked{
+  background-color:#2f7d4a!important;
+  border-color:#6fa27c!important;
+  background-image:radial-gradient(circle at 75% 50%,#fff 0 34%,transparent 36%)!important;
+}
+body.leren-admin .form-check-input:focus{
+  border-color:#8eb79a!important;
+  box-shadow:0 0 0 .25rem rgba(111,145,122,.25)!important;
+}
 </style>';
         }
         $html=preg_replace('~</head>~i',$theme.'</head>',$html,1)??$html;
