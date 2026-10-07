@@ -233,7 +233,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         $correct=implode(' | ',$accepted);
                     }
                     $generatedQuestion=$generated[$si]['questions'][$qi];
-                    $validQuestions[]=['type'=>$type,'question'=>$question,'correct'=>$correct,'options'=>$options,'correct_option'=>$type==='mc'?(int)$q['correct_option']:0,'explanation'=>$explanation,'source_page'=>$sourcePage,'use_image'=>$useImage,'image_prompt'=>trim((string)($generatedQuestion['image_prompt']??'')),'image_search_query'=>trim((string)($generatedQuestion['image_search_query']??'')),'svg_code'=>trim((string)($generatedQuestion['svg_code']??'')),'image_method'=>trim((string)($generatedQuestion['image_method']??'none')),'image_reason'=>trim((string)($generatedQuestion['image_reason']??''))];
+                    $validQuestions[]=['type'=>$type,'question'=>$question,'correct'=>$correct,'options'=>$options,'correct_option'=>$type==='mc'?(int)$q['correct_option']:0,'explanation'=>$explanation,'source_page'=>$sourcePage,'use_image'=>$useImage,'image_prompt'=>trim((string)($generatedQuestion['image_prompt']??'')),'image_search_query'=>trim((string)($generatedQuestion['image_search_query']??'')),'svg_code'=>trim((string)($generatedQuestion['svg_code']??'')),'image_method'=>trim((string)($q['image_method']??$generatedQuestion['image_method']??'none')),'image_reason'=>trim((string)($generatedQuestion['image_reason']??''))];
                 }
                 if($validQuestions)$validTests[]=['title'=>$title,'description'=>$description,'questions'=>$validQuestions];
             }
@@ -274,13 +274,22 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                                 $svgCode=trim((string)($q['svg_code']??''));
                                 $imagePrompt=trim((string)($q['image_prompt']??''));
                                 $imageMethod=trim((string)($q['image_method']??'none'));
+                                // Als GPT oorspronkelijk geen afbeelding wilde, maar de beheerder
+                                // op pagina 3 alsnog "Afbeelding gebruiken" kiest, maak dan
+                                // automatisch een GPT-afbeelding op basis van de vraag.
                                 if($imageMethod==='none'){
-                                    $q['use_image']=false;
-                                }elseif(!in_array($imageMethod,['web','svg','generate'],true)){
+                                    $imageMethod='generate';
+                                    $imagePrompt=$question;
+                                }
+                                if(!in_array($imageMethod,['web','svg','generate'],true)){
                                     throw new RuntimeException('Ongeldige afbeeldingsmethode bij een gegenereerde vraag.');
-                                }elseif(($imageMethod==='web'&&$searchQuery==='')||($imageMethod==='svg'&&$svgCode==='')||($imageMethod==='generate'&&$imagePrompt==='')){
+                                }
+                                if($imageMethod==='generate'&&$imagePrompt==='')$imagePrompt=$question;
+                                if(($imageMethod==='web'&&$searchQuery==='')||($imageMethod==='svg'&&$svgCode==='')||($imageMethod==='generate'&&$imagePrompt==='')){
                                     throw new RuntimeException('De gekozen afbeeldingsmethode heeft geen bijbehorende afbeeldingsdata.');
                                 }
+                                $q['image_method']=$imageMethod;
+                                $q['image_prompt']=$imagePrompt;
                             }
                             $qIns->execute([$testId,$q['question'],$imagePath,$q['type']==='mc'?'multiple_choice':'open',$q['explanation'],$sort+1]);
                             $qid=(int)$pdo->lastInsertId();
@@ -556,7 +565,7 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 <label class="form-check-label small" for="imgNo<?=$si?>_<?=$qi?>">Geen afbeelding</label>
 </div>
 <div class="form-check">
-<input class="form-check-input" type="radio" name="tests[<?=$si?>][questions][<?=$qi?>][use_image]" value="1" id="imgYes<?=$si?>_<?=$qi?>" <?=($q['use_image']&&($q['image_method']??'none')!=='none')?'checked':''?> <?=($q['image_method']??'none')==='none'?'disabled':''?>>
+<input class="form-check-input" type="radio" name="tests[<?=$si?>][questions][<?=$qi?>][use_image]" value="1" id="imgYes<?=$si?>_<?=$qi?>" <?=($q['use_image']&&($q['image_method']??'none')!=='none')?'checked':''?>>
 <label class="form-check-label small" for="imgYes<?=$si?>_<?=$qi?>">Afbeelding gebruiken</label>
 </div>
 </div>
