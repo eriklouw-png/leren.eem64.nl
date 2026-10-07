@@ -575,6 +575,7 @@ function updateTotals(container){if(!container)return;let total=0;container.quer
 const afterContainer=document.getElementById('specRowsAfter');if(afterContainer){fillSpecs(afterContainer,specDefaults);document.getElementById('addSpecAfter')?.addEventListener('click',()=>{addSpecRow(afterContainer,{type:'mixed',count:10},afterContainer.children.length);updateTotals(afterContainer)});afterContainer.addEventListener('input',()=>updateTotals(afterContainer));afterContainer.addEventListener('change',()=>updateTotals(afterContainer))}
 const aiLoading=document.getElementById('aiLoading'),aiLoadingTitle=document.getElementById('aiLoadingTitle'),aiLoadingText=document.getElementById('aiLoadingText');let aiLoadingTimer=null;function showAiLoading(kind){if(!aiLoading)return;clearInterval(aiLoadingTimer);if(kind==='analyze'){aiLoadingTitle.textContent='Pagina’s analyseren...';aiLoadingText.textContent='De AI leest de boekpagina’s. Dit kan even duren.'}else if(kind==='generate'){aiLoadingTitle.textContent='Toets maken...';aiLoadingText.textContent='GPT maakt de gevraagde vragen en eventuele samenvatting.'}else{aiLoadingTitle.textContent='Toets opslaan...';const messages=['Leren verwerkt de gegenereerde vragen...','GPT maakt eenvoudige afbeeldingen voor vragen die dat nodig hebben...','De afbeeldingen worden opgeslagen bij de vragen...','Bijna klaar — Leren rondt de toets af...'];let i=0;aiLoadingText.textContent=messages[0];aiLoadingTimer=setInterval(()=>{i=(i+1)%messages.length;aiLoadingText.textContent=messages[i]},2800)}aiLoading.classList.remove('d-none');document.body.style.overflow='hidden'}
 document.getElementById('analyzeForm')?.addEventListener('submit',()=>showAiLoading('analyze'));document.getElementById('generateForm')?.addEventListener('submit',()=>showAiLoading('generate'));document.getElementById('saveForm')?.addEventListener('submit',e=>{const submit=e.submitter;if(submit&&submit.name==='action'&&submit.value==='clear')return;showAiLoading('save');if(submit){submit.disabled=true;submit.dataset.originalText=submit.textContent;submit.textContent='Opslaan...'}});
+</script>
 <?php if($imageGenerationMode):?>
 <script>
 (async function(){
@@ -621,4 +622,4 @@ document.getElementById('analyzeForm')?.addEventListener('submit',()=>showAiLoad
 })();
 </script>
 <?php endif;?>
-</script></body></html>
+</body></html>
