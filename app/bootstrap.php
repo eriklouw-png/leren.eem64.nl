@@ -524,7 +524,7 @@ function openai_generate_with_images(string $input,array $imagePaths):?array{
                                 'translation'=>['type'=>'string'],
                                 'grammatical_label'=>['type'=>'string','enum'=>['','mannelijk','vrouwelijk','meervoud']]
                             ],
-                            'required'=>['source','translation'],
+                            'required'=>['source','translation','grammatical_label'],
                             'additionalProperties'=>false
                         ]],
                         'subtests'=>[
