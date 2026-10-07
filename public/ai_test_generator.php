@@ -162,7 +162,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $prompt.='Bepaal per sub-test zelf een korte, duidelijke inhoudelijke titel zonder prefix. Bij meerdere vergelijkbare sub-tests moeten de titels uniek zijn. Maak per sub-test precies het gevraagde aantal vragen. ';
                 $prompt.='Bij mc zijn alle vragen multiple choice met exact vier antwoorden en exact één correct antwoord. Bij open zijn alle vragen open en moet accepted_answers minimaal één inhoudelijk geldig antwoord bevatten. Bij combinatie moet je een evenwichtige mix van mc en open maken. ';
                 $prompt.='Gebruik de broninformatie gerust opnieuw in een andere vraagvorm. source_page is de pagina uit de geüploade set waarop de vraag het duidelijkst gebaseerd is. ';
-                $prompt.='Gebruik afbeeldingen spaarzaam: alleen als een afbeelding de vraag inhoudelijk echt helpt of noodzakelijk is. Bij een vraag waarvoor een afbeelding nodig is, zet use_image op true en geef in image_prompt een concrete, zelfstandige beschrijving van de gewenste afbeelding. Houd de afbeelding eenvoudig en educatief. Bij een query zonder bronpagina’s is source_page altijd 1. Bij een vraag waarvoor geen afbeelding nodig is, zet use_image op false en image_prompt op een lege string.';
+                $prompt.='Gebruik afbeeldingen spaarzaam: alleen als een afbeelding de vraag inhoudelijk echt helpt of noodzakelijk is. Bij een vraag waarvoor een afbeelding nodig is, zet use_image op true. Geef dan altijd een concrete image_search_query waarmee op internet naar precies de benodigde afbeelding kan worden gezocht. Geef daarnaast image_prompt als zelfstandige beschrijving voor een eventuele laatste fallback naar GPT-afbeeldingsgeneratie. Als een eenvoudige schematische/vectorafbeelding passend is, geef dan ook complete, direct bruikbare svg_code. De volgorde bij het opslaan is altijd: eerst proberen een geschikte afbeelding via web search te vinden, daarna een veilige SVG gebruiken als die beschikbaar is, en pas als laatste GPT-image generation. Bij een vraag waarvoor geen afbeelding nodig is, zet use_image op false, image_search_query op een lege string, svg_code op een lege string en image_prompt op een lege string. Bij een query zonder bronpagina’s is source_page altijd 1.';
                 $data=openai_generate_test_questions($prompt,(array)($saved['images']??[]),$query!=='' && empty($saved['images']));
                 if(isset($data['_leren_error']))$errors[]=$data['_leren_error'];
                 else{
@@ -232,7 +232,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         if(!$accepted)$accepted=[$correct];
                         $correct=implode(' | ',$accepted);
                     }
-                    $validQuestions[]=['type'=>$type,'question'=>$question,'correct'=>$correct,'options'=>$options,'correct_option'=>$type==='mc'?(int)$q['correct_option']:0,'explanation'=>$explanation,'source_page'=>$sourcePage,'use_image'=>$useImage,'image_prompt'=>trim((string)($q['image_prompt']??''))];
+                    $generatedQuestion=$generated[$si]['questions'][$qi];
+                    $validQuestions[]=['type'=>$type,'question'=>$question,'correct'=>$correct,'options'=>$options,'correct_option'=>$type==='mc'?(int)$q['correct_option']:0,'explanation'=>$explanation,'source_page'=>$sourcePage,'use_image'=>$useImage,'image_prompt'=>trim((string)($generatedQuestion['image_prompt']??'')),'image_search_query'=>trim((string)($generatedQuestion['image_search_query']??'')),'svg_code'=>trim((string)($generatedQuestion['svg_code']??''))];
                 }
                 if($validQuestions)$validTests[]=['title'=>$title,'description'=>$description,'questions'=>$validQuestions];
             }
@@ -269,25 +270,22 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         foreach($test['questions'] as $sort=>$q){
                             $imagePath=null;
                             if($q['use_image']){
-                                $source=$sourceImages[$q['source_page']-1]??null;
-                                if($source&&is_file($source)){
-                                    $mime=(string)(@mime_content_type($source)?:'');
-                                    $ext=$mime==='image/png'?'png':($mime==='image/webp'?'webp':'jpg');
-                                    $filename='ai_'.bin2hex(random_bytes(12)).'.'.$ext;
-                                    if(!@copy($source,$questionImageDir.'/'.$filename))throw new RuntimeException('Afbeelding kon niet aan een vraag worden gekoppeld.');
-                                    $imagePath=$filename;
-                                    $createdQuestionImages[]=$questionImageDir.'/'.$filename;
-                                }elseif(trim((string)($q['image_prompt']??''))!==''){
-                                    // Generated images are created asynchronously after the test itself has been saved.
-                                    $imagePath=null;
-                                }else{
-                                    throw new RuntimeException('Een vraag is gemarkeerd voor een afbeelding, maar bevat geen image_prompt.');
+                                $searchQuery=trim((string)($q['image_search_query']??''));
+                                $svgCode=trim((string)($q['svg_code']??''));
+                                $imagePrompt=trim((string)($q['image_prompt']??''));
+                                if($searchQuery===''&&$svgCode===''&&$imagePrompt===''){
+                                    throw new RuntimeException('Een vraag is gemarkeerd voor een afbeelding, maar bevat geen zoekopdracht, SVG of image_prompt.');
                                 }
                             }
                             $qIns->execute([$testId,$q['question'],$imagePath,$q['type']==='mc'?'multiple_choice':'open',$q['explanation'],$sort+1]);
                             $qid=(int)$pdo->lastInsertId();
                             if($q['use_image'] && $imagePath===null && trim((string)($q['image_prompt']??''))!==''){
-                                $pendingImageJobs[]=['question_id'=>$qid,'prompt'=>(string)$q['image_prompt']];
+                                $pendingImageJobs[]=[
+                                    'question_id'=>$qid,
+                                    'search_query'=>(string)($q['image_search_query']??''),
+                                    'svg_code'=>(string)($q['svg_code']??''),
+                                    'prompt'=>(string)($q['image_prompt']??'')
+                                ];
                             }
                             if($q['type']==='mc'){
                                 foreach($q['options'] as $oi=>$option)$optIns->execute([$qid,$option,$oi===$q['correct_option']?1:0,$oi+1]);
@@ -322,7 +320,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                             'subject_id'=>$subjectId,
                             'jobs'=>$pendingImageJobs,
                             'total'=>count($pendingImageJobs),
-                            'completed'=>0
+                            'completed'=>0,
+                            'saved_count'=>$savedCount
                         ];
                         redirect('ai_test_generator.php?topic_id='.$topicId.'&ai_images=1');
                     }
@@ -455,8 +454,8 @@ $stage=$hasGenerated?3:($analysis?2:1);
 <h2 class="h4 mb-2">Afbeeldingen maken</h2>
 <p class="text-secondary mb-4">De toets is opgeslagen. Leren maakt nu alleen de afbeeldingen die echt nodig zijn.</p>
 <div class="progress mb-3" style="height:12px"><div id="imageProgressBar" class="progress-bar" style="width:0%"></div></div>
-<div id="imageProgressCount" class="h5 mb-1">0 van 0</div>
-<div id="imageProgressText" class="text-secondary">Voorbereiden...</div>
+<div id="imageProgressCount" class="h5 mb-1">1 van <?= (int)($_SESSION['ai_image_jobs']['total']??0) ?></div>
+<div id="imageProgressText" class="text-secondary">Afbeelding 1 van <?= (int)($_SESSION['ai_image_jobs']['total']??0) ?> wordt gemaakt...</div>
 </div>
 <?php elseif($stage===1):?>
 <div class="upload-intro mb-4">
@@ -579,7 +578,9 @@ document.getElementById('analyzeForm')?.addEventListener('submit',()=>showAiLoad
   const text=document.getElementById('imageProgressText');
   async function nextImage(){
     try{
-      text.textContent='Afbeelding wordt gemaakt...';
+      const currentTotal=Number(count.textContent.split(' van ')[1]||0);
+      const currentDone=Math.max(0,Number(count.textContent.split(' van ')[0]||1)-1);
+      text.textContent='Afbeelding '+(currentDone+1)+' van '+currentTotal+' wordt gemaakt...';
       const response=await fetch('ai_generate_image.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Accept':'application/json'},body:'action=next'});
       const data=await response.json();
       if(!response.ok||!data.ok)throw new Error(data.error||'De afbeelding kon niet worden gemaakt.');
