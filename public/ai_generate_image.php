@@ -35,7 +35,7 @@ if($questionId<1||($searchQuery===''&&$svgCode===''&&$prompt==='')){
     $_SESSION['ai_image_jobs']['jobs']=$jobs;
     echo json_encode([
         'ok'=>false,
-        'error'=>'Een afbeeldingstaak bevat geen zoekopdracht, SVG of image_prompt.',
+        'error'=>'Ongeldige afbeeldingsmethode in de taak.',
         'completed'=>(int)($state['completed']??0),
         'total'=>$total
     ]);
@@ -50,7 +50,6 @@ try{
 
     $dir=__DIR__.'/uploads/questions';
     $filename=null;
-    $method='';
 
     // 1. Eerst op internet zoeken. Dit is de voorkeursroute voor echte,
     // inhoudelijk passende afbeeldingen.
