@@ -581,7 +581,10 @@ document.getElementById('analyzeForm')?.addEventListener('submit',()=>showAiLoad
       const currentTotal=Number(count.textContent.split(' van ')[1]||0);
       const currentDone=Math.max(0,Number(count.textContent.split(' van ')[0]||1)-1);
       text.textContent='Afbeelding '+(currentDone+1)+' van '+currentTotal+' wordt gemaakt...';
-      const response=await fetch('ai_generate_image.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Accept':'application/json'},body:'action=next'});
+      const controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),110000);
+      const response=await fetch('ai_generate_image.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Accept':'application/json'},body:'action=next',signal:controller.signal});
+      clearTimeout(timeout);
       const data=await response.json();
       if(!response.ok||!data.ok)throw new Error(data.error||'De afbeelding kon niet worden gemaakt.');
       const done=Number(data.completed||0), total=Number(data.total||0);
@@ -599,7 +602,7 @@ document.getElementById('analyzeForm')?.addEventListener('submit',()=>showAiLoad
       setTimeout(()=>{text.textContent='Afbeelding '+(done+1)+' van '+total+' wordt gemaakt...';},900);
       setTimeout(nextImage,250);
     }catch(error){
-      text.textContent=error.message||'Er ging iets mis.';
+      text.textContent=error.name==='AbortError'?'De afbeelding duurt te lang. Je kunt het opnieuw proberen.':(error.message||'Er ging iets mis.');
       count.textContent='Pauze';
       bar.classList.add('bg-danger');
       const retry=document.createElement('button');
