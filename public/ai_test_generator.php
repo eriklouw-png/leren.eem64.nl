@@ -536,7 +536,7 @@ $stage=$hasGenerated?3:($analysis?2:1);
 <span class="small text-secondary">Bronpagina <?=e((string)($q['source_page']??1))?></span>
 </div>
 <input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][type]" value="<?=e($q['type'])?>">
-<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][source_page]" value="<?=e((string)($q['source_page']??1))?>">
+<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][source_page]" value="<?=e((string)($q['source_page']??1))?>"><input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][clock_hour]" value="<?=e((string)($q['clock_hour']??0))?>"><input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][clock_minute]" value="<?=e((string)($q['clock_minute']??0))?>">
 <input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][correct_answer]" value="<?=e($q['correct_answer']??'')?>">
 <input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][question]" value="<?=e($q['question'])?>">
 <?php if($q['type']==='mc'):?><?php foreach(($q['options']??[]) as $oi=>$option):?><input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][options][<?=$oi?>]" value="<?=e($option)?>"><?php endforeach;?><input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][correct_option]" value="<?=e((string)($q['correct_option']??0))?>">
