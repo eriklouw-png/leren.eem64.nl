@@ -455,7 +455,6 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 <h2 class="h4 mb-2">Afbeeldingen maken</h2>
 <p class="text-secondary mb-4">De toets is opgeslagen. Leren maakt nu alleen de afbeeldingen die echt nodig zijn.</p>
 <div class="progress mb-3" style="height:12px"><div id="imageProgressBar" class="progress-bar" style="width:0%"></div></div>
-<div id="imageProgressCount" class="h5 mb-1">1 van <?= (int)($_SESSION['ai_image_jobs']['total']??0) ?></div>
 <div id="imageProgressText" class="text-secondary">Afbeelding 1 van <?= (int)($_SESSION['ai_image_jobs']['total']??0) ?> wordt gemaakt...</div>
 <form method="post" class="mt-4">
 <input type="hidden" name="action" value="clear">
@@ -580,36 +579,40 @@ document.getElementById('analyzeForm')?.addEventListener('submit',()=>showAiLoad
 <script>
 (async function(){
   const bar=document.getElementById('imageProgressBar');
-  const count=document.getElementById('imageProgressCount');
   const text=document.getElementById('imageProgressText');
+  const total=<?= (int)($_SESSION['ai_image_jobs']['total']??0) ?>;
+  let completed=<?= (int)($_SESSION['ai_image_jobs']['completed']??0) ?>;
+
   async function nextImage(){
     try{
-      const currentTotal=Number(count.textContent.split(' van ')[1]||0);
-      const currentDone=Math.max(0,Number(count.textContent.split(' van ')[0]||1)-1);
-      text.textContent='Afbeelding '+(currentDone+1)+' van '+currentTotal+' wordt gemaakt...';
+      const nextNumber=completed+1;
+      text.textContent='Afbeelding '+nextNumber+' van '+total+' wordt gemaakt...';
       const controller=new AbortController();
       const timeout=setTimeout(()=>controller.abort(),110000);
       const response=await fetch('ai_generate_image.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Accept':'application/json'},body:'action=next',signal:controller.signal});
       clearTimeout(timeout);
       const data=await response.json();
       if(!response.ok||!data.ok)throw new Error(data.error||'De afbeelding kon niet worden gemaakt.');
-      const done=Number(data.completed||0), total=Number(data.total||0);
-      const percent=total?Math.round(done/total*100):100;
+
+      completed=Number(data.completed||completed);
+      const serverTotal=Number(data.total||total);
+      const percent=serverTotal?Math.round(completed/serverTotal*100):100;
       bar.style.width=percent+'%';
-      count.textContent=done+' van '+total;
+
       if(data.method==='web')text.textContent='Geschikte afbeelding gevonden op internet.';
       else if(data.method==='svg')text.textContent='Eenvoudige SVG-afbeelding gemaakt.';
       else if(data.method==='generate')text.textContent='Geen geschikte afbeelding gevonden — GPT maakt een afbeelding.';
+
       if(data.done){
         text.textContent='Alle afbeeldingen zijn klaar. De toets wordt geopend...';
         setTimeout(()=>{window.location.href='subject_manage.php?id=<?= (int)$subjectId ?>&ai_saved='+(data.saved_count||0)},700);
         return;
       }
-      setTimeout(()=>{text.textContent='Afbeelding '+(done+1)+' van '+total+' wordt gemaakt...';},900);
+
+      setTimeout(()=>{text.textContent='Afbeelding '+(completed+1)+' van '+serverTotal+' wordt gemaakt...';},900);
       setTimeout(nextImage,250);
     }catch(error){
       text.textContent=error.name==='AbortError'?'De afbeelding duurt te lang. Je kunt het opnieuw proberen.':(error.message||'Er ging iets mis.');
-      count.textContent='Pauze';
       bar.classList.add('bg-danger');
       const retry=document.createElement('button');
       retry.className='btn btn-primary mt-3';
