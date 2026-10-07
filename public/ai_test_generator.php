@@ -465,9 +465,9 @@ $stage=$hasGenerated?3:($analysis?2:1);
 </div></div>
 <div class="card mb-3"><div class="card-body">
 <div class="form-check form-switch">
-<input class="form-check-input" type="checkbox" name="use_summary" value="1" id="useSummarySettings" <?=$useSummary?'checked':''?>>
+<input class="form-check-input" type="checkbox" name="use_summary" value="1" id="useSummarySettings" <?=$useSummary?'checked':''?> <?=($query!==''?'disabled':'')?>>
 <label class="form-check-label fw-semibold" for="useSummarySettings">Samenvatting maken</label>
-<div class="small text-secondary mt-1">De AI maakt een aparte leersamenvatting van deze pagina’s.</div>
+<div class="small text-secondary mt-1"><?=($query!==''?'Bij een query-toets wordt de samenvatting overgeslagen; er zijn geen boekpagina’s als bron.':'De AI maakt een aparte leersamenvatting van deze pagina’s.')?></div>
 </div>
 </div></div>
 <div class="card mb-4"><div class="card-body">
