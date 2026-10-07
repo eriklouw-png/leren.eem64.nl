@@ -957,8 +957,45 @@ Beoordeel streng maar alleen op inhoudelijke bruikbaarheid. De afbeelding moet d
         return ['valid'=>false,'reason'=>'Controle mislukt.','_leren_error'=>'Afbeeldingscontrole HTTP '.$statusCode.': '.$message];
     }
     ai_usage_log('image_content_validation',openai_model(),$data,$started);
+    // Responses kan structured output op verschillende geldige manieren teruggeven.
+    // Probeer eerst de normale parser en daarna ook parsed/JSON-varianten.
     $result=openai_output_json($data);
-    if(!is_array($result)||!isset($result['valid']))return ['valid'=>false,'reason'=>'De afbeeldingscontrole leverde geen bruikbaar oordeel op.','_leren_error'=>'Afbeeldingscontrole leverde geen bruikbaar oordeel op.'];
+
+    if(!is_array($result)){
+        foreach(($data['output']??[]) as $item){
+            foreach(($item['content']??[]) as $content){
+                if(isset($content['parsed'])&&is_array($content['parsed'])){
+                    $result=$content['parsed'];
+                    break 2;
+                }
+                $text=trim((string)($content['text']??''));
+                if($text!==''){
+                    $candidate=json_decode($text,true);
+                    if(is_array($candidate)){$result=$candidate;break 2;}
+                    if(preg_match('/\\{.*\\}/s',$text,$match)){
+                        $candidate=json_decode($match[0],true);
+                        if(is_array($candidate)){$result=$candidate;break 2;}
+                    }
+                }
+            }
+        }
+    }
+
+    if(!is_array($result)||!array_key_exists('valid',$result)){
+        $outputTypes=[];
+        foreach(($data['output']??[]) as $item){
+            foreach(($item['content']??[]) as $content){
+                $outputTypes[]=(string)($content['type']??'unknown');
+            }
+        }
+        $types=$outputTypes?implode(', ',$outputTypes):'geen output-content';
+        return [
+            'valid'=>false,
+            'reason'=>'De afbeeldingscontrole leverde geen bruikbaar oordeel op.',
+            '_leren_error'=>'Afbeeldingscontrole leverde geen bruikbaar oordeel op (output: '.$types.').'
+        ];
+    }
+
     return ['valid'=>(bool)$result['valid'],'reason'=>(string)($result['reason']??'')];
 }
 
