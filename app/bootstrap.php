@@ -662,6 +662,7 @@ function openai_generate_image(string $prompt,string $directory):?string{
     $prompt=trim($prompt);
     if($prompt==='')return null;
     if(!is_dir($directory)&&!@mkdir($directory,0755,true))return null;
+
     $payload=[
         'model'=>'gpt-image-2',
         'prompt'=>'Maak een eenvoudige educatieve illustratie voor een schoolvraag. Gebruik een rustige, duidelijke compositie, weinig details en geen decoratieve elementen. Zet geen tekst, labels of antwoorden in de afbeelding tenzij de afbeelding dat inhoudelijk noodzakelijk maakt. De afbeelding moet vooral functioneel en direct herkenbaar zijn.\n\n'.$prompt,
@@ -670,20 +671,37 @@ function openai_generate_image(string $prompt,string $directory):?string{
         'output_format'=>'jpeg',
         'output_compression'=>65
     ];
-    $context=stream_context_create(['http'=>[
-        'method'=>'POST',
-        'header'=>"Content-Type: application/json\r\nAccept: application/json\r\nAuthorization: Bearer ".$apiKey."\r\n",
-        'content'=>json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),
-        'timeout'=>100,
-        'ignore_errors'=>true
-    ]]);
-    $body=@file_get_contents('https://api.openai.com/v1/images/generations',false,$context);
-    if($body===false)return null;
+    $json=json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+    if($json===false)return null;
+
+    $ch=@curl_init('https://api.openai.com/v1/images/generations');
+    if($ch===false)return null;
+    curl_setopt_array($ch,[
+        CURLOPT_POST=>true,
+        CURLOPT_HTTPHEADER=>[
+            'Content-Type: application/json',
+            'Accept: application/json',
+            'Authorization: Bearer '.$apiKey
+        ],
+        CURLOPT_POSTFIELDS=>$json,
+        CURLOPT_RETURNTRANSFER=>true,
+        CURLOPT_CONNECTTIMEOUT=>10,
+        CURLOPT_TIMEOUT=>90,
+        CURLOPT_FOLLOWLOCATION=>true
+    ]);
+    $body=@curl_exec($ch);
+    $httpCode=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);
+    $curlError=(string)curl_error($ch);
+    curl_close($ch);
+
+    if($body===false||$body==='')return null;
     $data=json_decode($body,true);
+    if(!is_array($data))return null;
     $b64=$data['data'][0]['b64_json']??null;
     if(!is_string($b64)||$b64==='')return null;
     $bytes=base64_decode($b64,true);
     if($bytes===false)return null;
+
     $filename='ai_'.bin2hex(random_bytes(12)).'.jpg';
     if(@file_put_contents($directory.'/'.$filename,$bytes)===false)return null;
     return $filename;
