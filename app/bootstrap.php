@@ -30,7 +30,7 @@ ob_start(static function(string $html): string{
         'admin.php','subject_manage.php','subject_edit.php','topic_new.php','topic_edit.php',
         'test_new.php','ai_test_generator.php','test_edit.php','import.php','vocabulary_import.php',
         'questions.php','question_edit.php','summary_edit.php','user_edit.php',
-        'system_update.php','debug_question.php'
+        'system_update.php','debug_question.php','ai_usage.php'
     ];
     $isAdminPage=in_array($script,$adminPages,true);
 
@@ -288,6 +288,7 @@ function ai_usage_log(string $callType,string $model,array $data,float $startedA
             $pdo->exec("CREATE TABLE IF NOT EXISTS ai_usage (
                 id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                user_id INT UNSIGNED NULL,
                 call_type VARCHAR(80) NOT NULL,
                 model VARCHAR(120) NOT NULL,
                 input_tokens INT UNSIGNED NULL,
@@ -299,9 +300,12 @@ function ai_usage_log(string $callType,string $model,array $data,float $startedA
                 success TINYINT(1) NOT NULL DEFAULT 1,
                 PRIMARY KEY (id),
                 KEY idx_ai_usage_created_at (created_at),
+                KEY idx_ai_usage_user(created_at,user_id),
                 KEY idx_ai_usage_call_type (call_type),
                 KEY idx_ai_usage_model (model)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            try{$pdo->exec("ALTER TABLE ai_usage ADD COLUMN user_id INT UNSIGNED NULL AFTER created_at");}catch(Throwable $ignored){}
+            try{$pdo->exec("ALTER TABLE ai_usage ADD KEY idx_ai_usage_user(created_at,user_id)");}catch(Throwable $ignored){}
             $tableReady=true;
         }
 
@@ -313,12 +317,13 @@ function ai_usage_log(string $callType,string $model,array $data,float $startedA
         $totalTokens=isset($usage['total_tokens'])?(int)$usage['total_tokens']:null;
         $durationMs=max(0,(int)round((microtime(true)-$startedAt)*1000));
         $success=(isset($data['_leren_error'])||isset($data['error']))?0:1;
+        $userId=isset($_SESSION['user']['id'])?(int)$_SESSION['user']['id']:null;
 
         $stmt=$pdo->prepare("INSERT INTO ai_usage
-            (call_type,model,input_tokens,cached_input_tokens,output_tokens,reasoning_tokens,total_tokens,duration_ms,success)
-            VALUES (?,?,?,?,?,?,?,?,?)");
+            (created_at,user_id,call_type,model,input_tokens,cached_input_tokens,output_tokens,reasoning_tokens,total_tokens,duration_ms,success)
+            VALUES (CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?,?)");
         $stmt->execute([
-            $callType,$model,$inputTokens,$cachedInputTokens,$outputTokens,
+            $userId,$callType,$model,$inputTokens,$cachedInputTokens,$outputTokens,
             $reasoningTokens,$totalTokens,$durationMs,$success
         ]);
     }catch(Throwable $e){
