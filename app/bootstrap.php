@@ -13,7 +13,7 @@ function leren_navbar_html(string $area): string{
         ? '<a class="btn btn-outline-light btn-sm" href="index.php">Website</a>'
         : '<a class="btn btn-outline-light btn-sm" href="admin.php">Beheer</a>';
 
-    return '<nav class="navbar navbar-dark bg-dark mb-4"><div class="container">'
+    return '<nav class="navbar navbar-dark bg-dark leren-navbar mb-4"><div class="container">'
         .'<a class="navbar-brand d-flex align-items-center gap-2" href="index.php">'
         .'<img src="/assets/leren-logo.svg" alt="" width="40" height="40" class="leren-logo">'
         .'<span>Leren</span></a>'
@@ -91,6 +91,14 @@ body.leren-admin .btn-secondary,body.leren-admin .btn-outline-secondary{
 body.leren-admin .btn-light,body.leren-admin .btn-outline-light{color:#fff!important}
 body.leren-admin .alert a,body.leren-admin .card a:not(.btn),body.leren-admin .accordion-body a,
 body.leren-admin .list-group-item a{color:#8fc39b!important}
+.leren-navbar{background:linear-gradient(135deg,#19c873 0%,#0b8f52 58%,#087443 100%)!important}
+.leren-navbar .navbar-brand{color:#fff!important;font-weight:600}
+.leren-navbar .leren-user-name{color:#fff!important}
+@media(max-width:576px){
+  .leren-navbar .leren-user-name{display:none!important}
+  .leren-navbar .container{gap:.5rem}
+  .leren-navbar .navbar-brand img{width:36px;height:36px}
+}
 body.leren-admin .navbar.bg-dark{background:#1b211e!important}
 .leren-logo{border-radius:10px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.18)}
 body.leren-admin .border,body.leren-admin .border-top,body.leren-admin .border-end,
