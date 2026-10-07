@@ -588,12 +588,15 @@ document.getElementById('analyzeForm')?.addEventListener('submit',()=>showAiLoad
       const percent=total?Math.round(done/total*100):100;
       bar.style.width=percent+'%';
       count.textContent=done+' van '+total;
+      if(data.method==='web')text.textContent='Geschikte afbeelding gevonden op internet.';
+      else if(data.method==='svg')text.textContent='Eenvoudige SVG-afbeelding gemaakt.';
+      else if(data.method==='generate')text.textContent='Geen geschikte afbeelding gevonden — GPT maakt een afbeelding.';
       if(data.done){
         text.textContent='Alle afbeeldingen zijn klaar. De toets wordt geopend...';
         setTimeout(()=>{window.location.href='subject_manage.php?id=<?= (int)$subjectId ?>&ai_saved='+(data.saved_count||0)},700);
         return;
       }
-      text.textContent='Afbeelding '+(done+1)+' van '+total+' wordt gemaakt...';
+      setTimeout(()=>{text.textContent='Afbeelding '+(done+1)+' van '+total+' wordt gemaakt...';},900);
       setTimeout(nextImage,250);
     }catch(error){
       text.textContent=error.message||'Er ging iets mis.';
