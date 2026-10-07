@@ -21,6 +21,7 @@ if($topicId){
 
 $errors=[];$analysis=null;
 $prefix=trim((string)($_POST['prefix']??''));
+$query=trim((string)($_POST['query']??''));
 $requestedSpecs=$_POST['specs']??[];
 
 function ai_requested_specs(mixed $input):array{
@@ -96,6 +97,7 @@ if(isset($_SESSION['ai_test_analysis'])&&is_array($_SESSION['ai_test_analysis'])
     $saved=$_SESSION['ai_test_analysis'];
     if(($saved['subject_id']??null)===$subjectId && ($saved['topic_id']??null)===$topicId){
         $analysis=$saved['analysis']??null;
+        $query=trim((string)($saved['query']??$query));
     }
 }
 
@@ -123,7 +125,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $errors[]='Je kunt maximaal tien sub-testen tegelijk genereren.';
             }
             if(!$errors){
-                $useSummary=!empty($_POST['use_summary']);
+                $useSummary=!empty($_POST['use_summary']) && !empty($saved['images']);
+
                 if($topicId){
                     $topicSummarySetting=$pdo->prepare("UPDATE topics SET use_summary=? WHERE id=?");
                     $topicSummarySetting->execute([$useSummary?1:0,$topicId]);
@@ -147,7 +150,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 foreach($requestedSpecs as $i=>$spec){
                     $requested[]=['number'=>$i+1,'type'=>$spec['type'],'type_label'=>ai_type_label($spec['type']),'question_count'=>$spec['count']];
                 }
-                $prompt='Maak nu concrete oefentoetsvragen voor precies deze gevraagde sub-tests. Gebruik uitsluitend de informatie uit de schoolboekpagina’s. Probeer het gevraagde aantal daadwerkelijk te halen, ook als de eerdere analyse een lagere schatting van het aantal unieke vragen gaf. Gebruik de bron zo volledig mogelijk en maak binnen één sub-test verschillende vraagvormen en invalshoeken. Bij grammatica, tabellen, vervoegingen, begrippen en korte teksten mag dezelfde broninformatie meerdere keren worden bevraagd als de vraag wezenlijk anders is. Verzin geen informatie die niet uit de bron volgt; als het gevraagde aantal echt niet haalbaar is zonder verzinnen of vrijwel identieke vragen, maak dan zoveel goede vragen als verantwoord mogelijk en leg dat in de titel/description niet uit maar lever de vragen. Maak exact '.count($requested).' sub-tests met de gevraagde aantallen vragen. De gewenste opdrachten zijn: '.json_encode($requested,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'. Dezelfde leerstof en feiten mogen in verschillende sub-tests opnieuw worden gebruikt: een multiple-choice-sub-test en een open-vragen-sub-test mogen dus inhoudelijk op dezelfde broninformatie zijn gebaseerd. Ook mogen verschillende sub-tests dezelfde leerstof behandelen. Binnen iedere afzonderlijke sub-test moeten de vragen wel voldoende van elkaar verschillen en niet vrijwel identiek zijn. Bepaal per sub-test zelf een korte, duidelijke titel op basis van de leerstof; voeg geen prefix toe en gebruik geen algemene titels zoals "Toets 1" als een inhoudelijke titel mogelijk is. Bij meerdere vergelijkbare sub-tests moeten de titels uniek zijn. Maak per sub-test precies het gevraagde aantal vragen. Bij mc zijn alle vragen multiple choice met exact vier antwoorden en exact één correct antwoord. Bij open zijn alle vragen open en moet accepted_answers minimaal één inhoudelijk geldig antwoord bevatten. Bij combinatie moet je een evenwichtige mix van mc en open maken. Gebruik de broninformatie dus gerust opnieuw in een andere vraagvorm; probeer niet kunstmatig alle sub-tests samen tot één unieke vragenpool te beperken. source_page is de pagina uit de geüploade set waarop de vraag het duidelijkst gebaseerd is. Zet use_image alleen op true als een afbeelding, kaart, schema of foto op die pagina echt relevant is voor het beantwoorden van de vraag.';
+                $prompt=($query!==''
+                    ? 'De gebruiker gaf de volgende opdracht/onderwerp voor de toets: "'.$query.'". Gebruik dit als inhoudelijke basis en gebruik algemene kennis om de vragen te maken. Beperk je niet tot schoolboekpagina’s, want er zijn geen pagina’s aangeleverd. '
+                    : '').'Maak nu concrete oefentoetsvragen voor precies deze gevraagde sub-tests. Gebruik uitsluitend de informatie uit de schoolboekpagina’s. Probeer het gevraagde aantal daadwerkelijk te halen, ook als de eerdere analyse een lagere schatting van het aantal unieke vragen gaf. Gebruik de bron zo volledig mogelijk en maak binnen één sub-test verschillende vraagvormen en invalshoeken. Bij grammatica, tabellen, vervoegingen, begrippen en korte teksten mag dezelfde broninformatie meerdere keren worden bevraagd als de vraag wezenlijk anders is. Verzin geen informatie die niet uit de bron volgt; als het gevraagde aantal echt niet haalbaar is zonder verzinnen of vrijwel identieke vragen, maak dan zoveel goede vragen als verantwoord mogelijk en leg dat in de titel/description niet uit maar lever de vragen. Maak exact '.count($requested).' sub-tests met de gevraagde aantallen vragen. De gewenste opdrachten zijn: '.json_encode($requested,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'. Dezelfde leerstof en feiten mogen in verschillende sub-tests opnieuw worden gebruikt: een multiple-choice-sub-test en een open-vragen-sub-test mogen dus inhoudelijk op dezelfde broninformatie zijn gebaseerd. Ook mogen verschillende sub-tests dezelfde leerstof behandelen. Binnen iedere afzonderlijke sub-test moeten de vragen wel voldoende van elkaar verschillen en niet vrijwel identiek zijn. Bepaal per sub-test zelf een korte, duidelijke titel op basis van de leerstof; voeg geen prefix toe en gebruik geen algemene titels zoals "Toets 1" als een inhoudelijke titel mogelijk is. Bij meerdere vergelijkbare sub-tests moeten de titels uniek zijn. Maak per sub-test precies het gevraagde aantal vragen. Bij mc zijn alle vragen multiple choice met exact vier antwoorden en exact één correct antwoord. Bij open zijn alle vragen open en moet accepted_answers minimaal één inhoudelijk geldig antwoord bevatten. Bij combinatie moet je een evenwichtige mix van mc en open maken. Gebruik de broninformatie dus gerust opnieuw in een andere vraagvorm; probeer niet kunstmatig alle sub-tests samen tot één unieke vragenpool te beperken. source_page is de pagina uit de geüploade set waarop de vraag het duidelijkst gebaseerd is. Zet use_image alleen op true als een afbeelding, kaart, schema of foto op die pagina echt relevant is voor het beantwoorden van de vraag.';
                 $data=openai_generate_test_questions($prompt,(array)($saved['images']??[]));
                 if(isset($data['_leren_error']))$errors[]=$data['_leren_error'];
                 else{
@@ -336,8 +341,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         }
 
         if(!$errors){
+            if($query!==''){
+                $prompt='Analyseer het onderwerp/de opdracht van de gebruiker voor het maken van een oefentoets. De gebruiker wil de volgende leerstof of opdracht: "'.$query.'". Gebruik algemene kennis om het onderwerp af te bakenen, formuleer de belangrijkste leerpunten en bepaal welke verschillende zinvolle vragen over dit onderwerp kunnen worden gemaakt. Stel enkele logische inhoudelijke sub-testtitels voor. Geef alleen JSON volgens het opgegeven schema.';
+                $data=openai_generate_text_analysis($prompt);
+            }else{
             $prompt='Analyseer de geüploade schoolboekpagina’s voor het maken van oefentoetsen. Identificeer het vak en onderwerp, vat de stof kort samen en geef de belangrijkste leerpunten. Gebruik uitsluitend informatie uit de pagina’s. Bepaal daarnaast zo realistisch mogelijk hoeveel verschillende, inhoudelijk zinvolle vragen maximaal binnen één afzonderlijke sub-test uit deze bron kunnen worden gemaakt zonder leerstof te verzinnen. Kijk daarbij niet alleen naar unieke feiten, maar ook naar verschillende geldige vraagvormen en invalshoeken die de bron daadwerkelijk ondersteunt. Bij grammatica, vervoegingen, woordlijsten en tabellen mag bijvoorbeeld iedere relevante vorm afzonderlijk worden bevraagd en mag dezelfde leerstof worden getoetst via betekenis, persoonsvorm, invulling, herkenning, vertaling, correcte toepassing of een korte contextzin, zolang de vragen voor een leerling inhoudelijk duidelijk van elkaar verschillen. Tel zulke wezenlijk verschillende vraagvormen dus mee. Vermijd alleen vrijwel identieke vragen die alleen enkele woorden omwisselen. Dezelfde leerstof mag in meerdere sub-tests opnieuw worden gebruikt en mag bijvoorbeeld zowel als multiple-choicevraag als als open vraag worden bevraagd. Wees realistisch, maar niet onnodig conservatief: het doel is het maximale aantal goede oefenvragen dat deze specifieke bron daadwerkelijk ondersteunt. Stel ook enkele logische inhoudelijke sub-testtitels voor. Geef alleen JSON volgens het opgegeven schema.';
-            $data=openai_generate_with_images($prompt,$valid);
+            $data=$query!=='' ? $data : openai_generate_with_images($prompt,$valid);
             if(isset($data['_leren_error'])){
                 foreach($valid as $path)@unlink($path);
                 @rmdir($sessionDir);
@@ -362,6 +371,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         'images'=>$valid,
                         'summary_text'=>null,
                         'request'=>['prefix'=>'','specs'=>[]],
+                        'query'=>$query,
                         'created_at'=>time()
                     ];
                 }
@@ -407,8 +417,13 @@ $stage=$hasGenerated?3:($analysis?2:1);
 
 <?php if($stage===1):?>
 <div class="upload-intro mb-4">
-<h2 class="h4 mb-2">1. Boekpagina’s toevoegen</h2>
-<p class="text-secondary mb-0">Upload de relevante pagina’s uit het schoolboek. Op de volgende pagina kies je pas hoe de toets moet worden opgebouwd.</p>
+<h2 class="h4 mb-2">1. Toetsbron kiezen</h2>
+<p class="text-secondary mb-3">Upload boekpagina’s óf geef hieronder een onderwerp/opdracht. De AI gebruikt daarna de gekozen bron om de toets te maken.</p>
+<div class="card bg-light border-0 mb-3"><div class="card-body">
+<label class="form-label fw-semibold" for="query">Onderwerp of opdracht</label>
+<textarea class="form-control" id="query" name="query" rows="3" placeholder="Bijvoorbeeld: Maak een toets over de Griekse stadstaten, met aandacht voor Athene, Sparta en de democratie."><?=e($query)?></textarea>
+<div class="form-text">Je kunt hier ook precies beschrijven wat je wilt oefenen. Zonder boekpagina’s gebruikt de AI haar algemene kennis.</div>
+</div></div>
 </div>
 <form method="post" enctype="multipart/form-data" id="analyzeForm" data-ai-loading="analyze">
 <input type="hidden" name="action" value="analyze">
@@ -417,11 +432,11 @@ $stage=$hasGenerated?3:($analysis?2:1);
 <div class="fw-semibold fs-5">Sleep boekpagina’s hierheen</div>
 <div class="text-secondary mt-1">of tik om foto’s te kiezen</div>
 <div class="upload-rules mt-3"><span>JPG, PNG of WebP</span><span>Max. 10 pagina’s</span><span>Max. 5 MB per foto</span></div>
-<input class="d-none" id="pages" type="file" name="pages[]" accept="image/jpeg,image/png,image/webp" multiple required>
+<input class="d-none" id="pages" type="file" name="pages[]" accept="image/jpeg,image/png,image/webp" multiple>
 </label>
 <div id="fileList" class="upload-file-list mb-4"></div>
 <div class="d-flex flex-column flex-sm-row gap-2">
-<button class="btn btn-primary btn-lg" type="submit" id="analyzeButton" disabled>Start met verwerken</button>
+<button class="btn btn-primary btn-lg" type="submit" id="analyzeButton">Start met verwerken</button>
 <a class="btn btn-outline-secondary btn-lg" href="subject_manage.php?id=<?=$subjectId?>">Annuleren</a>
 </div>
 </form>
@@ -505,7 +520,8 @@ $stage=$hasGenerated?3:($analysis?2:1);
 <script>
 const input=document.getElementById('pages'),list=document.getElementById('fileList'),dropzone=document.getElementById('dropzone'),analyzeButton=document.getElementById('analyzeButton');
 function renderFiles(){if(!input||!list)return;const files=[...input.files];list.innerHTML='';if(!files.length){if(analyzeButton)analyzeButton.disabled=true;return;}files.forEach((file,index)=>{const item=document.createElement('div');item.className='upload-file';item.innerHTML='<span>🖼️</span><div class="flex-grow-1 min-w-0"><div class="upload-file-name">'+(index+1)+'. '+file.name.replace(/[<>&"]/g,'')+'</div><div class="small text-secondary">'+Math.round(file.size/1024)+' KB</div></div>';list.appendChild(item)});if(analyzeButton)analyzeButton.disabled=false}
-input?.addEventListener('change',renderFiles);dropzone?.addEventListener('dragover',e=>{e.preventDefault();dropzone.classList.add('dragover')});dropzone?.addEventListener('dragleave',()=>dropzone.classList.remove('dragover'));dropzone?.addEventListener('drop',e=>{e.preventDefault();dropzone.classList.remove('dragover');if(input&&e.dataTransfer.files.length){input.files=e.dataTransfer.files;renderFiles()}});
+input?.addEventListener('change',renderFiles);
+document.getElementById('query')?.addEventListener('input',()=>{const q=document.getElementById('query').value.trim();if(analyzeButton)analyzeButton.disabled=!q && !(input?.files?.length);});dropzone?.addEventListener('dragover',e=>{e.preventDefault();dropzone.classList.add('dragover')});dropzone?.addEventListener('dragleave',()=>dropzone.classList.remove('dragover'));dropzone?.addEventListener('drop',e=>{e.preventDefault();dropzone.classList.remove('dragover');if(input&&e.dataTransfer.files.length){input.files=e.dataTransfer.files;renderFiles()}});
 const savedSpecs=<?=json_encode($savedRequest['specs']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;const specDefaults=savedSpecs.length?savedSpecs:[{type:'mixed',count:10}];
 function addSpecRow(container,row,index){const wrap=document.createElement('div');wrap.className='row g-2 align-items-end mb-2 spec-row';wrap.innerHTML='<div class="col-5 col-md-3"><label class="form-label small">Aantal</label><input class="form-control" type="number" name="specs['+index+'][count]" min="1" max="100" value="'+(row.count||10)+'" required></div><div class="col-5 col-md-4"><label class="form-label small">Type</label><select class="form-select" name="specs['+index+'][type]"><option value="mc" '+(row.type==='mc'?'selected':'')+'>Multiple choice</option><option value="open" '+(row.type==='open'?'selected':'')+'>Open vragen</option><option value="mixed" '+(row.type==='mixed'?'selected':'')+'>Combinatie</option></select></div><div class="col-2 col-md-2"><button type="button" class="btn btn-outline-danger w-100 remove-spec">×</button></div>';container.appendChild(wrap);wrap.querySelector('.remove-spec').addEventListener('click',()=>{wrap.remove();updateTotals(container)})}
 function fillSpecs(container,specs){container.innerHTML='';(specs.length?specs:[{type:'mixed',count:10}]).forEach((row,i)=>addSpecRow(container,row,i));updateTotals(container)}
