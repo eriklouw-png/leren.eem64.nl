@@ -251,7 +251,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $prefixToUse=trim((string)(($saved['request']['prefix']??'')??''));
                 $title=$prefixToUse!==''?$prefixToUse.' '.$rawTitle:$rawTitle;
                 $description=trim((string)($test['description']??''));
-                $questions=$isVocabularyMode?($generated[$si]['questions']??[]):($test['questions']??[]);
+                $questions=$generated[$si]['questions']??[];
                 if($title===''){ $errors[]='Elke sub-test moet een titel hebben.'; continue; }
                 if(!is_array($questions)||!$questions){$errors[]='Sub-test "'.$title.'" bevat geen vragen.';continue;}
                 $validQuestions=[];
@@ -262,7 +262,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     $correct=trim((string)($q['correct_answer']??''));
                     $explanation=trim((string)($q['explanation']??''));
                     $sourcePage=max(1,(int)($q['source_page']??1));
-                    $useImage=!empty($q['use_image']);
+                    $postedQuestion=(is_array($test['questions']??null)&&is_array($test['questions'][$qi]??null))?$test['questions'][$qi]:[];
+                    $useImage=!empty($postedQuestion['use_image'])||(!isset($postedQuestion['use_image'])&&!empty($q['use_image']));
                     if($question===''||$correct===''){$errors[]='Vraag '.($qi+1).' in "'.$title.'" mist vraag of antwoord.';continue;}
                     if(!in_array($type,['mc','open'],true)){$errors[]='Ongeldig vraagtype in "'.$title.'".';continue;}
                     $options=[];
@@ -652,18 +653,7 @@ Voorgestelde methode: <?=e($methodLabel)?><?=($q['image_reason']??'')!==''?' · 
 </div>
 <span class="small text-secondary">Bronpagina <?=e((string)($q['source_page']??1))?></span>
 </div>
-<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][type]" value="<?=e($q['type'])?>">
-<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][source_page]" value="<?=e((string)($q['source_page']??1))?>">
-<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][image_prompt]" value="<?=e((string)($q['image_prompt']??''))?>">
-<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][image_search_query]" value="<?=e((string)($q['image_search_query']??''))?>">
-<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][svg_code]" value="<?=e((string)($q['svg_code']??''))?>">
-<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][image_method]" value="<?=e((string)($q['image_method']??'none'))?>">
-<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][image_reason]" value="<?=e((string)($q['image_reason']??''))?>">
-<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][correct_answer]" value="<?=e($q['correct_answer']??'')?>">
-<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][question]" value="<?=e($q['question'])?>">
-<?php if($q['type']==='mc'):?><?php foreach(($q['options']??[]) as $oi=>$option):?><input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][options][<?=$oi?>]" value="<?=e($option)?>"><?php endforeach;?><input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][correct_option]" value="<?=e((string)($q['correct_option']??0))?>">
-<?php else:?><input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][accepted_answers]" value="<?=e(implode(' | ',(array)($q['accepted_answers']??[$q['correct_answer']??''])))?>"><?php endif;?>
-<input type="hidden" name="tests[<?=$si?>][questions][<?=$qi?>][explanation]" value="<?=e($q['explanation']??'')?>">
+][questions][<?=$qi?>][explanation]" value="<?=e($q['explanation']??'')?>">
 <?php endif;?>
 </div>
 <?php endforeach;?>
