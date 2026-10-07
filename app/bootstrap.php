@@ -635,7 +635,7 @@ function ai_save_svg(string $svg,string $directory):?string{
     if($svg===''||strlen($svg)>150000)return null;
     if(!preg_match('~^<\?xml[^>]*>\s*<svg\b~is',$svg)&&!preg_match('~^<svg\b~i',$svg))return null;
     if(!preg_match('~</svg>\s*$~i',$svg))return null;
-    if(preg_match('~<(script|iframe|object|embed|foreignObject)\b|javascript:|on[a-z]+\s*=~i',$svg))return null;
+    if(preg_match('~<(script|iframe|object|embed|foreignObject)\b|javascript:|on[a-z]+\s*=|url\s*\(|(?:xlink:)?href\s*=\s*["\']https?://~i',$svg))return null;
     if(!is_dir($directory)&&!@mkdir($directory,0755,true))return null;
     $filename='svg_'.bin2hex(random_bytes(12)).'.svg';
     if(@file_put_contents($directory.'/'.$filename,$svg)===false)return null;
