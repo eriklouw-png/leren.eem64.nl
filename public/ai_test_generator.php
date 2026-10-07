@@ -440,7 +440,7 @@ $savedSummaryText=(string)($_SESSION['ai_test_analysis']['summary_text']??'');
 
 <?php
 $hasGenerated=isset($_SESSION['ai_test_analysis']['generated']['subtests']) && is_array($_SESSION['ai_test_analysis']['generated']['subtests']);
-$stage=$hasGenerated?3:($analysis?2:1);
+$stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 ?>
 <div class="ai-steps mb-4">
 <?php foreach([1=>'Pagina’s',2=>'Instellingen',3=>'Vragen'] as $stepNo=>$stepName):?>
