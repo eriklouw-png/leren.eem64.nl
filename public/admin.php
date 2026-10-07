@@ -197,5 +197,5 @@ $students=$pdo->query("
 </div>
 <?php endif;?>
 
-<div class="mt-5 pt-3 border-top d-flex flex-wrap gap-2"><a class="btn btn-outline-primary" href="ai_usage.php">AI-verbruik &amp; kosten</a><a class="btn btn-outline-primary" href="system_update.php">Website bijwerken</a></div>
+<div class="mt-5 pt-3 border-top d-flex flex-wrap gap-2"><a class="btn btn-outline-primary" href="ai_usage.php">AI-verbruik &amp; kosten</a><a class="btn btn-outline-primary" href="ai_rules.php">AI-instructies per vak</a><a class="btn btn-outline-primary" href="system_update.php">Website bijwerken</a></div>
 </main><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script></body></html>
