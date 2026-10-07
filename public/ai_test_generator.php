@@ -312,14 +312,18 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         if(!warm_ai())$errors[]='AI is niet beschikbaar. Controleer OPENAI_API_KEY en de AI-instellingen.';
         $files=$_FILES['pages']??null;
         $valid=[];
+        $query=trim((string)($_POST['query']??''));
         $base=sys_get_temp_dir().'/leren_ai_test_pages';
-        if(!is_dir($base)&&!@mkdir($base,0700,true))$errors[]='De tijdelijke opslagmap voor AI-pagina’s kon niet worden aangemaakt.';
-        $sessionDir=$base.'/'.bin2hex(random_bytes(16));
-        if(!$errors&&!is_dir($sessionDir)&&!@mkdir($sessionDir,0700,true))$errors[]='De tijdelijke opslagmap voor deze AI-analyse kon niet worden aangemaakt.';
+        $sessionDir=null;
 
         if(!$errors && $files && isset($files['name']) && is_array($files['name'])){
+            if(!is_dir($base)&&!@mkdir($base,0700,true))$errors[]='De tijdelijke opslagmap voor AI-pagina’s kon niet worden aangemaakt.';
+            if(!$errors){
+                $sessionDir=$base.'/'.bin2hex(random_bytes(16));
+                if(!@mkdir($sessionDir,0700,true))$errors[]='De tijdelijke opslagmap voor deze AI-analyse kon niet worden aangemaakt.';
+            }
             $allowed=['image/jpeg','image/png','image/webp'];
-            foreach($files['name'] as $i=>$name){
+            if(!$errors)foreach($files['name'] as $i=>$name){
                 if(count($valid)>=10)break;
                 $error=(int)($files['error'][$i]??UPLOAD_ERR_NO_FILE);
                 if($error===UPLOAD_ERR_NO_FILE)continue;
@@ -335,9 +339,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 if(!@move_uploaded_file($tmp,$path)){$errors[]='Een afbeelding kon niet veilig worden opgeslagen.';continue;}
                 $valid[]=$path;
             }
-            if(!$valid&&!$errors)$errors[]='Selecteer minimaal één afbeelding.';
-        }elseif(!$errors){
-            $errors[]='Selecteer minimaal één afbeelding.';
+        }
+
+        if(!$errors && $query==='' && !$valid){
+            $errors[]='Vul een onderwerp/opdracht in of selecteer minimaal één boekpagina.';
         }
 
         if(!$errors){
@@ -345,23 +350,23 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $prompt='Analyseer het onderwerp/de opdracht van de gebruiker voor het maken van een oefentoets. De gebruiker wil de volgende leerstof of opdracht: "'.$query.'". Gebruik algemene kennis om het onderwerp af te bakenen, formuleer de belangrijkste leerpunten en bepaal welke verschillende zinvolle vragen over dit onderwerp kunnen worden gemaakt. Stel enkele logische inhoudelijke sub-testtitels voor. Geef alleen JSON volgens het opgegeven schema.';
                 $data=openai_generate_text_analysis($prompt);
             }else{
-            $prompt='Analyseer de geüploade schoolboekpagina’s voor het maken van oefentoetsen. Identificeer het vak en onderwerp, vat de stof kort samen en geef de belangrijkste leerpunten. Gebruik uitsluitend informatie uit de pagina’s. Bepaal daarnaast zo realistisch mogelijk hoeveel verschillende, inhoudelijk zinvolle vragen maximaal binnen één afzonderlijke sub-test uit deze bron kunnen worden gemaakt zonder leerstof te verzinnen. Kijk daarbij niet alleen naar unieke feiten, maar ook naar verschillende geldige vraagvormen en invalshoeken die de bron daadwerkelijk ondersteunt. Bij grammatica, vervoegingen, woordlijsten en tabellen mag bijvoorbeeld iedere relevante vorm afzonderlijk worden bevraagd en mag dezelfde leerstof worden getoetst via betekenis, persoonsvorm, invulling, herkenning, vertaling, correcte toepassing of een korte contextzin, zolang de vragen voor een leerling inhoudelijk duidelijk van elkaar verschillen. Tel zulke wezenlijk verschillende vraagvormen dus mee. Vermijd alleen vrijwel identieke vragen die alleen enkele woorden omwisselen. Dezelfde leerstof mag in meerdere sub-tests opnieuw worden gebruikt en mag bijvoorbeeld zowel als multiple-choicevraag als als open vraag worden bevraagd. Wees realistisch, maar niet onnodig conservatief: het doel is het maximale aantal goede oefenvragen dat deze specifieke bron daadwerkelijk ondersteunt. Stel ook enkele logische inhoudelijke sub-testtitels voor. Geef alleen JSON volgens het opgegeven schema.';
-            $data=$query!=='' ? $data : openai_generate_with_images($prompt,$valid);
+                $prompt='Analyseer de geüploade schoolboekpagina’s voor het maken van oefentoetsen. Identificeer het vak en onderwerp, vat de stof kort samen en geef de belangrijkste leerpunten. Gebruik uitsluitend informatie uit de pagina’s. Bepaal daarnaast zo realistisch mogelijk hoeveel verschillende, inhoudelijk zinvolle vragen maximaal binnen één afzonderlijke sub-test uit deze bron kunnen worden gemaakt zonder leerstof te verzinnen. Kijk daarbij niet alleen naar unieke feiten, maar ook naar verschillende geldige vraagvormen en invalshoeken die de bron daadwerkelijk ondersteunt. Bij grammatica, vervoegingen, woordlijsten en tabellen mag bijvoorbeeld iedere relevante vorm afzonderlijk worden bevraagd en mag dezelfde leerstof worden getoetst via betekenis, persoonsvorm, invulling, herkenning, vertaling, correcte toepassing of een korte contextzin, zolang de vragen voor een leerling inhoudelijk duidelijk van elkaar verschillen. Tel zulke wezenlijk verschillende vraagvormen dus mee. Vermijd alleen vrijwel identieke vragen die alleen enkele woorden omwisselen. Dezelfde leerstof mag in meerdere sub-tests opnieuw worden gebruikt en mag bijvoorbeeld zowel als multiple-choicevraag als als open vraag worden bevraagd. Wees realistisch, maar niet onnodig conservatief: het doel is het maximale aantal goede oefenvragen dat deze specifieke bron daadwerkelijk ondersteunt. Stel ook enkele logische inhoudelijke sub-testtitels voor. Geef alleen JSON volgens het opgegeven schema.';
+                $data=openai_generate_with_images($prompt,$valid);
+            }
+
             if(isset($data['_leren_error'])){
                 foreach($valid as $path)@unlink($path);
-                @rmdir($sessionDir);
+                if($sessionDir&&is_dir($sessionDir))@rmdir($sessionDir);
                 $errors[]=$data['_leren_error'];
             }else{
                 $analysis=openai_output_json($data);
                 if(!$analysis||!isset($analysis['subtests'])||!is_array($analysis['subtests'])||count($analysis['subtests'])===0){
                     foreach($valid as $path)@unlink($path);
-                    @rmdir($sessionDir);
+                    if($sessionDir&&is_dir($sessionDir))@rmdir($sessionDir);
                     $reason=(string)($data['incomplete_details']['reason']??'');
-                    if(($data['status']??'')==='incomplete' && $reason!==''){
-                        $errors[]='De AI-analyse werd niet volledig afgerond ('.$reason.'). Probeer het opnieuw.';
-                    }else{
-                        $errors[]='De AI gaf geen bruikbaar analyse-resultaat terug. Probeer het opnieuw.';
-                    }
+                    $errors[]=(($data['status']??'')==='incomplete'&&$reason!=='')
+                        ? 'De AI-analyse werd niet volledig afgerond ('.$reason.'). Probeer het opnieuw.'
+                        : 'De AI gaf geen bruikbaar analyse-resultaat terug. Probeer het opnieuw.';
                     $analysis=null;
                 }else{
                     $_SESSION['ai_test_analysis']=[
@@ -369,18 +374,19 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         'topic_id'=>$topicId,
                         'analysis'=>$analysis,
                         'images'=>$valid,
+                        'query'=>$query,
                         'summary_text'=>null,
                         'request'=>['prefix'=>'','specs'=>[]],
-                        'query'=>$query,
                         'created_at'=>time()
                     ];
                 }
             }
         }
-        if($errors && isset($sessionDir)&&is_dir($sessionDir)){
+        if($errors&&$sessionDir&&is_dir($sessionDir)){
             foreach($valid as $path)if(is_file($path))@unlink($path);
             @rmdir($sessionDir);
         }
+    }
     }
 }
 $savedRequest=$_SESSION['ai_test_analysis']['request']??['prefix'=>$prefix,'specs'=>$requestedSpecs];
