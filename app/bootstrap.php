@@ -869,6 +869,99 @@ function openai_generate_topic_summary(string $input,array $imagePaths):?array{
     return $data;
 }
 
+function openai_validate_educational_image(string $question,string $correctAnswer,string $filePath,string $method=''):array{
+    $apiKey=openai_api_key();
+    if($apiKey==='')return ['valid'=>false,'reason'=>'OPENAI_API_KEY ontbreekt.','_leren_error'=>'OPENAI_API_KEY ontbreekt.'];
+    if(!is_file($filePath))return ['valid'=>false,'reason'=>'De afbeelding bestaat niet.'];
+
+    $imageData=null;
+    $mime='image/jpeg';
+    $extra='';
+
+    if($method==='svg'){
+        $svg=(string)@file_get_contents($filePath);
+        if($svg==='')return ['valid'=>false,'reason'=>'De SVG kon niet worden gelezen.'];
+        $extra="Dit is een SVG-afbeelding. Controleer ook de geometrie, posities, labels en ruimtelijke betekenis.\nSVG-CODE:\n".$svg;
+        if(class_exists('Imagick')){
+            try{
+                $im=new Imagick();
+                $im->setBackgroundColor(new ImagickPixel('white'));
+                $im->readImage($filePath);
+                $im->setImageFormat('png');
+                $imageData=base64_encode($im->getImageBlob());
+                $mime='image/png';
+                $im->clear();$im->destroy();
+            }catch(Throwable $ignored){}
+        }
+    }else{
+        $bytes=@file_get_contents($filePath);
+        if($bytes===false||$bytes==='')return ['valid'=>false,'reason'=>'De afbeelding kon niet worden gelezen.'];
+        $detected=(string)@mime_content_type($filePath);
+        if(in_array($detected,['image/jpeg','image/png','image/webp','image/gif'],true))$mime=$detected;
+        $imageData=base64_encode($bytes);
+    }
+
+    $content=[
+        ['type'=>'input_text','text'=>"Controleer of deze afbeelding inhoudelijk geschikt is voor een schoolvraag.
+
+VRAAG:
+".$question."
+
+JUISTE ANTWOORD:
+".$correctAnswer."
+
+Beoordeel streng maar alleen op inhoudelijke bruikbaarheid. De afbeelding moet de vraag daadwerkelijk ondersteunen en mag geen duidelijke feitelijke, geografische, ruimtelijke, numerieke of andere inhoudelijke fout bevatten. Controleer bij kaarten/diagrammen/klokken/grafieken specifiek of posities, markers, labels, verhoudingen en relaties kloppen met de vraag en het juiste antwoord. Een technisch geldige of mooie afbeelding is niet voldoende. Als de afbeelding twijfelachtig of onvoldoende betrouwbaar is, geef valid=false. Geef een korte reden. ".$extra]
+    ];
+    if($imageData!==null){
+        $content[]=['type'=>'input_image','image_url'=>'data:'.$mime.';base64,'.$imageData,'detail'=>'high'];
+    }
+
+    $started=microtime(true);
+    $payload=[
+        'model'=>openai_model(),
+        'instructions'=>'Je bent een strenge kwaliteitscontroleur voor educatieve afbeeldingen. Beoordeel uitsluitend of de afbeelding inhoudelijk klopt en bruikbaar is voor de opgegeven vraag. Geef geen cosmetische kritiek.',
+        'input'=>[['role'=>'user','content'=>$content]],
+        'max_output_tokens'=>250,
+        'store'=>false,
+        'text'=>['format'=>[
+            'type'=>'json_schema','name'=>'image_content_validation','strict'=>true,
+            'schema'=>[
+                'type'=>'object',
+                'properties'=>[
+                    'valid'=>['type'=>'boolean'],
+                    'reason'=>['type'=>'string']
+                ],
+                'required'=>['valid','reason'],
+                'additionalProperties'=>false
+            ]
+        ]]
+    ];
+    $json=json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+    $context=stream_context_create(['http'=>[
+        'method'=>'POST',
+        'header'=>"Content-Type: application/json\r\nAccept: application/json\r\nAuthorization: Bearer ".$apiKey."\r\n",
+        'content'=>$json,
+        'timeout'=>45,
+        'ignore_errors'=>true
+    ]]);
+    $body=@file_get_contents('https://api.openai.com/v1/responses',false,$context);
+    $statusCode=0;
+    foreach(($http_response_header??[]) as $header){
+        if(preg_match('~^HTTP/\\S+\\s+(\\d+)~i',$header,$m)){$statusCode=(int)$m[1];break;}
+    }
+    if($body===false)return ['valid'=>false,'reason'=>'De inhoudelijke afbeeldingscontrole kon niet worden uitgevoerd.','_leren_error'=>'Afbeeldingscontrole: geen verbinding met OpenAI (HTTP '.$statusCode.').'];
+    $data=json_decode($body,true);
+    if(!is_array($data))return ['valid'=>false,'reason'=>'De afbeeldingscontrole gaf geen geldige respons.','_leren_error'=>'Afbeeldingscontrole gaf geen geldige JSON terug.'];
+    if($statusCode<200||$statusCode>=300){
+        $message=(string)($data['error']['message']??'Onbekende API-fout.');
+        return ['valid'=>false,'reason'=>'Controle mislukt.','_leren_error'=>'Afbeeldingscontrole HTTP '.$statusCode.': '.$message];
+    }
+    ai_usage_log('image_content_validation',openai_model(),$data,$started);
+    $result=openai_output_json($data);
+    if(!is_array($result)||!isset($result['valid']))return ['valid'=>false,'reason'=>'De afbeeldingscontrole leverde geen bruikbaar oordeel op.','_leren_error'=>'Afbeeldingscontrole leverde geen bruikbaar oordeel op.'];
+    return ['valid'=>(bool)$result['valid'],'reason'=>(string)($result['reason']??'')];
+}
+
 function openai_output_json(array $data):?array{
     if(isset($data['output_text'])&&is_string($data['output_text'])){
         $result=json_decode($data['output_text'],true);
