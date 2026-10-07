@@ -150,7 +150,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 foreach($requestedSpecs as $i=>$spec){
                     $requested[]=['number'=>$i+1,'type'=>$spec['type'],'type_label'=>ai_type_label($spec['type']),'question_count'=>$spec['count']];
                 }
-                $prompt=($query!==''
                 $prompt='Maak nu concrete oefentoetsvragen voor precies deze gevraagde sub-tests. ';
                 if($query!=='')$prompt.='De gebruiker gaf de volgende opdracht/het volgende onderwerp: '.$query.'. Gebruik dit als inhoudelijke basis en gebruik algemene kennis. Er zijn geen schoolboekpagina’s aangeleverd. ';
                 else $prompt.='Gebruik uitsluitend de informatie uit de schoolboekpagina’s. ';
