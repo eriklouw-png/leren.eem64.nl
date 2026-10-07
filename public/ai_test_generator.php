@@ -387,7 +387,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             @rmdir($sessionDir);
         }
     }
-    }
 }
 $savedRequest=$_SESSION['ai_test_analysis']['request']??['prefix'=>$prefix,'specs'=>$requestedSpecs];
 $savedSummaryText=(string)($_SESSION['ai_test_analysis']['summary_text']??'');
