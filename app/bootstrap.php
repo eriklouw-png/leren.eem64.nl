@@ -921,7 +921,7 @@ Beoordeel streng maar alleen op inhoudelijke bruikbaarheid. De afbeelding moet d
         'model'=>openai_model(),
         'instructions'=>'Je bent een strenge kwaliteitscontroleur voor educatieve afbeeldingen. Beoordeel uitsluitend of de afbeelding inhoudelijk klopt en bruikbaar is voor de opgegeven vraag. Geef geen cosmetische kritiek.',
         'input'=>[['role'=>'user','content'=>$content]],
-        'max_output_tokens'=>250,
+        'max_output_tokens'=>500,
         'store'=>false,
         'text'=>['format'=>[
             'type'=>'json_schema','name'=>'image_content_validation','strict'=>true,
@@ -982,17 +982,69 @@ Beoordeel streng maar alleen op inhoudelijke bruikbaarheid. De afbeelding moet d
     }
 
     if(!is_array($result)||!array_key_exists('valid',$result)){
-        $outputTypes=[];
-        foreach(($data['output']??[]) as $item){
-            foreach(($item['content']??[]) as $content){
-                $outputTypes[]=(string)($content['type']??'unknown');
+        // Een incidenteel leeg/afgebroken oordeel mag niet meteen een afbeelding
+        // afkeuren. Voer één eenvoudige tweede controle uit voordat we stoppen.
+        $retryPayload=[
+            'model'=>openai_model(),
+            'instructions'=>'Beoordeel deze educatieve afbeelding. Antwoord uitsluitend met JSON met precies twee velden: valid (true of false) en reason (korte reden). Als de afbeelding inhoudelijk klopt voor de vraag en het juiste antwoord, is valid true. Bij twijfel is valid false.',
+            'input'=>[['role'=>'user','content'=>$content]],
+            'max_output_tokens'=>300,
+            'store'=>false,
+            'text'=>['format'=>[
+                'type'=>'json_schema','name'=>'image_content_validation_retry','strict'=>true,
+                'schema'=>[
+                    'type'=>'object',
+                    'properties'=>[
+                        'valid'=>['type'=>'boolean'],
+                        'reason'=>['type'=>'string']
+                    ],
+                    'required'=>['valid','reason'],
+                    'additionalProperties'=>false
+                ]
+            ]]
+        ];
+        $retryJson=json_encode($retryPayload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+        $retryContext=stream_context_create(['http'=>[
+            'method'=>'POST',
+            'header'=>"Content-Type: application/json\\r\\nAccept: application/json\\r\\nAuthorization: Bearer ".$apiKey."\\r\\n",
+            'content'=>$retryJson,
+            'timeout'=>45,
+            'ignore_errors'=>true
+        ]]);
+        $retryStarted=microtime(true);
+        $retryBody=@file_get_contents('https://api.openai.com/v1/responses',false,$retryContext);
+        $retryStatus=0;
+        foreach(($http_response_header??[]) as $header){
+            if(preg_match('~^HTTP/\\S+\\s+(\\d+)~i',$header,$m)){$retryStatus=(int)$m[1];break;}
+        }
+        if($retryBody!==false){
+            $retryData=json_decode($retryBody,true);
+            if(is_array($retryData)&&$retryStatus>=200&&$retryStatus<300){
+                ai_usage_log('image_content_validation_retry',openai_model(),$retryData,$retryStarted);
+                $retryResult=openai_output_json($retryData);
+                if(!is_array($retryResult)){
+                    foreach(($retryData['output']??[]) as $item){
+                        foreach(($item['content']??[]) as $retryContent){
+                            if(isset($retryContent['parsed'])&&is_array($retryContent['parsed'])){
+                                $retryResult=$retryContent['parsed'];break 2;
+                            }
+                            $retryText=trim((string)($retryContent['text']??''));
+                            if($retryText!==''){
+                                $candidate=json_decode($retryText,true);
+                                if(is_array($candidate)){$retryResult=$candidate;break 2;}
+                            }
+                        }
+                    }
+                }
+                if(is_array($retryResult)&&array_key_exists('valid',$retryResult)){
+                    return ['valid'=>(bool)$retryResult['valid'],'reason'=>(string)($retryResult['reason']??'')];
+                }
             }
         }
-        $types=$outputTypes?implode(', ',$outputTypes):'geen output-content';
         return [
             'valid'=>false,
             'reason'=>'De afbeeldingscontrole leverde geen bruikbaar oordeel op.',
-            '_leren_error'=>'Afbeeldingscontrole leverde geen bruikbaar oordeel op (output: '.$types.').'
+            '_leren_error'=>'Afbeeldingscontrole leverde geen bruikbaar oordeel op. De controle is automatisch opnieuw geprobeerd.'
         ];
     }
 
