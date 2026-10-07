@@ -96,30 +96,45 @@ foreach($sessions as $s){
 }
 ksort($sessionGroups);
 function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds%60;return $m.' min '.str_pad((string)$s,2,'0',STR_PAD_LEFT).' sec';}
-?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Beheer - Leren</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><style>details .chevron{display:inline-block;transition:transform .15s ease;font-size:1.5rem;line-height:1}details[open] .chevron{transform:rotate(180deg)}</style></head><body class="bg-light"><nav class="navbar navbar-dark bg-dark"><div class="container"><a class="navbar-brand" href="admin.php">Leren beheer</a><div><span class="text-white me-3"><?=e($_SESSION['user']['name'])?></span><a class="btn btn-outline-light btn-sm" href="index.php">Website</a> <a class="btn btn-outline-light btn-sm" href="logout.php">Uitloggen</a></div></div></nav><main class="container py-4">
+?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Beheer - Leren</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><style>
+@media(max-width:767.98px){
+  .admin-grid{--bs-gutter-x:.65rem;--bs-gutter-y:.65rem}
+  .admin-grid>.admin-col{width:50%;padding-left:calc(var(--bs-gutter-x)*.5);padding-right:calc(var(--bs-gutter-x)*.5)}
+  .admin-tile{aspect-ratio:1/1;overflow:hidden}
+  .admin-tile .card-body{height:100%;padding:.7rem!important;display:flex;flex-direction:column}
+  .admin-tile .admin-tile-top{display:block!important}
+  .admin-tile .admin-tile-top img,
+  .admin-tile .admin-tile-top .admin-placeholder{width:100%!important;height:auto!important;aspect-ratio:1/1;display:block!important;margin-bottom:.55rem;object-fit:cover}
+  .admin-tile .admin-tile-info h2{font-size:1.05rem!important;line-height:1.15}
+  .admin-tile .admin-tile-info p,
+  .admin-tile .admin-tile-info .student-email{display:none}
+  .admin-tile .admin-stats{margin-top:auto!important}
+  .admin-tile .admin-action{font-size:.8rem;padding:.35rem .4rem}
+}
+details .chevron{display:inline-block;transition:transform .15s ease;font-size:1.5rem;line-height:1}details[open] .chevron{transform:rotate(180deg)}</style></head><body class="bg-light"><nav class="navbar navbar-dark bg-dark"><div class="container"><a class="navbar-brand" href="admin.php">Leren beheer</a><div><span class="text-white me-3"><?=e($_SESSION['user']['name'])?></span><a class="btn btn-outline-light btn-sm" href="index.php">Website</a> <a class="btn btn-outline-light btn-sm" href="logout.php">Uitloggen</a></div></div></nav><main class="container py-4">
 <div class="d-flex justify-content-between align-items-center mb-3">
 <h1 class="mb-0">Vakken</h1>
 <div><a class="btn btn-outline-primary" href="subject_edit.php">Nieuw vak</a></div>
 </div>
 
-<div class="row g-3 mb-5">
+<div class="row g-3 mb-5 admin-grid">
 <?php foreach($subjects as $subject):?>
-<div class="col-12 col-md-6 col-lg-4">
+<div class="col-6 col-md-6 col-lg-4 admin-col">
 <a href="subject_manage.php?id=<?=(int)$subject['id']?>" class="text-decoration-none text-dark">
-<div class="card shadow-sm h-100">
+<div class="card shadow-sm h-100 admin-tile">
 <div class="card-body p-3">
-<div class="d-flex align-items-center gap-3">
+<div class="d-flex align-items-center gap-3 admin-tile-top">
 <?php if($subject['image_mime']):?>
 <img src="subject_image.php?id=<?=(int)$subject['id']?>" class="rounded flex-shrink-0" style="width:86px;height:86px;object-fit:cover" alt="<?=e($subject['name'])?>">
 <?php else:?>
-<div class="rounded bg-secondary-subtle d-flex align-items-center justify-content-center flex-shrink-0" style="width:86px;height:86px;font-size:2rem">📚</div>
+<div class="rounded bg-secondary-subtle d-flex align-items-center justify-content-center flex-shrink-0 admin-placeholder" style="width:86px;height:86px;font-size:2rem">📚</div>
 <?php endif;?>
-<div class="min-w-0">
+<div class="min-w-0 admin-tile-info">
 <h2 class="h4 mb-1"><?=e($subject['name'])?></h2>
 <?php if($subject['description']):?><p class="text-secondary mb-0 small"><?=e($subject['description'])?></p><?php endif;?>
 </div>
 </div>
-<div class="btn btn-primary w-100 mt-3">Naar <?=e($subject['name'])?> →</div>
+<div class="btn btn-primary w-100 mt-3 admin-action">Naar <?=e($subject['name'])?> →</div>
 </div>
 </div>
 </a>
@@ -170,15 +185,15 @@ $students=$pdo->query("
 <?php endif;?>
 <div class="min-w-0">
 <h2 class="h4 mb-1"><?=e($student['name'])?></h2>
-<div class="text-secondary small"><?=e($student['email'])?></div>
+<div class="text-secondary small student-email"><?=e($student['email'])?></div>
 </div>
 </div>
-<div class="row g-2 mt-3 small">
+<div class="row g-2 mt-3 small admin-stats">
 <div class="col-4"><div class="bg-light rounded p-2 text-center"><strong><?=e((string)$student['completed_tests'])?></strong><div class="text-secondary">toetsen</div></div></div>
 <div class="col-4"><div class="bg-light rounded p-2 text-center"><strong><?=e(rtrim(rtrim(number_format((float)$student['average_score'],0,',','.'),'0'),','))?>%</strong><div class="text-secondary">gem.</div></div></div>
 <div class="col-4"><div class="bg-light rounded p-2 text-center"><strong><?=e((string)intdiv((int)$student['active_seconds'],60))?></strong><div class="text-secondary">min.</div></div></div>
 </div>
-<div class="btn btn-primary w-100 mt-3">Naar <?=e($student['name'])?> →</div>
+<div class="btn btn-primary w-100 mt-3 admin-action">Naar <?=e($student['name'])?> →</div>
 </div>
 </div>
 </a>
