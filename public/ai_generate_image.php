@@ -126,9 +126,9 @@ try{
             // Corrigeer eerst de bestaande afbeelding gericht. GPT krijgt daarmee
             // zowel de afbeelding als de concrete foutmelding. Dat is veel
             // betrouwbaarder voor bijvoorbeeld kaarten, klokken en diagrammen.
-            $editPrompt='Corrigeer deze educatieve afbeelding. Behoud de bestaande afbeelding en verander alleen wat inhoudelijk fout is. Maak geen willekeurige nieuwe afbeelding en voeg geen onnodige decoratie toe. De uiteindelijke afbeelding moet exact overeenkomen met de schoolvraag en het juiste antwoord.';
-            if($reason!=='')$editPrompt.=' De controle vond deze fout: '.$reason;
-            $editPrompt.=' VRAAG: '.$questionText.' JUISTE ANTWOORD: '.$correctAnswer;
+            $editPrompt='Corrigeer deze bestaande educatieve afbeelding zeer gericht. Gebruik de bestaande afbeelding als basis, maar vertrouw NIET op de huidige positie, marker, wijzer, label of andere inhoud die door de controle als fout is aangemerkt. Bepaal de juiste inhoud opnieuw aan de hand van de schoolvraag en het juiste antwoord. Corrigeer het concrete inhoudelijke probleem exact en controleer daarna zelf of de gecorrigeerde afbeelding het juiste antwoord ondubbelzinnig weergeeft. Bij een kaart moet een plaatsmarker daadwerkelijk op de geografisch juiste locatie staan; bij een klok moeten de wijzers exact de gevraagde tijd aangeven; bij een diagram of grafiek moeten waarden, posities en relaties exact kloppen. Behoud de rest van de afbeelding zoveel mogelijk. Geen decoratie en geen willekeurige nieuwe interpretatie.';
+            if($reason!=='')$editPrompt.=' CONCRETE FOUT UIT DE CONTROLE: '.$reason;
+            $editPrompt.=' VRAAG: '.$questionText.' JUISTE ANTWOORD: '.$correctAnswer.' BELANGRIJK: voer de correctie uit op basis van de vraag en het juiste antwoord, niet alleen op basis van de bestaande afbeelding.';
 
             $edited=openai_edit_image($rejectedFile,$editPrompt,$dir);
             if($edited!==null){
