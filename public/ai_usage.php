@@ -66,7 +66,7 @@ $rows->execute([$since]);
 $rows=$rows->fetchAll();
 
 $allCost=0.0;$successful=0;$failed=0;$totalTokens=0;
-$byType=[];$byUser=[];$byModel=[];$recent=[];
+$byType=[];$byUser=[];$byModel=[];$byPage=[];$recent=[];
 foreach($rows as $row){
     $cost=ai_usage_cost($row);
     $allCost+=$cost;
@@ -84,6 +84,11 @@ foreach($rows as $row){
     $byUser[$userKey]['calls']++;
     $byUser[$userKey]['tokens']+=(int)($row['total_tokens']??0);
     $byUser[$userKey]['cost']+=$cost;
+    $page=$row['page_name']?:'Onbekende locatie';
+    if(!isset($byPage[$page]))$byPage[$page]=['calls'=>0,'tokens'=>0,'cost'=>0.0];
+    $byPage[$page]['calls']++;
+    $byPage[$page]['tokens']+=(int)($row['total_tokens']??0);
+    $byPage[$page]['cost']+=$cost;
     $model=$row['model'];
     if(!isset($byModel[$model]))$byModel[$model]=['calls'=>0,'tokens'=>0,'cost'=>0.0];
     $byModel[$model]['calls']++;
@@ -93,6 +98,21 @@ foreach($rows as $row){
 }
 uasort($byType,fn($a,$b)=>$b['cost']<=>$a['cost']);
 uasort($byUser,fn($a,$b)=>$b['cost']<=>$a['cost']);
+uasort($byPage,fn($a,$b)=>$b['cost']<=>$a['cost']);
+
+$imageStats=['web'=>0,'svg'=>0,'generate'=>0,'none'=>0];
+try{
+    $imageStmt=$pdo->prepare("SELECT image_path,COUNT(*) AS aantal FROM questions WHERE created_at>=? GROUP BY image_path");
+    $imageStmt->execute([$since]);
+    foreach($imageStmt->fetchAll() as $img){
+        $path=(string)($img['image_path']??''); $n=(int)$img['aantal'];
+        if($path==='')$imageStats['none']+=$n;
+        elseif(str_starts_with($path,'web_'))$imageStats['web']+=$n;
+        elseif(str_starts_with($path,'svg_'))$imageStats['svg']+=$n;
+        elseif(str_starts_with($path,'ai_'))$imageStats['generate']+=$n;
+        else $imageStats['none']+=$n;
+    }
+}catch(Throwable $ignored){}
 
 $prev=$pdo->prepare("SELECT * FROM ai_usage WHERE created_at>=? AND created_at<? ORDER BY created_at");
 $prev->execute([$previousSince,$since]);
@@ -154,6 +174,26 @@ function ai_pct(?float $n):string{return $n===null?'—':(($n>0?'+':'').number_f
 <div class="col-6 col-lg-3"><div class="card ai-stat"><div class="card-body"><div class="text-secondary">Tokens</div><div class="value"><?=ai_tokens($totalTokens)?></div><div class="ai-small text-secondary">geregistreerd</div></div></div></div>
 <div class="col-6 col-lg-3"><div class="card ai-stat"><div class="card-body"><div class="text-secondary">Duurste opdracht</div><div class="value"><?=e($byType?ai_type_name(array_key_first($byType)):'—')?></div><div class="ai-small text-secondary"><?=ai_money($byType?current($byType)['cost']:0)?> totaal</div></div></div></div>
 </div>
+
+<div class="card mb-4"><div class="card-body">
+<h2 class="h5">AI-opdrachten per locatie</h2>
+<p class="text-secondary">Hier zie je afzonderlijk waar de AI wordt aangeroepen. De verschillende stappen van het maken van een AI-toets blijven daardoor van elkaar te onderscheiden.</p>
+<div class="table-responsive"><table class="table table-sm ai-table mb-0"><thead><tr><th>Locatie</th><th class="text-end">Calls</th><th class="text-end">Tokens</th><th class="text-end">Kosten</th></tr></thead><tbody>
+<?php foreach($byPage as $page=>$d): $pageLabel=['quiz.php'=>'Quiz / leerling','ai_test_generator.php'=>'AI-toets maken','ai_generate_image.php'=>'Afbeeldingen AI-toets'][$page]??$page;?><tr><td><?=e($pageLabel)?></td><td class="text-end"><?=$d['calls']?></td><td class="text-end"><?=ai_tokens($d['tokens'])?></td><td class="text-end fw-semibold"><?=ai_money($d['cost'])?></td></tr><?php endforeach;?>
+<?php if(!$byPage):?><tr><td colspan="4" class="text-secondary">Nog geen locatiegegevens.</td></tr><?php endif;?>
+</tbody></table></div>
+</div></div>
+
+<div class="card mb-4"><div class="card-body">
+<h2 class="h5">Afbeeldingen per methode</h2>
+<p class="text-secondary">Afzonderlijk zichtbaar hoeveel afbeeldingen als internetafbeelding, SVG of door GPT zijn gemaakt.</p>
+<div class="row g-3">
+<div class="col-6 col-lg-3"><div class="p-3 rounded" style="background:#252e28"><div class="text-secondary">Internet</div><div class="fs-3 fw-bold"><?=$imageStats['web']?></div></div></div>
+<div class="col-6 col-lg-3"><div class="p-3 rounded" style="background:#252e28"><div class="text-secondary">SVG</div><div class="fs-3 fw-bold"><?=$imageStats['svg']?></div></div></div>
+<div class="col-6 col-lg-3"><div class="p-3 rounded" style="background:#252e28"><div class="text-secondary">GPT gegenereerd</div><div class="fs-3 fw-bold"><?=$imageStats['generate']?></div></div></div>
+<div class="col-6 col-lg-3"><div class="p-3 rounded" style="background:#252e28"><div class="text-secondary">Geen afbeelding</div><div class="fs-3 fw-bold"><?=$imageStats['none']?></div></div></div>
+</div>
+</div></div>
 
 <div class="card mb-4"><div class="card-body">
 <h2 class="h5">Welke opdrachten kosten het meest?</h2>
