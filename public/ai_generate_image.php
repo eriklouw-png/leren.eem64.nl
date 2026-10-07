@@ -29,6 +29,8 @@ if(!$jobs){
 
 $job=array_shift($jobs);
 $questionId=(int)($job['question_id']??0);
+$questionText=trim((string)($job['question']??''));
+$correctAnswer=trim((string)($job['correct_answer']??''));
 $method=trim((string)($job['method']??''));
 $searchQuery=trim((string)($job['search_query']??''));
 $svgCode=trim((string)($job['svg_code']??''));
@@ -108,6 +110,21 @@ try{
     }
 
     if($filename===null)throw new RuntimeException('Er kon geen geschikte afbeelding worden gevonden of gemaakt.');
+
+    // Naast de technische controle controleren we nu inhoudelijk of de afbeelding
+    // daadwerkelijk bij de vraag en het juiste antwoord past.
+    if($questionText!==''&&$correctAnswer!==''){
+        $validation=openai_validate_educational_image($questionText,$correctAnswer,$dir.'/'.$filename,$method);
+        if(isset($validation['_leren_error'])&&$validation['_leren_error']!==''){
+            @unlink($dir.'/'.$filename);
+            throw new RuntimeException($validation['_leren_error']);
+        }
+        if(empty($validation['valid'])){
+            @unlink($dir.'/'.$filename);
+            $reason=trim((string)($validation['reason']??''));
+            throw new RuntimeException('De afbeelding is inhoudelijk afgekeurd. '.($reason!==''?$reason:'De afbeelding past niet betrouwbaar bij de vraag.'));
+        }
+    }
 
     $update=$pdo->prepare("UPDATE questions SET image_path=? WHERE id=?");
     $update->execute([$filename,$questionId]);
