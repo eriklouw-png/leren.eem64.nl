@@ -111,9 +111,9 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
   .admin-tile .subject-card-title{font-size:1.15rem}
   .admin-tile .subject-card-description{font-size:.82rem;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .admin-tile .admin-action{font-size:.75rem;padding:.3rem .4rem}
-  .student-grid{--bs-gutter-x:.65rem;--bs-gutter-y:.65rem}
-  .student-grid>.student-col{width:50%;padding-left:calc(var(--bs-gutter-x)*.5);padding-right:calc(var(--bs-gutter-x)*.5)}
-  .student-tile{aspect-ratio:1/1;overflow:hidden}
+  .student-grid{--bs-gutter-x:.65rem;--bs-gutter-y:.65rem;display:flex;flex-wrap:wrap}
+  .student-grid>.student-col{flex:0 0 50%;max-width:50%;width:50%;padding-left:calc(var(--bs-gutter-x)*.5);padding-right:calc(var(--bs-gutter-x)*.5)}
+  .student-tile{width:100%;height:100%;aspect-ratio:1/1;overflow:hidden}
   .student-tile .student-card-image{height:100%;min-height:0}
   .student-tile .student-card-body{height:100%;min-height:0!important;padding:.8rem!important}
   .student-tile .student-title{font-size:1.15rem}
@@ -122,7 +122,15 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
   .student-tile .student-stats .p-2{padding:.35rem!important}
   .student-tile .admin-action{font-size:.75rem;padding:.3rem .4rem}
 }
-details .chevron{display:inline-block;transition:transform .15s ease;font-size:1.5rem;line-height:1}details[open] .chevron{transform:rotate(180deg)}</style></head><body class="bg-light"><nav class="navbar navbar-dark bg-dark"><div class="container"><a class="navbar-brand" href="admin.php">Leren beheer</a><div><span class="text-white me-3"><?=e($_SESSION['user']['name'])?></span><a class="btn btn-outline-light btn-sm" href="index.php">Website</a> <a class="btn btn-outline-light btn-sm" href="logout.php">Uitloggen</a></div></div></nav><main class="container py-4">
+details .chevron{display:inline-block;transition:transform .15s ease;font-size:1.5rem;line-height:1}details[open] .chevron{transform:rotate(180deg)}.student-grid>.student-col{display:flex}
+.student-tile{width:100%}
+@media(min-width:768px){
+  .student-grid>.student-col{flex-basis:50%;max-width:50%}
+}
+@media(min-width:992px){
+  .student-grid>.student-col{flex-basis:33.333333%;max-width:33.333333%}
+}
+</style></head><body class="bg-light"><nav class="navbar navbar-dark bg-dark"><div class="container"><a class="navbar-brand" href="admin.php">Leren beheer</a><div><span class="text-white me-3"><?=e($_SESSION['user']['name'])?></span><a class="btn btn-outline-light btn-sm" href="index.php">Website</a> <a class="btn btn-outline-light btn-sm" href="logout.php">Uitloggen</a></div></div></nav><main class="container py-4">
 <div class="d-flex justify-content-between align-items-center mb-3">
 <h1 class="mb-0">Vakken</h1>
 <div><a class="btn btn-outline-primary" href="subject_edit.php">Nieuw vak</a></div>
