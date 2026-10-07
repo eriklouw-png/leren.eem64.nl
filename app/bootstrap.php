@@ -524,10 +524,9 @@ function openai_generate_test_questions(string $input,array $imagePaths,bool $us
                                                 'explanation'=>['type'=>'string'],
                                                 'source_page'=>['type'=>'integer','minimum'=>1,'maximum'=>10],
                                                 'use_image'=>['type'=>'boolean'],
-                                                'clock_hour'=>['type'=>['integer','null'],'minimum'=>1,'maximum'=>12],
-                                                'clock_minute'=>['type'=>['integer','null'],'minimum'=>0,'maximum'=>59]
+                                                'image_prompt'=>['type'=>'string']
                                             ],
-                                            'required'=>['type','question','correct_answer','options','correct_option','accepted_answers','explanation','source_page','use_image','clock_hour','clock_minute'],
+                                            'required'=>['type','question','correct_answer','options','correct_option','accepted_answers','explanation','source_page','use_image','image_prompt'],
                                             'additionalProperties'=>false
                                         ]
                                     ]
@@ -566,6 +565,37 @@ function openai_generate_test_questions(string $input,array $imagePaths,bool $us
         return ['_leren_error'=>'OpenAI API HTTP '.$statusCode.': '.$message];
     }
     return $data;
+}
+
+function openai_generate_image(string $prompt,string $directory):?string{
+    $apiKey=openai_api_key();
+    if($apiKey==='')return null;
+    $prompt=trim($prompt);
+    if($prompt==='')return null;
+    if(!is_dir($directory)&&!@mkdir($directory,0755,true))return null;
+    $payload=[
+        'model'=>'gpt-image-2',
+        'prompt'=>$prompt,
+        'size'=>'1024x1024',
+        'output_format'=>'png'
+    ];
+    $context=stream_context_create(['http'=>[
+        'method'=>'POST',
+        'header'=>"Content-Type: application/json\r\nAccept: application/json\r\nAuthorization: Bearer ".$apiKey."\r\n",
+        'content'=>json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),
+        'timeout'=>180,
+        'ignore_errors'=>true
+    ]]);
+    $body=@file_get_contents('https://api.openai.com/v1/images/generations',false,$context);
+    if($body===false)return null;
+    $data=json_decode($body,true);
+    $b64=$data['data'][0]['b64_json']??null;
+    if(!is_string($b64)||$b64==='')return null;
+    $bytes=base64_decode($b64,true);
+    if($bytes===false)return null;
+    $filename='ai_'.bin2hex(random_bytes(12)).'.png';
+    if(@file_put_contents($directory.'/'.$filename,$bytes)===false)return null;
+    return $filename;
 }
 
 function openai_generate_topic_summary(string $input,array $imagePaths):?array{
