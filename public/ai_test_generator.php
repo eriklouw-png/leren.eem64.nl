@@ -462,8 +462,6 @@ $queryLabel=ai_query_subject_label($query);
 $displayTopicName=$queryLabel!==''?$queryLabel:$topicName;
 $savedRequest=$_SESSION['ai_test_analysis']['request']??['prefix'=>$prefix,'specs'=>$requestedSpecs];
 $savedSummaryText=(string)($_SESSION['ai_test_analysis']['summary_text']??'');
-$queryLabel=ai_query_subject_label($query);
-$displayTopicName=$queryLabel!==''?$queryLabel:$topicName;
 ?>
 <!doctype html>
 <html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
