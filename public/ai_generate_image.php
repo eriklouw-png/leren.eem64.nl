@@ -56,7 +56,8 @@ function ai_validate_svg_quality(string $svg):bool{
     $viewHeight=(float)$viewBox[2];
     if($viewWidth<=0||$viewHeight<=0||$viewWidth>100000||$viewHeight>100000)return false;
 
-    if(!preg_match('~<svg\\b[^>]*\\bwidth\\s*=\\s*["\\']1000["\\'][^>]*\\bheight\\s*=\\s*["\\']1000["\\']~is',$svg))return false;
+    if(!preg_match('~<svg\\b[^>]*\\bwidth\\s*=\\s*["\\']1000["\\']~is',$svg))return false;
+    if(!preg_match('~<svg\\b[^>]*\\bheight\\s*=\\s*["\\']1000["\\']~is',$svg))return false;
 
     if(class_exists('DOMDocument')){
         $previous=libxml_use_internal_errors(true);
