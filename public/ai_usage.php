@@ -160,7 +160,7 @@ function ai_pct(?float $n):string{return $n===null?'—':(($n>0?'+':'').number_f
 .ai-dashboard{max-width:1280px}.ai-stat{min-height:130px}.ai-stat .value{font-size:clamp(1.45rem,3vw,2rem);font-weight:700;line-height:1.15;word-break:break-word}.ai-small{font-size:.82rem}.trend-up{color:#f39c9c!important}.trend-down{color:#8fd19e!important}.ai-table th{white-space:nowrap}@media(max-width:575.98px){.ai-dashboard{padding-left:12px;padding-right:12px}.ai-stat{min-height:110px}.ai-stat .value{font-size:1.45rem}.ai-table{font-size:.86rem}.ai-table th,.ai-table td{padding:.55rem .45rem}}
 .ai-table td,.ai-table th{vertical-align:middle}.mini-bar{height:8px;border-radius:999px;background:#465149;overflow:hidden}.mini-bar>span{display:block;height:100%;background:#3d9660}
 </style></head><body>
-<main class="container py-4 ai-dashboard">
+<main class="container py-4 ai-dashboard"><div class="mb-3"><a href="admin.php" class="text-decoration-none">← Terug naar Beheer</a></div>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
 <div><h1 class="mb-1">AI-verbruik</h1><p class="text-secondary mb-0">Inzicht in AI-opdrachten, verbruik en geschatte kosten.</p></div>
 <div class="btn-group ai-period" role="group">
