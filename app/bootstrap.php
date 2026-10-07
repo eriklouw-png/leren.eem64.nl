@@ -33,7 +33,17 @@ ob_start(static function(string $html): string{
     $isAdminPage=in_array($script,$adminPages,true);
 
     if(stripos($html,'</head>')!==false){
-        $theme='<link rel="stylesheet" href="/theme.css"><link rel="icon" type="image/svg+xml" href="/assets/leren-logo.svg"><link rel="apple-touch-icon" href="/assets/leren-logo.svg">';
+        $theme='<link rel="stylesheet" href="/theme.css"><link rel="icon" type="image/svg+xml" href="/assets/leren-logo.svg"><link rel="apple-touch-icon" href="/assets/leren-logo.svg"><style id="leren-navbar-theme">
+.leren-navbar{background:linear-gradient(135deg,#19c873 0%,#0b8f52 58%,#087443 100%)!important}
+.leren-navbar .navbar-brand{color:#fff!important;font-weight:600}
+.leren-navbar .leren-user-name{color:#fff!important}
+.leren-logo{border-radius:10px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+@media(max-width:576px){
+  .leren-navbar .leren-user-name{display:none!important}
+  .leren-navbar .container{gap:.5rem}
+  .leren-navbar .navbar-brand img{width:36px;height:36px}
+}
+</style>';
         if($isAdminPage){
             $theme.='<style id="leren-admin-theme">
 /* Beheeromgeving: volledige dark mode. */
@@ -91,17 +101,8 @@ body.leren-admin .btn-secondary,body.leren-admin .btn-outline-secondary{
 body.leren-admin .btn-light,body.leren-admin .btn-outline-light{color:#fff!important}
 body.leren-admin .alert a,body.leren-admin .card a:not(.btn),body.leren-admin .accordion-body a,
 body.leren-admin .list-group-item a{color:#8fc39b!important}
-.leren-navbar{background:linear-gradient(135deg,#19c873 0%,#0b8f52 58%,#087443 100%)!important}
 body.leren-admin .leren-navbar{background:#1b211e!important}
-.leren-navbar .navbar-brand{color:#fff!important;font-weight:600}
-.leren-navbar .leren-user-name{color:#fff!important}
-@media(max-width:576px){
-  .leren-navbar .leren-user-name{display:none!important}
-  .leren-navbar .container{gap:.5rem}
-  .leren-navbar .navbar-brand img{width:36px;height:36px}
-}
 body.leren-admin .navbar.bg-dark{background:#1b211e!important}
-.leren-logo{border-radius:10px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.18)}
 body.leren-admin .border,body.leren-admin .border-top,body.leren-admin .border-end,
 body.leren-admin .border-bottom,body.leren-admin .border-start{border-color:#465149!important}
 body.leren-admin hr{border-color:#56635a!important;opacity:1}
