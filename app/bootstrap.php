@@ -14,7 +14,9 @@ function leren_navbar_html(string $area): string{
         : '<a class="btn btn-outline-light btn-sm" href="admin.php">Beheer</a>';
 
     return '<nav class="navbar navbar-dark bg-dark mb-4"><div class="container">'
-        .'<a class="navbar-brand" href="index.php">Leren</a>'
+        .'<a class="navbar-brand d-flex align-items-center gap-2" href="index.php">'
+        .'<img src="/assets/leren-logo.svg" alt="" width="40" height="40" class="leren-logo">'
+        .'<span>Leren</span></a>'
         .'<div><span class="text-white me-3">'.$name.'</span>'
         .'<a class="btn btn-outline-light btn-sm me-2" href="logout.php">Uitloggen</a>'.$right.'</div>'
         .'</div></nav>';
@@ -31,7 +33,7 @@ ob_start(static function(string $html): string{
     $isAdminPage=in_array($script,$adminPages,true);
 
     if(stripos($html,'</head>')!==false){
-        $theme='<link rel="stylesheet" href="/theme.css">';
+        $theme='<link rel="stylesheet" href="/theme.css"><link rel="icon" type="image/svg+xml" href="/assets/leren-logo.svg"><link rel="apple-touch-icon" href="/assets/leren-logo.svg">';
         if($isAdminPage){
             $theme.='<style id="leren-admin-theme">
 /* Beheeromgeving: volledige dark mode. */
@@ -90,6 +92,7 @@ body.leren-admin .btn-light,body.leren-admin .btn-outline-light{color:#fff!impor
 body.leren-admin .alert a,body.leren-admin .card a:not(.btn),body.leren-admin .accordion-body a,
 body.leren-admin .list-group-item a{color:#8fc39b!important}
 body.leren-admin .navbar.bg-dark{background:#1b211e!important}
+.leren-logo{border-radius:10px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.18)}
 body.leren-admin .border,body.leren-admin .border-top,body.leren-admin .border-end,
 body.leren-admin .border-bottom,body.leren-admin .border-start{border-color:#465149!important}
 body.leren-admin hr{border-color:#56635a!important;opacity:1}
