@@ -674,6 +674,25 @@ function openai_generate_image(string $prompt,string $directory):?string{
     $json=json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
     if($json===false)return null;
 
+    if(!function_exists('curl_init')){
+        $context=stream_context_create(['http'=>[
+            'method'=>'POST',
+            'header'=>"Content-Type: application/json\\r\\nAccept: application/json\\r\\nAuthorization: Bearer ".$apiKey."\\r\\n",
+            'content'=>$json,
+            'timeout'=>90,
+            'ignore_errors'=>true
+        ]]);
+        $body=@file_get_contents('https://api.openai.com/v1/images/generations',false,$context);
+        if($body===false)return null;
+        $data=json_decode($body,true);
+        $b64=$data['data'][0]['b64_json']??null;
+        if(!is_string($b64)||$b64==='')return null;
+        $bytes=base64_decode($b64,true);
+        if($bytes===false)return null;
+        $filename='ai_'.bin2hex(random_bytes(12)).'.jpg';
+        if(@file_put_contents($directory.'/'.$filename,$bytes)===false)return null;
+        return $filename;
+    }
     $ch=@curl_init('https://api.openai.com/v1/images/generations');
     if($ch===false)return null;
     curl_setopt_array($ch,[
