@@ -296,6 +296,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                             if($q['use_image'] && $imagePath===null && (string)($q['image_method']??'none')!=='none'){
                                 $pendingImageJobs[]=[
                                     'question_id'=>$qid,
+                                    'question'=>(string)$q['question'],
+                                    'correct_answer'=>(string)$q['correct'],
                                     'method'=>(string)($q['image_method']??'none'),
                                     'reason'=>(string)($q['image_reason']??''),
                                     'search_query'=>(string)($q['image_search_query']??''),
