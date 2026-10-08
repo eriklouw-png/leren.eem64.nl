@@ -799,7 +799,7 @@ function openai_generate_with_images(string $input,array $imagePaths,string $man
 
     $payload=[
         'model'=>openai_model(),
-        'instructions'=>ai_general_instruction('source_validation_instructions'),
+        'instructions'=>ai_general_instruction('analysis_instructions')."\n\n".ai_general_instruction('language_instructions')."\n\n".ai_general_instruction('source_validation_instructions')."\n\n".$managedInstructions,
         'input'=>[['role'=>'user','content'=>$content]],
         'max_output_tokens'=>4000,
         'store'=>false,
