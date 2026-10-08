@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../app/bootstrap.php';require_admin();
+require __DIR__.'/../app/bootstrap.php';require_manager();
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if(!$id)redirect('admin.php');
 
