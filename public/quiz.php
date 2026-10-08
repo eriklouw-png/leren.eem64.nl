@@ -373,9 +373,9 @@ if(!$viewMode && $_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==
     $x=$pdo->prepare("UPDATE attempts SET status='finished',score=?,finished_at=NOW() WHERE id=? AND status='in_progress'");
     $x->execute([$score,$attemptId]);
 
-    if($reviewMode){
-        /* Een fout die hier goed wordt gemaakt, telt voortaan als goed op de
-         * laatste gewone poging van de betreffende sub-test. */
+    if($reviewMode || $mode==='mistakes'){
+        /* Een fout die in Alleen fouten of Fouten oefenen goed wordt gemaakt,
+         * telt voortaan als goed op de oorspronkelijke gewone poging. */
         $correctQuestions=$pdo->prepare("
             SELECT aq.question_id
             FROM attempt_questions aq
@@ -396,7 +396,12 @@ if(!$viewMode && $_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==
                 ORDER BY a.id DESC
                 LIMIT 1
             ");
-            $findOriginal->execute([(int)$questionId,$studentId,$topicId]);
+            if($mode==='mistakes' && !$reviewMode){
+                $originalTopicId=(int)$test['topic_id'];
+                $findOriginal->execute([(int)$questionId,$studentId,$originalTopicId]);
+            }else{
+                $findOriginal->execute([(int)$questionId,$studentId,$topicId]);
+            }
             $originalAttemptId=(int)($findOriginal->fetchColumn()?:0);
             if($originalAttemptId){
                 $fix=$pdo->prepare("UPDATE attempt_answers SET is_correct=1 WHERE attempt_id=? AND question_id=?");
