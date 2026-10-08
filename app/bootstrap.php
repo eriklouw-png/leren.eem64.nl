@@ -36,8 +36,6 @@ ob_start(static function(string $html): string{
 
     if(stripos($html,'</head>')!==false){
         $theme='<link rel="stylesheet" href="/theme.css"><link rel="icon" type="image/svg+xml" href="/assets/leren-logo.svg"><link rel="apple-touch-icon" href="/assets/leren-logo.svg">';
-';
-        }
         $html=preg_replace('~</head>~i',$theme.'</head>',$html,1)??$html;
     }
 
