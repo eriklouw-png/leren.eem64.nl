@@ -295,7 +295,9 @@ $menuActions=[
 if($t['in_progress_attempt_id']){
     $menuActions[]=['label'=>'Ga verder','href'=>$primaryUrl];
 }
-$menuActions[]=['label'=>'Start opnieuw','href'=>'quiz.php?id='.(int)$t['id'].'&new=1'];
+if($t['in_progress_attempt_id'] || $latestScore!==null){
+    $menuActions[]=['label'=>'Start opnieuw','href'=>'quiz.php?id='.(int)$t['id'].'&new=1'];
+}
 if(($mistakeCountByTest[(int)$t['id']]??0)>0){
     $menuActions[]=['label'=>'Alleen fouten ('.(int)$mistakeCountByTest[(int)$t['id']].')','href'=>'quiz.php?id='.(int)$t['id'].'&mode=mistakes'];
 }
