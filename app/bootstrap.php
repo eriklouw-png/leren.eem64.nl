@@ -114,11 +114,11 @@ ob_start(static function(string $html): string{
             .'<div class="leren-modal-backdrop" data-confirm-close></div>'
             .'<div class="leren-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="lerenConfirmTitle">'
             .'<button type="button" class="leren-modal-close" data-confirm-close aria-label="Sluiten">&times;</button>'
-            .'<h2 id="lerenConfirmTitle">Verwijderen</h2>'
+            .'<h2 id="lerenConfirmTitle">Weet u het zeker?</h2>'
             .'<p id="lerenConfirmMessage" class="mb-3"></p>'
             .'<div class="leren-modal-actions">'
             .'<button type="button" class="leren-modal-action" data-confirm-cancel>Annuleren</button>'
-            .'<button type="button" class="leren-modal-action danger" data-confirm-ok>Verwijderen</button>'
+            .'<button type="button" class="leren-modal-action leren-confirm-start" data-confirm-ok>Start opnieuw</button>'
             .'</div></div></div>';
         $html=preg_replace('~</body>~i',$confirmModal.'</body>',$html,1)??$html;
     }
