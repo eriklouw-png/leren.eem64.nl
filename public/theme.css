@@ -135,6 +135,7 @@ details .chevron{display:inline-block;transition:transform .15s ease;font-size:1
 .question-counter{font-size:1.05rem}
 .feedback{
   position:fixed!important;
+  padding-right:3.5rem!important;
   left:50%;
   bottom:16px;
   transform:translateX(-50%);
@@ -148,6 +149,24 @@ details .chevron{display:inline-block;transition:transform .15s ease;font-size:1
 .feedback.alert-success{background:rgba(209,231,221,.92)!important}
 .feedback.alert-danger{background:rgba(248,215,218,.92)!important}
 .feedback.alert-warning{background:rgba(255,243,205,.92)!important}
+.feedback-close{
+  position:absolute;
+  top:.45rem;
+  right:.65rem;
+  width:2rem;
+  height:2rem;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  background:rgba(0,0,0,.08);
+  color:inherit;
+  font-size:1.5rem;
+  line-height:1.8rem;
+  text-align:center;
+  cursor:pointer;
+  opacity:.7;
+}
+.feedback-close:hover{opacity:1;background:rgba(0,0,0,.14)}
 @media(max-width:576px){
   .feedback{
     bottom:10px;
