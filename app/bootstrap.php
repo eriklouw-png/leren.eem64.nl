@@ -716,7 +716,7 @@ function openai_generate_text_analysis(string $input,string $managedInstructions
     if($apiKey==='')return ['_leren_error'=>'OPENAI_API_KEY ontbreekt in de container.'];
     $payload=[
         'model'=>openai_model(),
-        'instructions'=>ai_general_instructions()."\n\n".$managedInstructions,
+        'instructions'=>ai_general_instruction('language_instructions')."\n\n".$managedInstructions,
         'input'=>[['role'=>'user','content'=>[['type'=>'input_text','text'=>$input]]]],
         'max_output_tokens'=>4000,
         'store'=>false,
@@ -799,7 +799,7 @@ function openai_generate_with_images(string $input,array $imagePaths,string $man
 
     $payload=[
         'model'=>openai_model(),
-        'instructions'=>ai_general_instructions()."\n\n".$managedInstructions,
+        'instructions'=>ai_general_instruction('source_validation_instructions'),
         'input'=>[['role'=>'user','content'=>$content]],
         'max_output_tokens'=>4000,
         'store'=>false,
@@ -886,7 +886,7 @@ function ai_general_instruction_defaults():array{
         'summary_instructions'=>'Maak een Nederlandse samenvatting van foto’s van schoolboekpagina’s. Gebruik uitsluitend informatie die zichtbaar of leesbaar in de aangeleverde pagina’s staat. Verzin niets en gebruik geen algemene kennis om ontbrekende informatie aan te vullen. De samenvatting is bedoeld voor een leerling van ongeveer 12-15 jaar en moet overzichtelijk, leerbaar en inhoudelijk volledig zijn. Behoud belangrijke begrippen, namen, processen, voorbeelden en jaartallen uit de bron. Deel de samenvatting op in logische onderwerpen. Elk nieuw onderwerp MOET beginnen met een Markdown-kopje in exact dit formaat: ## Onderwerp. Dus twee hekjes, één spatie en daarna de titel. Gebruik geen # of ### kopjes.',
         'image_generation_instructions'=>'Maak een eenvoudige educatieve illustratie voor een schoolvraag. Gebruik een rustige, duidelijke compositie, weinig details en geen decoratieve elementen. Zet geen tekst, labels of antwoorden in de afbeelding tenzij de afbeelding dat inhoudelijk noodzakelijk maakt. De afbeelding moet vooral functioneel en direct herkenbaar zijn.',
         'image_validation_instructions'=>'Je bent een strenge kwaliteitscontroleur voor educatieve afbeeldingen. Beoordeel uitsluitend of de afbeelding inhoudelijk klopt en bruikbaar is voor de opgegeven vraag. Geef geen cosmetische kritiek.',
-        'rule_generation_instructions'=>'Je maakt een eerste set beheerde AI-instructies voor een nieuw schoolvak in een Nederlandse oefentoets-app. Gebruik bestaande vakconfiguraties als voorbeelden. Zoek vooral een inhoudelijk vergelijkbaar vak en neem daarvan de structuur en het detailniveau over. Maak alleen typen die voor dit vak logisch zijn. Gebruik bij taalvakken de bestaande taalstructuur als uitgangspunt. Voor gewone schoolvakken is meestal één mixed-regel voldoende. Neem samenvattingen, afbeeldingen, multiple choice en open vragen alleen op als ze voor het vak zinvol zijn. Schrijf compacte, concrete Nederlandse instructies die een docent direct kan bewerken. Verzin geen specifieke methode, lesboek of leerstof die je niet uit de vaknaam kunt afleiden. Geef uitsluitend JSON terug volgens het gevraagde schema.'
+        'rule_generation_instructions'=>'Je maakt een eerste set beheerde AI-instructies voor een nieuw schoolvak in een Nederlandse oefentoets-app. Gebruik bestaande vakconfiguraties als voorbeelden. Zoek vooral een inhoudelijk vergelijkbaar vak en neem daarvan de structuur en het detailniveau over. Maak alleen typen die voor dit vak logisch zijn. Gebruik bij taalvakken de bestaande taalstructuur als uitgangspunt. Neem de centrale taal- en woordenlijstregels mee in iedere relevante taalregel, zodat expliciet vermelde enkelvoud/meervoud- en mannelijk/vrouwelijkvarianten volgens de centrale regels worden verwerkt. Voor gewone schoolvakken is meestal één mixed-regel voldoende. Neem samenvattingen, afbeeldingen, multiple choice en open vragen alleen op als ze voor het vak zinvol zijn. Schrijf compacte, concrete Nederlandse instructies die een docent direct kan bewerken. Verzin geen specifieke methode, lesboek of leerstof die je niet uit de vaknaam kunt afleiden. Geef uitsluitend JSON terug volgens het gevraagde schema.'
     ];
 }
 function ai_general_instructions():string{
@@ -961,7 +961,7 @@ function openai_validate_test_source_images(string $subjectName,array $imagePath
     $apiKey=openai_api_key();
     if($apiKey==='')return ['_leren_error'=>'OPENAI_API_KEY ontbreekt in de container.'];
 
-    $content=[['type'=>'input_text','text'=>'Controleer deze geüploade afbeeldingen voordat ze als bron voor een schooltoets worden gebruikt. Het gewenste vak is: '.trim($subjectName).'. Beoordeel iedere afbeelding afzonderlijk. Een geldige afbeelding moet herkenbaar een schoolboekpagina, werkblad of ander duidelijk lesmateriaal zijn dat inhoudelijk bij het gewenste vak past. Keur een afbeelding af als het geen relevant lesmateriaal voor het vak is, als het een willekeurige foto is, als het vooral een gezicht/portret/selfie is in plaats van een lespagina, of als het onderwerp duidelijk bij een ander vak hoort. Een foto van een schoolboekpagina waarop toevallig mensen of gezichten staan is wel toegestaan als de pagina duidelijk relevant lesmateriaal voor het gewenste vak is. Geef per afbeelding een duidelijke beslissing.']];
+    $content=[['type'=>'input_text','text'=>'Het gewenste schoolvak is: '.trim($subjectName).'. Beoordeel iedere aangeleverde afbeelding afzonderlijk volgens de algemene broncontrole-instructies. Geef per afbeelding een duidelijke beslissing.']];
     $imageCount=0;
     foreach($imagePaths as $imagePath){
         if(!is_string($imagePath)||!is_file($imagePath))continue;
@@ -1285,7 +1285,7 @@ function openai_generate_image(string $prompt,string $directory):?string{
 
     $payload=[
         'model'=>'gpt-image-2',
-        'prompt'=>ai_general_instruction('image_generation_instructions').'\n\n'.$prompt,
+        'prompt'=>ai_general_instruction('image_generation_instructions')."\n\n".$prompt,
         'quality'=>'low',
         'output_format'=>'jpeg',
         'output_compression'=>65
