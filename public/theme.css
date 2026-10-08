@@ -170,6 +170,7 @@ details .chevron{display:inline-block;transition:transform .15s ease;font-size:1
   left:50%;
   top:50%;
   transform:translate(-50%,-54%);
+  margin-top:2px;
   color:#6c757d;
   font-family:Arial,sans-serif;
   font-size:1.35rem;
