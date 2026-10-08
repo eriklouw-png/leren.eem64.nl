@@ -233,37 +233,34 @@ $browserToken=$_SESSION['learner_token'];
 <?php if(!$tests):?>
 <div class="alert alert-info">Er zijn nog geen sub-testen voor deze overhoring.</div>
 <?php else:?>
-<div class="list-group shadow-sm">
+<div class="leren-list">
 <?php foreach($tests as $t):?>
 <?php
 $history=$historyByTest[(int)$t['id']]??[];
 $latestScore=$history ? (float)$history[0]['score'] : null;
 $isComplete=$latestScore!==null && $latestScore>=100;
+if($t['in_progress_attempt_id']){
+    $primaryUrl='quiz.php?id='.(int)$t['id'];
+    $primaryLabel='Ga verder';
+}elseif($latestScore!==null){
+    $primaryUrl='quiz.php?id='.(int)$t['id'];
+    $primaryLabel='Opnieuw maken';
+}else{
+    $primaryUrl='quiz.php?id='.(int)$t['id'];
+    $primaryLabel='Start';
+}
 ?>
-<div class="list-group-item p-3 p-md-4<?=$isComplete?' subtest-complete':''?>">
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
-<div class="min-w-0">
-<div class="d-flex align-items-center gap-2">
+<div class="leren-list-item subtest-item<?=$isComplete?' subtest-complete':''?>">
+<a class="subtest-item-main" href="<?=e($primaryUrl)?>">
+<div class="subtest-item-content">
+<div class="subtest-item-heading">
 <?php if($isComplete):?><span class="subtest-check" aria-label="100 procent behaald">✓</span><?php endif;?>
-<strong class="fs-5 subtest-title"><?=e($t['title'])?></strong>
+<strong class="subtest-title"><?=e($t['title'])?></strong>
 </div>
-<div class="small text-secondary"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=((in_array(($t['test_type']??'mixed'),['vocabulary','sentences'],true) && ($t['vocab_direction']??'both')==='both') ? (int)ceil(((int)$t['question_count'])/2) : (int)$t['question_count'])?> <?=($t['test_type']??'mixed')==='vocabulary'?'woorden':(($t['test_type']??'mixed')==='sentences'?'zinnen':'vragen')?> · Aangemaakt <?=e(date('d-m-Y H:i',strtotime((string)$t['created_at'])))?></div>
-<?php if($t['description']):?><div class="text-secondary mt-1"><?=e($t['description'])?></div><?php endif;?>
+<div class="subtest-item-meta"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=((in_array(($t['test_type']??'mixed'),['vocabulary','sentences'],true) && ($t['vocab_direction']??'both')==='both') ? (int)ceil(((int)$t['question_count'])/2) : (int)$t['question_count'])?> <?=($t['test_type']??'mixed')==='vocabulary'?'woorden':(($t['test_type']??'mixed')==='sentences'?'zinnen':'vragen')?> · Aangemaakt <?=e(date('d-m-Y H:i',strtotime((string)$t['created_at'])))?></div>
+<?php if($t['description']):?><div class="subtest-item-description"><?=e($t['description'])?></div><?php endif;?>
 </div>
-
-<div class="d-flex flex-wrap gap-2 flex-shrink-0">
-<?php if($t['in_progress_attempt_id']):?>
-<a class="btn btn-success btn-sm" href="quiz.php?id=<?=(int)$t['id']?>">Ga Verder</a>
-<a class="btn btn-outline-secondary btn-sm" href="quiz.php?id=<?=(int)$t['id']?>&new=1">Start Opnieuw</a>
-<?php else:?>
-<a class="btn btn-outline-primary btn-sm" href="quiz.php?id=<?=(int)$t['id']?>">Start</a>
-<?php endif;?>
-<?php if(($mistakeCountByTest[(int)$t['id']]??0)>0):?>
-<a class="btn btn-outline-warning btn-sm" href="quiz.php?id=<?=(int)$t['id']?>&mode=mistakes">Alleen fouten (<?= (int)$mistakeCountByTest[(int)$t['id']] ?>)</a>
-<?php endif;?>
-</div>
-</div>
-
+<div class="subtest-item-progress">
 <?php
 if($t['in_progress_attempt_id']){
     $subProgressTotal=max(1,(int)$t['in_progress_total_count']);
@@ -272,27 +269,83 @@ if($t['in_progress_attempt_id']){
     $subProgressLabel=$subProgressDone.' van '.$subProgressTotal.' vragen';
 }elseif($latestScore!==null){
     $subProgressPercent=(int)round($latestScore);
+    $subProgressLabel='';
 }else{
     $subProgressPercent=0;
+    $subProgressLabel='';
 }
 ?>
-<div class="subtest-progress mt-4">
-<div class="d-flex justify-content-between small text-secondary mb-1">
-<span>Voortgang</span>
-<strong><?=$subProgressPercent?>%</strong>
+<div class="d-flex justify-content-between small text-secondary mb-1"><span>Voortgang</span><strong><?=$subProgressPercent?>%</strong></div>
+<div class="progress" role="progressbar" aria-label="Voortgang van sub-test" aria-valuenow="<?=$subProgressPercent?>" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar bg-success" style="width:<?=$subProgressPercent?>%"></div></div>
+<?php if($subProgressLabel):?><div class="small text-secondary mt-1"><?=$subProgressLabel?></div><?php endif;?>
 </div>
-<div class="progress" role="progressbar" aria-label="Voortgang van sub-test" aria-valuenow="<?=$subProgressPercent?>" aria-valuemin="0" aria-valuemax="100" style="height:10px">
-<div class="progress-bar bg-success" style="width:<?=$subProgressPercent?>%"></div>
-</div>
-<?php if($t['in_progress_attempt_id']):?>
-<div class="small text-secondary mt-1"><?=$subProgressLabel?></div>
-<?php endif;?>
-</div>
-
-
+</a>
+<button type="button" class="subtest-menu-button" aria-label="Opties voor <?=e($t['title'])?>" data-subtest-menu
+ data-title="<?=e($t['title'])?>"
+ data-primary-url="<?=e($primaryUrl)?>"
+ data-primary-label="<?=e($primaryLabel)?>"
+ data-resume-url="<?=e($t['in_progress_attempt_id']?'quiz.php?id='.(int)$t['id']:'')?>"
+ data-restart-url="<?=e('quiz.php?id='.(int)$t['id'].'&new=1')?>"
+ data-mistakes-url="<?=e(($mistakeCountByTest[(int)$t['id']]??0)>0?'quiz.php?id='.(int)$t['id'].'&mode=mistakes':'')?>"
+ data-mistakes-count="<?= (int)($mistakeCountByTest[(int)$t['id']]??0)?>">
+<span></span><span></span><span></span>
+</button>
 </div>
 <?php endforeach;?>
+</div>
+<?php endif;?>
+<div class="leren-modal" id="subtestOptionsModal" hidden aria-hidden="true">
+<div class="leren-modal-backdrop" data-modal-close></div>
+<div class="leren-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="subtestOptionsTitle">
+<button type="button" class="leren-modal-close" data-modal-close aria-label="Sluiten">×</button>
+<h2 id="subtestOptionsTitle">Sub-test</h2>
+<div class="leren-modal-actions" id="subtestOptionsActions"></div>
+</div>
 </div><?php endif;?>
+
+<script>
+(function(){
+  const modal=document.getElementById('subtestOptionsModal');
+  const title=document.getElementById('subtestOptionsTitle');
+  const actions=document.getElementById('subtestOptionsActions');
+  if(!modal||!title||!actions)return;
+  let lastFocus=null;
+  function addAction(label,url,primary){
+    if(!url)return;
+    const a=document.createElement('a');
+    a.className='btn '+(primary?'btn-primary':'btn-outline-secondary');
+    a.href=url;
+    a.textContent=label;
+    actions.appendChild(a);
+  }
+  function openModal(button){
+    lastFocus=button;
+    title.textContent=button.dataset.title||'Sub-test';
+    actions.innerHTML='';
+    addAction(button.dataset.primaryLabel||'Start',button.dataset.primaryUrl,true);
+    if(button.dataset.resumeUrl) addAction('Ga verder',button.dataset.resumeUrl,false);
+    addAction('Start opnieuw',button.dataset.restartUrl,false);
+    if(button.dataset.mistakesUrl){
+      addAction('Alleen fouten ('+(button.dataset.mistakesCount||'0')+')',button.dataset.mistakesUrl,false);
+    }
+    modal.hidden=false;
+    modal.setAttribute('aria-hidden','false');
+    document.body.classList.add('leren-modal-open');
+    modal.querySelector('[data-modal-close]').focus();
+  }
+  function closeModal(){
+    modal.hidden=true;
+    modal.setAttribute('aria-hidden','true');
+    document.body.classList.remove('leren-modal-open');
+    if(lastFocus)lastFocus.focus();
+  }
+  document.querySelectorAll('[data-subtest-menu]').forEach(button=>{
+    button.addEventListener('click',()=>openModal(button));
+  });
+  modal.querySelectorAll('[data-modal-close]').forEach(el=>el.addEventListener('click',closeModal));
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!modal.hidden)closeModal();});
+})();
+</script>
 </main>
 </body>
 </html>
