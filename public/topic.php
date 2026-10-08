@@ -322,7 +322,7 @@ if(($mistakeCountByTest[(int)$t['id']]??0)>0){
 <strong class="leren-list-item-title"><?=e($t['title'])?></strong>
 </div>
 <div class="leren-list-item-subtitle"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=((int)$t['question_count'])?> vragen · Aangemaakt <?=e(date('d-m-Y H:i',strtotime((string)$t['created_at'])))?></div>
-<?php if($t['in_progress_attempt_id']):?><div class="leren-list-item-progress-text">Voortgang: <?=((int)$t['in_progress_answered_count'])?> van <?=((int)$t['in_progress_total_count'])?> vragen gedaan.</div><?php elseif($latestScore!==null):?><?php $completedProgress=$completedProgressByTest[(int)$t['id']]??['total_count'=>0,'answered_count'=>0]; ?><div class="leren-list-item-progress-text">Voortgang: <?=((int)$completedProgress['answered_count'])?> van <?=((int)$completedProgress['total_count'])?> vragen gedaan.</div><?php endif;?>
+<?php if($t['in_progress_attempt_id']):?><div class="leren-list-item-progress-text">Voortgang: <?=((int)$t['in_progress_answered_count'])?> van <?=((int)$t['in_progress_total_count'])?> vragen gedaan.</div><?php elseif($latestScore!==null):?><?php $completedProgress=$completedProgressByTest[(int)$t['id']]??['total_count'=>0,'answered_count'=>0]; ?><div class="leren-list-item-progress-text">Voortgang: <?=((int)$completedProgress['answered_count'])?> van <?=((int)$completedProgress['total_count'])?> vragen gedaan.</div><?php else:?><?php $totalQuestions=(int)$t['question_count']; ?><div class="leren-list-item-progress-text">Voortgang: 0 van <?=$totalQuestions?> vragen gedaan.</div><?php endif;?>
 </div>
 <div class="leren-list-item-progress">
 <?php
