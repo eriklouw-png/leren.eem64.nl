@@ -744,8 +744,9 @@ $grammarShort=implode(' · ',$grammarParts);
 <span class="visually-hidden">Afbeelding <?=(!empty($q['use_image'])&&($q['image_method']??'none')!=='none')?'gebruiken':'niet gebruiken'?></span>
 </label>
 </div>
+</div>
 <?php endforeach;?>
-</div></div>
+</div>
 <?php endforeach;?>
 <div class="d-flex flex-column flex-sm-row gap-2 mb-3"><button class="btn btn-success btn-lg" type="submit">Opslaan als sub-test<?=count($_SESSION['ai_test_analysis']['generated']['subtests'])===1?'':'s'?></button><button class="btn btn-outline-secondary btn-lg" type="submit" name="action" value="clear" formnovalidate>Annuleren</button></div>
 </form>
