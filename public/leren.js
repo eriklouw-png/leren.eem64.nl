@@ -118,6 +118,7 @@ function initConfirmModal(){
 
     const message=document.getElementById('lerenConfirmMessage');
     const ok=modal.querySelector('[data-confirm-ok]');
+    const restartClass='leren-menu-restart';
     let pendingForm=null;
     let pendingSubmitter=null;
     let pendingLinkHref=null;
@@ -131,10 +132,18 @@ function initConfirmModal(){
         pendingLinkHref=null;
     }
 
+    function setConfirmButton(isRestart){
+        if(!ok)return;
+        ok.textContent=isRestart?'Start opnieuw':'Verwijderen';
+        ok.classList.toggle('leren-confirm-start',isRestart);
+        ok.classList.toggle('leren-confirm-delete',!isRestart);
+    }
+
     function open(form,submitter){
         pendingForm=form;
         pendingSubmitter=submitter||null;
         if(message)message.textContent=form.dataset.confirm||'Weet u zeker dat u dit wilt verwijderen?';
+        setConfirmButton(form.classList.contains(restartClass));
         modal.hidden=false;
         modal.setAttribute('aria-hidden','false');
         document.body.classList.add('leren-modal-open');
@@ -156,6 +165,7 @@ function initConfirmModal(){
         pendingSubmitter=null;
         pendingLinkHref=link.href;
         if(message)message.textContent=link.dataset.confirm;
+        setConfirmButton(link.classList.contains(restartClass));
         modal.hidden=false;
         modal.setAttribute('aria-hidden','false');
         document.body.classList.add('leren-modal-open');
