@@ -87,7 +87,8 @@ ob_start(static function(string $html): string{
                     static function(array $m):string{
                         $attrs=$m[1];
                         if(preg_match('~\\bclass="([^"]*)"~i',$attrs,$classMatch)){
-                            $classes=trim($classMatch[1].' leren-admin');
+                            $roleClass=leren_user_role()==='admin'?'leren-admin':(leren_user_role()==='beheerder'?'leren-manager':'leren-student');
+                            $classes=trim($classMatch[1].' '.$roleClass);
                             $attrs=preg_replace('~\\bclass="[^"]*"~i','class="'.htmlspecialchars($classes,ENT_QUOTES,'UTF-8').'"',$attrs,1)??$attrs;
                         }else{
                             $attrs=' class="leren-admin"'.$attrs;
