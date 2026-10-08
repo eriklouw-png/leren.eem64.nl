@@ -663,3 +663,28 @@ body.leren-admin .leren-modal-close{background:#303b34;color:#fff}
  .subtest-menu-button{flex-basis:44px}
  .subtest-item-progress{max-width:none}
 }
+
+
+/* Shared action rows inside the menu modal */
+.leren-modal-actions{display:flex;flex-direction:column;gap:.65rem}
+.leren-modal-action{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  width:100%;
+  min-height:54px;
+  padding:.75rem 1rem;
+  border:1px solid var(--leren-border);
+  border-radius:.65rem;
+  background:var(--leren-surface-muted);
+  color:var(--leren-text)!important;
+  font-size:1rem;
+  font-weight:600;
+  text-decoration:none!important;
+}
+.leren-modal-action:hover{background:var(--leren-green-light);border-color:#9bc7a7;color:var(--leren-green-dark)!important}
+.leren-modal-action.primary{background:var(--leren-green);border-color:var(--leren-green);color:#fff!important}
+.leren-modal-action.primary:hover{background:var(--leren-green-dark);border-color:var(--leren-green-dark);color:#fff!important}
+body.leren-admin .leren-modal-action{background:#303b34;border-color:#56635a;color:#fff!important}
+body.leren-admin .leren-modal-action:hover{background:#3b4c41;border-color:#6f9b7b}
+body.leren-admin .leren-modal-action.primary{background:#2f7d4a;border-color:#2f7d4a}
