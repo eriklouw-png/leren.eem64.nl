@@ -295,7 +295,6 @@ body.leren-admin .form-check-input:focus{
   .leren-navbar .leren-user-name{display:none!important}
   .leren-navbar .container{gap:.5rem}
   .leren-navbar .navbar-brand img{width:36px;height:36px}
-  .leren-navbar .navbar-brand span{display:none!important}
 }
 
 /* Admin dark mode — same components, different tokens */
