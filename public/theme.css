@@ -754,6 +754,7 @@ body.leren-admin .leren-modal-action.primary{background:#2f7d4a;border-color:#2f
   line-height:1.4;
   color:var(--leren-muted);
 }
+.leren-list-item-subtitle{margin-top:.9rem}
 .leren-list-item-description{margin-top:.3rem}
 .leren-list-item-progress-text{margin-top:.1rem;font-size:.875rem;line-height:1.4;color:var(--leren-muted)}
 .leren-list-item-progress{width:100%;max-width:100%}
