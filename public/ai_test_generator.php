@@ -346,7 +346,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         $correct=implode(' | ',$accepted);
                     }
                     $generatedQuestion=$generated[$si]['questions'][$qi];
-                    $validQuestions[]=['type'=>$type,'question'=>$question,'correct'=>$correct,'options'=>$options,'correct_option'=>$type==='mc'?(int)$q['correct_option']:0,'explanation'=>$explanation,'source_page'=>$sourcePage,'use_image'=>$useImage,'image_prompt'=>trim((string)($generatedQuestion['image_prompt']??'')),'image_search_query'=>trim((string)($generatedQuestion['image_search_query']??'')),'svg_code'=>trim((string)($generatedQuestion['svg_code']??'')),'image_method'=>trim((string)($q['image_method']??$generatedQuestion['image_method']??'none')),'image_reason'=>trim((string)($generatedQuestion['image_reason']??''))];
+                    $validQuestions[]=['type'=>$type,'question'=>$question,'correct'=>$correct,'options'=>$options,'correct_option'=>$type==='mc'?(int)$q['correct_option']:0,'explanation'=>$explanation,'grammar_label'=>trim((string)($generatedQuestion['grammatical_label']??$generatedQuestion['grammar_label']??$q['grammatical_label']??$q['grammar_label']??'')),'source_page'=>$sourcePage,'use_image'=>$useImage,'image_prompt'=>trim((string)($generatedQuestion['image_prompt']??'')),'image_search_query'=>trim((string)($generatedQuestion['image_search_query']??'')),'svg_code'=>trim((string)($generatedQuestion['svg_code']??'')),'image_method'=>trim((string)($q['image_method']??$generatedQuestion['image_method']??'none')),'image_reason'=>trim((string)($generatedQuestion['image_reason']??''))];
                 }
                 if($validQuestions)$validTests[]=['title'=>$title,'description'=>$description,'questions'=>$validQuestions];
             }
@@ -357,7 +357,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 }
                 $pdo->beginTransaction();
                 try{
-                    $qIns=$pdo->prepare("INSERT INTO questions(test_id,question_text,image_path,question_type,explanation,sort_order) VALUES(?,?,?,?,?,?)");
+                    $qIns=$pdo->prepare("INSERT INTO questions(test_id,question_text,image_path,question_type,explanation,grammar_label,sort_order) VALUES(?,?,?,?,?,?,?)");
                     $optIns=$pdo->prepare("INSERT INTO question_options(question_id,option_text,is_correct,sort_order) VALUES(?,?,?,?)");
                     $oaIns=$pdo->prepare("INSERT INTO open_question_answers(question_id,answer_text,sort_order) VALUES(?,?,?)");
                     $testIns=$pdo->prepare("INSERT INTO tests(topic_id,title,description,test_type,vocab_left_label,vocab_right_label,vocab_direction,is_active) VALUES(?,?,?,?,?,?,?,1)");
@@ -411,7 +411,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                                 $q['image_method']=$imageMethod;
                                 $q['image_prompt']=$imagePrompt;
                             }
-                            $qIns->execute([$testId,$q['question'],$imagePath,$q['type']==='mc'?'multiple_choice':'open',$q['explanation'],$sort+1]);
+                            $qIns->execute([$testId,$q['question'],$imagePath,$q['type']==='mc'?'multiple_choice':'open',$q['explanation'],$q['grammar_label']??null,$sort+1]);
                             $qid=(int)$pdo->lastInsertId();
                             if($q['use_image'] && $imagePath===null && (string)($q['image_method']??'none')!=='none'){
                                 $pendingImageJobs[]=[
