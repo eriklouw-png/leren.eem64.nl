@@ -77,7 +77,7 @@ $status=read_update_status($statusFile);
 <h1>Website bijwerken</h1>
 <p class="text-secondary">De nieuwste versie wordt uit GitHub gehaald en de Docker-container wordt opnieuw opgebouwd.</p>
 <div id="statusBox" class="alert alert-secondary">Status wordt opgehaald...</div>
-<div class="mb-3">
+<div class="mb-3 system-update-steps">
 <div class="system-update-step" id="stepRequest">1. Update aanvragen</div>
 <div class="system-update-step" id="stepPull">2. GitHub bijwerken</div>
 <div class="system-update-step" id="stepBuild">3. Docker-container bouwen</div>
