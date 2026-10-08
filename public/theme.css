@@ -2174,3 +2174,15 @@ body.leren-admin .ai-source-error,
     font-size:1.15rem;
   }
 }
+
+
+/* Homepage subject cards — custom SVG icons. */
+.subject-custom-icon{
+  width:62%;
+  height:62%;
+  display:block;
+  color:currentColor;
+}
+.subject-home-icon .subject-custom-icon{
+  flex:none;
+}
