@@ -744,7 +744,7 @@ function openai_generate_text_analysis(string $input,string $managedInstructions
                             'question_count'=>['type'=>'integer','minimum'=>1,'maximum'=>50],
                             'recommended_types'=>['type'=>'array','items'=>['type'=>'string','enum'=>['mc','open']]]
                         ],
-                        'required'=>['title','recognized_type','description','question_count','recommended_types'],
+                        'required'=>['title','description','question_count','recommended_types'],
                         'additionalProperties'=>false
                     ]]
                 ],
