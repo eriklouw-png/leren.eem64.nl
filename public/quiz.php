@@ -294,25 +294,9 @@ if(!$attempt && !$viewMode){
     }
     if($mode==='normal'){
         if(in_array(($test['test_type']??'mixed'),['vocabulary','sentences'],true) && $vocabDirectionChoice!=='both'){
-            $directionTo=$vocabDirectionChoice==='left_to_right'
-                ? (string)$test['vocab_right_label']
-                : (string)$test['vocab_left_label'];
-            $directionExplanation='Vertaal naar '.$directionTo.'.';
-            $emptyCheck=$pdo->prepare("SELECT COUNT(*) FROM questions WHERE test_id=? AND explanation LIKE CONCAT(?, '%')");
-            $emptyCheck->execute([$testId,$directionExplanation]);
-            $directionCount=(int)$emptyCheck->fetchColumn();
-
-            /*
-             * Oudere door de AI aangemaakte woordenlijsten hadden nog een algemene
-             * uitleg ("Vertaal het woord naar de andere taal.") zonder richting.
-             * Bij die toetsen zijn de twee richtingen per woordpaar opgeslagen:
-             * oneven sort_order = eerste richting, even = omgekeerde richting.
-             */
-            if($directionCount===0){
-                $parity= $vocabDirectionChoice==='left_to_right' ? 1 : 0;
-                $emptyCheck=$pdo->prepare("SELECT COUNT(*) FROM questions WHERE test_id=? AND MOD(sort_order,2)=?");
-                $emptyCheck->execute([$testId,$parity]);
-            }
+            // De richting staat per vraag opgeslagen. Gebruik die bron van waarheid.
+            $emptyCheck=$pdo->prepare("SELECT COUNT(*) FROM questions WHERE test_id=? AND vocab_direction=?");
+            $emptyCheck->execute([$testId,$vocabDirectionChoice]);
         }else{
             $emptyCheck=$pdo->prepare("SELECT COUNT(*) FROM questions WHERE test_id=?");
             $emptyCheck->execute([$testId]);
@@ -333,21 +317,9 @@ if(!$attempt && !$viewMode){
         }else{
             if(in_array(($test['test_type']??'mixed'),['vocabulary','sentences'],true)){
                 if($vocabDirectionChoice==='left_to_right' || $vocabDirectionChoice==='right_to_left'){
-                    $directionTo=$vocabDirectionChoice==='left_to_right'
-                        ? (string)$test['vocab_right_label']
-                        : (string)$test['vocab_left_label'];
-                    $directionExplanation='Vertaal naar '.$directionTo.'.';
-                    $y=$pdo->prepare("SELECT id FROM questions WHERE test_id=? AND explanation LIKE CONCAT(?, '%') ORDER BY RAND()");
-                    $y->execute([$testId,$directionExplanation]);
+                    $y=$pdo->prepare("SELECT id FROM questions WHERE test_id=? AND vocab_direction=? ORDER BY RAND()");
+                    $y->execute([$testId,$vocabDirectionChoice]);
                     $questionIds=$y->fetchAll(PDO::FETCH_COLUMN);
-
-                    // Compatibiliteit met oudere AI-woordenlijsten zonder richtingsuitleg.
-                    if(!$questionIds){
-                        $parity=$vocabDirectionChoice==='left_to_right' ? 1 : 0;
-                        $y=$pdo->prepare("SELECT id FROM questions WHERE test_id=? AND MOD(sort_order,2)=? ORDER BY RAND()");
-                        $y->execute([$testId,$parity]);
-                        $questionIds=$y->fetchAll(PDO::FETCH_COLUMN);
-                    }
                 }else{
                     $y=$pdo->prepare("SELECT id FROM questions WHERE test_id=? ORDER BY RAND()");
                     $y->execute([$testId]);
