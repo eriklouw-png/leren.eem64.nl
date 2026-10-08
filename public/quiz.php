@@ -421,7 +421,7 @@ if(!$viewMode && $_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==
     redirect('result.php?id='.$attemptId);
 }
 
-$x=$pdo->prepare("SELECT q.id,q.question_text,q.image_path,q.question_type,q.explanation,aq.sort_order,aa.selected_option_id,aa.answer_text FROM attempt_questions aq JOIN questions q ON q.id=aq.question_id LEFT JOIN attempt_answers aa ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id WHERE aq.attempt_id=? ORDER BY aq.sort_order,q.id");
+$x=$pdo->prepare("SELECT q.id,q.question_text,q.image_path,q.question_type,q.explanation,aq.sort_order,aa.selected_option_id,aa.answer_text,aa.is_correct FROM attempt_questions aq JOIN questions q ON q.id=aq.question_id LEFT JOIN attempt_answers aa ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id WHERE aq.attempt_id=? ORDER BY aq.sort_order,q.id");
 
 $x->execute([$attemptId]);$questions=$x->fetchAll();
 $resumeIndex=0;
