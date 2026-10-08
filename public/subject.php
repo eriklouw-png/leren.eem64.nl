@@ -36,6 +36,14 @@ if($studentId && $topics){
             SELECT test_id,MAX(id) attempt_id
             FROM attempts
             WHERE student_id=? AND status='finished' AND mode='normal'
+              AND EXISTS (
+                  SELECT 1 FROM attempt_answers az
+                  WHERE az.attempt_id=attempts.id
+                    AND (
+                        (az.answer_text IS NOT NULL AND TRIM(az.answer_text)<>'')
+                        OR az.selected_option_id IS NOT NULL
+                    )
+              )
             GROUP BY test_id
         ) latest ON latest.attempt_id=a.id
         WHERE t.topic_id IN ($placeholders) AND t.is_active=1
