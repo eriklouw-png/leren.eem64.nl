@@ -296,7 +296,11 @@ if($t['in_progress_attempt_id']){
     $menuActions[]=['label'=>'Ga verder','href'=>$primaryUrl];
 }
 if($t['in_progress_attempt_id'] || $latestScore!==null){
-    $menuActions[]=['label'=>'Start opnieuw','href'=>'quiz.php?id='.(int)$t['id'].'&new=1'];
+    $menuActions[]=[
+        'label'=>'Start opnieuw',
+        'href'=>'quiz.php?id='.(int)$t['id'].'&new=1',
+        'confirm'=>'U gaat een toets opnieuw start. Uw huidige voortgang gaat hiermee verloren. Weet u het zeker?'
+    ];
 }
 if(($mistakeCountByTest[(int)$t['id']]??0)>0){
     $menuActions[]=['label'=>'Alleen fouten ('.(int)$mistakeCountByTest[(int)$t['id']].')','href'=>'quiz.php?id='.(int)$t['id'].'&mode=mistakes'];
