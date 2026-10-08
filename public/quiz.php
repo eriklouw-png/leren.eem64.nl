@@ -476,7 +476,7 @@ if($q['question_type']==='multiple_choice'){
  const cards=[...document.querySelectorAll('.question-card')],bar=document.getElementById('progressBar'),form=document.getElementById('quizForm');
  let current=<?= (int)$resumeIndex ?>,checking=false;
  function activity(data){fetch('activity.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data),keepalive:true}).catch(()=>{});}
- const saveUrl='quiz.php?id='+testId+<?= $reviewMode ? "'&review=1&topic_id=".(int)$topicId."'" : "''" ?>;
+ const saveUrl='quiz.php?id='+testId+<?= $reviewMode ? "'&review=1&topic_id=".(int)$topicId."'" : ($mode==='mistakes' ? "'&mode=mistakes'" : "''") ?>;
  function save(questionId,value){return fetch(saveUrl,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({action:'save_answer',attempt_id:attemptId,question_id:questionId,answer:value})}).then(r=>r.json());}
  function saveDraft(questionId,value){return fetch(saveUrl,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({action:'save_draft',attempt_id:attemptId,question_id:questionId,answer:value})}).then(r=>r.json());}
  function value(card){const el=card.querySelector('input[type=radio]:checked,textarea');return el?el.value.trim():'';}
