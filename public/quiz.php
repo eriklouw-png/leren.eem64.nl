@@ -298,7 +298,7 @@ if(!$attempt && !$viewMode){
                 ? (string)$test['vocab_right_label']
                 : (string)$test['vocab_left_label'];
             $directionExplanation='Vertaal naar '.$directionTo.'.';
-            $emptyCheck=$pdo->prepare("SELECT COUNT(*) FROM questions WHERE test_id=? AND explanation=?");
+            $emptyCheck=$pdo->prepare("SELECT COUNT(*) FROM questions WHERE test_id=? AND explanation LIKE CONCAT(?, '%')");
             $emptyCheck->execute([$testId,$directionExplanation]);
             $directionCount=(int)$emptyCheck->fetchColumn();
 
@@ -337,7 +337,7 @@ if(!$attempt && !$viewMode){
                         ? (string)$test['vocab_right_label']
                         : (string)$test['vocab_left_label'];
                     $directionExplanation='Vertaal naar '.$directionTo.'.';
-                    $y=$pdo->prepare("SELECT id FROM questions WHERE test_id=? AND explanation=? ORDER BY RAND()");
+                    $y=$pdo->prepare("SELECT id FROM questions WHERE test_id=? AND explanation LIKE CONCAT(?, '%') ORDER BY RAND()");
                     $y->execute([$testId,$directionExplanation]);
                     $questionIds=$y->fetchAll(PDO::FETCH_COLUMN);
 
