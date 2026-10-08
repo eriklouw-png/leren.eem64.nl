@@ -1,26 +1,54 @@
 <?php
 require __DIR__.'/../app/bootstrap.php';
 require_admin();
+
 $pdo->exec("CREATE TABLE IF NOT EXISTS ai_general_instructions (
  id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
  source_validation_instructions TEXT NULL,
+ language_instructions TEXT NULL,
+ question_generation_instructions TEXT NULL,
+ summary_instructions TEXT NULL,
+ image_generation_instructions TEXT NULL,
+ image_validation_instructions TEXT NULL,
+ rule_generation_instructions TEXT NULL,
  updated_at DATETIME NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-$defaultGeneralInstructions='Controleer iedere geüploade foto voordat deze als bron voor een toets wordt gebruikt. De afbeelding moet duidelijk schoolboekmateriaal, een werkblad of ander lesmateriaal zijn dat inhoudelijk bij het gekozen vak past. Keur een willekeurige foto, selfie, portret/gezichtsfoto of materiaal voor een ander vak af. Een gezicht dat onderdeel is van een relevante schoolboekpagina is toegestaan. Als de foto niet duidelijk bij het gekozen vak hoort, keur hem af.';
-$generalRow=$pdo->query("SELECT source_validation_instructions FROM ai_general_instructions WHERE id=1")->fetch();
+foreach([
+ 'language_instructions'=>'ALTER TABLE ai_general_instructions ADD COLUMN language_instructions TEXT NULL AFTER source_validation_instructions',
+ 'question_generation_instructions'=>'ALTER TABLE ai_general_instructions ADD COLUMN question_generation_instructions TEXT NULL AFTER language_instructions',
+ 'summary_instructions'=>'ALTER TABLE ai_general_instructions ADD COLUMN summary_instructions TEXT NULL AFTER question_generation_instructions',
+ 'image_generation_instructions'=>'ALTER TABLE ai_general_instructions ADD COLUMN image_generation_instructions TEXT NULL AFTER summary_instructions',
+ 'image_validation_instructions'=>'ALTER TABLE ai_general_instructions ADD COLUMN image_validation_instructions TEXT NULL AFTER image_generation_instructions',
+ 'rule_generation_instructions'=>'ALTER TABLE ai_general_instructions ADD COLUMN rule_generation_instructions TEXT NULL AFTER image_validation_instructions'
+] as $sql){try{$pdo->exec($sql);}catch(Throwable $ignored){}}
+
+$defaults=ai_general_instruction_defaults();
+$generalRow=$pdo->query("SELECT * FROM ai_general_instructions WHERE id=1")->fetch();
 if(!$generalRow){
-    $stmt=$pdo->prepare("INSERT INTO ai_general_instructions(id,source_validation_instructions,updated_at) VALUES(1,?,NOW())");
-    $stmt->execute([$defaultGeneralInstructions]);
+ $stmt=$pdo->prepare("INSERT INTO ai_general_instructions(id,source_validation_instructions,language_instructions,question_generation_instructions,summary_instructions,image_generation_instructions,image_validation_instructions,rule_generation_instructions,updated_at) VALUES(1,?,?,?,?,?,?,?,NOW())");
+ $stmt->execute([$defaults['source_validation_instructions'],$defaults['language_instructions'],$defaults['question_generation_instructions'],$defaults['summary_instructions'],$defaults['image_generation_instructions'],$defaults['image_validation_instructions'],$defaults['rule_generation_instructions']]);
+ $generalRow=$pdo->query("SELECT * FROM ai_general_instructions WHERE id=1")->fetch();
+}else{
+ $updates=[];$params=[];
+ foreach($defaults as $column=>$default){
+  if(trim((string)($generalRow[$column]??''))===''){$updates[]=$column.'=?';$params[]=$default;}
+ }
+ if($updates){
+  $params[]=1;$stmt=$pdo->prepare("UPDATE ai_general_instructions SET ".implode(',',$updates).",updated_at=NOW() WHERE id=?");$stmt->execute($params);
+  $generalRow=$pdo->query("SELECT * FROM ai_general_instructions WHERE id=1")->fetch();
+ }
 }
 if($_SERVER['REQUEST_METHOD']==='POST'){
  $action=$_POST['action']??'';
  if($action==='save_general'){
-  $value=trim((string)($_POST['source_validation_instructions']??''));
-  $stmt=$pdo->prepare("UPDATE ai_general_instructions SET source_validation_instructions=?,updated_at=NOW() WHERE id=1");
-  $stmt->execute([$value]);
+  $columns=array_keys($defaults);$sets=[];$values=[];
+  foreach($columns as $column){$sets[]=$column.'=?';$values[]=trim((string)($_POST[$column]??''));}
+  $values[]=1;
+  $stmt=$pdo->prepare("UPDATE ai_general_instructions SET ".implode(',',$sets).",updated_at=NOW() WHERE id=?");
+  $stmt->execute($values);
   redirect('ai_rules.php?saved=1');
  }
-if($action==='save'){
+ if($action==='save'){
   $ids=$_POST['id']??[];
   if(is_array($ids)){
    $stmt=$pdo->prepare("UPDATE ai_test_rules SET label=?,enabled=?,allow_summary=?,allow_images=?,allow_multiple_choice=?,allow_open=?,recognition_instructions=?,generation_instructions=?,sort_order=?,updated_at=NOW() WHERE id=?");
@@ -68,8 +96,7 @@ $ruleInsert=$pdo->prepare("INSERT IGNORE INTO ai_test_rules(subject_id,test_type
 foreach($newSubjectRules as $r){
     $ruleInsert->execute([$r[1],$r[2],$r[3],$r[4],$r[5],$r[6],$r[7],$r[8],$r[9],$r[10],$r[0]]);
 }
-$generalInstructions=(string)($pdo->query("SELECT source_validation_instructions FROM ai_general_instructions WHERE id=1")->fetchColumn()??'');
-$generalInstructions=(string)($pdo->query("SELECT source_validation_instructions FROM ai_general_instructions WHERE id=1")->fetchColumn()??'');
+$generalInstructions=$generalRow;
 $rules=$pdo->query("SELECT * FROM ai_test_rules ORDER BY subject_id,sort_order,label")->fetchAll();
 $bySubject=[];foreach($rules as $r)$bySubject[(int)$r['subject_id']][]=$r;
 ?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI-instructies per vak</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -79,10 +106,16 @@ $bySubject=[];foreach($rules as $r)$bySubject[(int)$r['subject_id']][]=$r;
 <section class="mb-5"><h2 class="h3 mb-3">Algemeen</h2>
 <div class="rule-card"><form method="post">
 <input type="hidden" name="action" value="save_general">
-<label class="form-label fw-semibold">AI-broncontrole van geüploade foto’s</label>
-<textarea class="form-control" name="source_validation_instructions" rows="8"><?=e($generalInstructions)?></textarea>
-<div class="form-text">Deze instructie geldt voor alle vakken. De AI controleert hiermee of een geüploade foto geschikt lesmateriaal is voor het gekozen vak, en kan bijvoorbeeld willekeurige foto’s, gezichten/selfies of materiaal voor een ander vak afkeuren.</div>
-<button class="btn btn-primary mt-3" type="submit">Algemene AI-instructie opslaan</button>
+<div class="rule-grid">
+<div><label class="form-label fw-semibold">Broncontrole van geüploade foto’s</label><textarea class="form-control" name="source_validation_instructions" rows="7"><?=e((string)($generalInstructions['source_validation_instructions']??''))?></textarea><div class="form-text">Voor alle vakken: bepaalt of een geüploade foto geschikt lesmateriaal is.</div></div>
+<div><label class="form-label fw-semibold">Taal- en woordenlijsten</label><textarea class="form-control" name="language_instructions" rows="7"><?=e((string)($generalInstructions['language_instructions']??''))?></textarea><div class="form-text">Voor alle talen, inclusief toekomstige talen.</div></div>
+<div><label class="form-label fw-semibold">Algemene vraaggeneratie</label><textarea class="form-control" name="question_generation_instructions" rows="7"><?=e((string)($generalInstructions['question_generation_instructions']??''))?></textarea><div class="form-text">Basisregels die gelden bij het genereren van vragen.</div></div>
+<div><label class="form-label fw-semibold">Samenvattingen</label><textarea class="form-control" name="summary_instructions" rows="7"><?=e((string)($generalInstructions['summary_instructions']??''))?></textarea><div class="form-text">Algemene regels voor AI-samenvattingen.</div></div>
+<div><label class="form-label fw-semibold">Afbeeldingen maken</label><textarea class="form-control" name="image_generation_instructions" rows="7"><?=e((string)($generalInstructions['image_generation_instructions']??''))?></textarea><div class="form-text">Basisinstructie voor gegenereerde educatieve afbeeldingen.</div></div>
+<div><label class="form-label fw-semibold">Afbeeldingen controleren</label><textarea class="form-control" name="image_validation_instructions" rows="7"><?=e((string)($generalInstructions['image_validation_instructions']??''))?></textarea><div class="form-text">Basisinstructie voor controle van AI-afbeeldingen.</div></div>
+<div class="col-12"><label class="form-label fw-semibold">AI-regels voor nieuwe vakken</label><textarea class="form-control" name="rule_generation_instructions" rows="8"><?=e((string)($generalInstructions['rule_generation_instructions']??''))?></textarea><div class="form-text">Wordt gebruikt wanneer automatisch AI-instructies voor een nieuw vak worden aangemaakt.</div></div>
+</div>
+<button class="btn btn-primary mt-3" type="submit">Algemene AI-instructies opslaan</button>
 </form></div></section>
 <form method="post"><input type="hidden" name="action" value="save">
 <?php foreach($subjects as $subject):?><section class="mb-5"><h2 class="h3 mb-3"><?=e($subject['name'])?></h2>
