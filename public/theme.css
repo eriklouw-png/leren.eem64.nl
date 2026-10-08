@@ -258,3 +258,30 @@ body.leren-admin .form-check-input:focus{
   box-shadow:0 0 0 .25rem rgba(111,145,122,.25)!important;
 }
 
+
+
+/* Shared Leren layout system */
+.leren-page{color:var(--leren-text,#212529);padding-bottom:2rem}
+.leren-page h1{font-size:1.75rem;line-height:1.2;font-weight:700;margin-bottom:.5rem}
+.leren-page h2{font-size:1.25rem;line-height:1.3;font-weight:650}
+.leren-page h3{font-size:1.05rem;line-height:1.35;font-weight:650}
+.leren-page p{line-height:1.5}
+.leren-page .text-secondary{color:var(--leren-muted,#6c757d)!important}
+.leren-section{margin-top:1.75rem}
+.leren-section-title{margin-bottom:.75rem}
+.leren-actions{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.leren-meta{font-size:.875rem;color:var(--leren-muted,#6c757d)}
+.leren-empty{padding:1.25rem;border:1px dashed var(--leren-border,#dee5e0);border-radius:.75rem;background:var(--leren-surface-muted,#f8faf9);color:var(--leren-muted,#6c757d)}
+.leren-page .card{border-color:var(--leren-border,#dee5e0);border-radius:.75rem;box-shadow:0 .15rem .5rem rgba(0,0,0,.06)}
+.leren-page .card-body{padding:1.25rem}
+.leren-page .card-header,.leren-page .card-footer{background:var(--leren-surface-muted,#f8faf9);border-color:var(--leren-border,#dee5e0)}
+.leren-page .list-group{border-radius:.75rem;overflow:hidden}
+.leren-page .list-group-item{border-color:var(--leren-border,#dee5e0);padding:1rem 1.1rem}
+.leren-page .list-group-item .text-secondary{font-size:.875rem}
+.leren-page .form-label{font-weight:600;margin-bottom:.35rem}
+.leren-page .form-control,.leren-page .form-select{min-height:42px}
+.leren-page textarea.form-control{min-height:100px}
+.leren-page .form-text{font-size:.825rem;color:var(--leren-muted,#6c757d)}
+.leren-page .table{margin-bottom:0}
+.leren-page .table th{font-size:.8rem;text-transform:uppercase;letter-spacing:.025em;color:var(--leren-muted,#6c757d);font-weight:700}
+.leren-page .table td,.leren-page .table th{vertical-align:middle}
