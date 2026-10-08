@@ -46,9 +46,15 @@ $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d');
 <?php if(!$summaries):?><div class="alert alert-secondary mb-4">Nog geen samenvattingen voor deze overhoring.</div><?php else:?>
 <div class="leren-list mb-4">
 <?php foreach($summaries as $summary):?>
+<?php
+$menuActions=[
+    ['label'=>'Samenvatting bewerken','href'=>'summary_edit.php?id='.(int)$summary['id'],'primary'=>true],
+    ['type'=>'form','label'=>'Verwijderen','danger'=>true,'action'=>'topic_manage.php?id='.$id,'fields'=>['action'=>'delete_summary','item_id'=>(int)$summary['id']],'confirm'=>'Weet u zeker dat u deze samenvatting wilt verwijderen? De samenvatting verdwijnt uit de website, maar blijft in de database bewaard.'],
+];
+?>
 <div class="leren-list-item">
 <a class="leren-list-item-main" href="summary_edit.php?id=<?=$summary['id']?>"><div class="leren-list-item-content"><div class="leren-list-item-heading"><strong class="leren-list-item-title"><?=e($summary['name'])?></strong></div><div class="leren-list-item-subtitle">Bijgewerkt <?=e(date('d-m-Y',strtotime((string)($summary['updated_at']?:$summary['created_at']))))?></div></div></a>
-<button class="leren-list-item-menu" type="button" data-summary-menu data-id="<?=$summary['id']?>" data-title="<?=e($summary['name'])?>" aria-label="Opties voor <?=e($summary['name'])?>"><span></span><span></span><span></span></button>
+<button class="leren-list-item-menu" type="button" data-list-menu data-list-modal="manageOptionsModal" data-menu-title="<?=e($summary['name'])?>" data-list-actions="<?=e(json_encode($menuActions, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES))?>" aria-label="Opties voor <?=e($summary['name'])?>"><span></span><span></span><span></span></button>
 </div>
 <?php endforeach;?>
 </div>
@@ -59,39 +65,27 @@ $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d');
 <div class="leren-list">
 <?php foreach($tests as $t):?>
 <?php $questionCount=((in_array(($t['test_type']??'mixed'),['vocabulary','sentences'],true) && ($t['vocab_direction']??'both')==='both') ? (int)ceil(((int)$t['question_count'])/2) : (int)$t['question_count']); ?>
+<?php
+$menuActions=[
+    ['label'=>'Sub-test bewerken','href'=>'test_edit.php?id='.(int)$t['id'],'primary'=>true],
+    ['label'=>'Vragen beheren','href'=>'questions.php?test_id='.(int)$t['id']],
+    ['type'=>'form','label'=>'Verwijderen','danger'=>true,'action'=>'topic_manage.php?id='.$id,'fields'=>['action'=>'delete_test','item_id'=>(int)$t['id']],'confirm'=>'Weet u zeker dat u deze sub-test wilt verwijderen? De sub-test verdwijnt uit de website, maar blijft in de database bewaard.'],
+];
+?>
 <div class="leren-list-item">
 <a class="leren-list-item-main" href="test_edit.php?id=<?=$t['id']?>"><div class="leren-list-item-content"><div class="leren-list-item-heading"><strong class="leren-list-item-title"><?=e($t['title'])?></strong></div><div class="leren-list-item-subtitle"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=$questionCount?> <?=($t['test_type']??'mixed')==='vocabulary'?'woorden':(($t['test_type']??'mixed')==='sentences'?'zinnen':'vragen')?> · <?=((int)$t['is_active']?'Actief':'Inactief')?></div><?php if($t['description']):?><div class="leren-list-item-description"><?=e($t['description'])?></div><?php endif;?></div></a>
-<button class="leren-list-item-menu" type="button" data-test-menu data-id="<?=$t['id']?>" data-title="<?=e($t['title'])?>" aria-label="Opties voor <?=e($t['title'])?>"><span></span><span></span><span></span></button>
+<button class="leren-list-item-menu" type="button" data-list-menu data-list-modal="manageOptionsModal" data-menu-title="<?=e($t['title'])?>" data-list-actions="<?=e(json_encode($menuActions, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES))?>" aria-label="Opties voor <?=e($t['title'])?>"><span></span><span></span><span></span></button>
 </div>
 <?php endforeach;?>
 </div>
 <?php endif;?>
 
-<div class="leren-modal" id="manageOptionsModal" hidden><div class="leren-modal-backdrop" data-manage-modal-close></div><div class="leren-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="manageOptionsTitle"><button class="leren-modal-close" type="button" data-manage-modal-close aria-label="Sluiten">&times;</button><h2 id="manageOptionsTitle">Opties</h2><div class="leren-modal-actions" id="manageOptionsActions"></div></div></div>
-
-<script>
-(function(){
-const modal=document.getElementById('manageOptionsModal'),title=document.getElementById('manageOptionsTitle'),actions=document.getElementById('manageOptionsActions');
-function closeModal(){modal.hidden=true;document.body.classList.remove('leren-modal-open');}
-function addAction(label,href,primary){const a=document.createElement('a');a.className='leren-modal-action'+(primary?' primary':'');a.href=href;a.textContent=label;actions.appendChild(a);}
-function openModal(button,type){
-const itemId=button.dataset.id;title.textContent=button.dataset.title||'Opties';actions.innerHTML='';
-if(type==='summary'){
-addAction('Samenvatting bewerken','summary_edit.php?id='+encodeURIComponent(itemId),true);
-const form=document.createElement('form');form.method='post';form.action='summary_edit.php?id='+encodeURIComponent(itemId);
-form.innerHTML='<input type="hidden" name="id" value="'+itemId+'"><input type="hidden" name="subject_id" value="<?=e((string)$topic['subject_id'])?>"><input type="hidden" name="topic_id" value="<?=e((string)$id)?>">';
-const b=document.createElement('button');b.type='submit';b.className='leren-modal-action danger';b.textContent='Verwijderen';form.dataset.confirm='Weet u zeker dat u deze samenvatting wilt verwijderen? De samenvatting verdwijnt uit de website, maar blijft in de database bewaard.';form.innerHTML='<input type="hidden" name="action" value="delete_summary"><input type="hidden" name="item_id" value="'+itemId+'">';form.appendChild(b);actions.appendChild(form);
-}else{
-addAction('Sub-test bewerken','test_edit.php?id='+encodeURIComponent(itemId),true);
-addAction('Vragen beheren','questions.php?test_id='+encodeURIComponent(itemId),false);
-const testForm=document.createElement('form');testForm.method='post';testForm.action='topic_manage.php?id='+'<?=e((string)$id)?>';testForm.dataset.confirm='Weet u zeker dat u deze sub-test wilt verwijderen? De sub-test verdwijnt uit de website, maar blijft in de database bewaard.';testForm.innerHTML='<input type="hidden" name="action" value="delete_test"><input type="hidden" name="item_id" value="'+itemId+'">';const testDel=document.createElement('button');testDel.type='submit';testDel.className='leren-modal-action danger';testDel.textContent='Verwijderen';testForm.appendChild(testDel);actions.appendChild(testForm);
-}
-modal.hidden=false;document.body.classList.add('leren-modal-open');
-}
-document.querySelectorAll('[data-summary-menu]').forEach(b=>b.addEventListener('click',()=>openModal(b,'summary')));
-document.querySelectorAll('[data-test-menu]').forEach(b=>b.addEventListener('click',()=>openModal(b,'test')));
-document.querySelectorAll('[data-manage-modal-close]').forEach(el=>el.addEventListener('click',closeModal));
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!modal.hidden)closeModal();});
-})();
-</script>
+<div class="leren-modal" id="manageOptionsModal" data-list-modal hidden aria-hidden="true">
+<div class="leren-modal-backdrop" data-list-modal-close></div>
+<div class="leren-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="manageOptionsTitle">
+<button class="leren-modal-close" type="button" data-list-modal-close aria-label="Sluiten">&times;</button>
+<h2 id="manageOptionsTitle" data-list-modal-title>Opties</h2>
+<div class="leren-modal-actions" data-list-modal-actions></div>
+</div>
+</div>
 </main></body></html>
