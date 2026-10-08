@@ -24,6 +24,13 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $postId=filter_var($_POST['id']??null,FILTER_VALIDATE_INT)?:0;
     if(!$postId){http_response_code(400);exit('Ongeldig ID.');}
 
+    if($action==='delete'){
+        if($currentUser['role']!=='admin'){http_response_code(403);exit('Alleen een beheerder kan een student verwijderen.');}
+        $x=$pdo->prepare("DELETE FROM users WHERE id=? AND role='student'");
+        $x->execute([$postId]);
+        redirect('admin.php?deleted=student');
+    }
+
     if($action==='delete_image'){
         $x=$pdo->prepare("UPDATE users SET image_mime=NULL,image_data=NULL WHERE id=? AND role='student'");
         $x->execute([$postId]);
@@ -117,12 +124,14 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <input class="form-control" type="file" name="image" accept="image/jpeg,image/png,image/webp">
 <div class="form-text">JPG, PNG of WebP. Maximaal 5 MB.</div>
 <?php if(!empty($student['image_mime'])):?>
-<button class="btn btn-outline-danger btn-sm mt-2" type="submit" name="action" value="delete_image" formnovalidate>Afbeelding verwijderen</button>
+<button class="btn btn-outline-danger btn-sm mt-2" type="submit" name="action" value="delete_image" formnovalidate data-confirm="Weet u zeker dat u de profielfoto wilt verwijderen?">Afbeelding verwijderen</button>
 <?php endif;?>
 </div>
 
 <button class="btn btn-primary" type="submit">Opslaan</button>
-<a class="btn btn-outline-secondary" href="student.php?id=<?=$id?>">Annuleren</a>
+<a class="btn btn-outline-secondary" href="student.php?id=<?=$id?>">Annuleren</a><?php if($currentUser['role']==='admin'):?>
+<button class="btn btn-danger ms-2" type="submit" name="action" value="delete" data-confirm="Weet u zeker dat u deze student wilt verwijderen? De student, zijn/haar profiel en de bijbehorende voortgang blijven niet meer aan de student gekoppeld.">Student verwijderen</button>
+<?php endif;?>
 </form>
 </div>
 </div>
