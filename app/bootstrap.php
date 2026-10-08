@@ -724,7 +724,7 @@ function openai_generate_text_analysis(string $input,string $managedInstructions
     if($apiKey==='')return ['_leren_error'=>'OPENAI_API_KEY ontbreekt in de container.'];
     $payload=[
         'model'=>openai_model(),
-        'instructions'=>'Je helpt een docent bij het maken van oefentoetsen. Gebruik de gebruikersopdracht als onderwerp en inhoudelijke basis. Gebruik algemene kennis wanneer er geen schoolboekpagina’s zijn aangeleverd. Verzin geen details over een specifieke methode, boek of bron die niet uit de gebruikersopdracht blijken. Als er vakregels zijn meegegeven, gebruik die uitsluitend voor het herkennen en configureren van het passende type. '.$managedInstructions,
+        'instructions'=>'Je helpt een docent bij het maken van oefentoetsen. Gebruik de gebruikersopdracht als onderwerp en inhoudelijke basis. Gebruik algemene kennis wanneer er geen schoolboekpagina’s zijn aangeleverd. Verzin geen details over een specifieke methode, boek of bron die niet uit de gebruikersopdracht blijken. Als er vakregels zijn meegegeven, gebruik die uitsluitend voor het herkennen en configureren van het passende type. Bij een herkende woordenlijst: zet in grammatical_label alle relevante grammaticale kenmerken die uit de bron blijken. Dit kan een combinatie zijn, bijvoorbeeld "mannelijk, enkelvoud", "mannelijk, meervoud", "vrouwelijk, enkelvoud" of "mannelijk, enkelvoud en meervoud". Gebruik geen grammaticaal kenmerk als het niet betrouwbaar uit de bron blijkt. '.$managedInstructions,
         'input'=>[['role'=>'user','content'=>[['type'=>'input_text','text'=>$input]]]],
         'max_output_tokens'=>4000,
         'store'=>false,
@@ -743,7 +743,7 @@ function openai_generate_text_analysis(string $input,string $managedInstructions
                     'is_vocabulary_list'=>['type'=>'boolean'],
                     'is_sentence_list'=>['type'=>'boolean'],
                     'vocabulary_language'=>['type'=>'string'],
-                    'vocabulary_pairs'=>['type'=>'array','items'=>['type'=>'object','properties'=>['source'=>['type'=>'string'],'translation'=>['type'=>'string'],'grammatical_label'=>['type'=>'string','enum'=>['','mannelijk','vrouwelijk','meervoud']]],'required'=>['source','translation','grammatical_label'],'additionalProperties'=>false]],
+                    'vocabulary_pairs'=>['type'=>'array','items'=>['type'=>'object','properties'=>['source'=>['type'=>'string'],'translation'=>['type'=>'string'],'grammatical_label'=>['type'=>'string']],'required'=>['source','translation','grammatical_label'],'additionalProperties'=>false]],
                     'subtests'=>['type'=>'array','items'=>[
                         'type'=>'object',
                         'properties'=>[
