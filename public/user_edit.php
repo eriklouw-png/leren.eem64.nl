@@ -2,7 +2,8 @@
 require __DIR__.'/../app/bootstrap.php';
 require_login();
 
-$currentUser=current_user();
+$currentUser=$_SESSION['user'] ?? null;
+if(!is_array($currentUser) || empty($currentUser['id'])){redirect('login.php');}
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT)?:0;
 if(!$id)$id=(int)$currentUser['id'];
 
