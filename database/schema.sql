@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS questions;
 DROP TABLE IF EXISTS tests;
 DROP TABLE IF EXISTS topics;
 DROP TABLE IF EXISTS subjects;
+DROP TABLE IF EXISTS manager_students;
 DROP TABLE IF EXISTS users;
 SET FOREIGN_KEY_CHECKS=1;
 
@@ -23,6 +24,15 @@ CREATE TABLE users (
  password_hash VARCHAR(255) NOT NULL,
  role ENUM('admin','beheerder','student') NOT NULL DEFAULT 'student',
  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE manager_students (
+ manager_id INT UNSIGNED NOT NULL,
+ student_id INT UNSIGNED NOT NULL,
+ PRIMARY KEY (manager_id,student_id),
+ KEY idx_manager_students_student(student_id),
+ CONSTRAINT fk_manager_students_manager FOREIGN KEY(manager_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+ CONSTRAINT fk_manager_students_student FOREIGN KEY(student_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE subjects (
