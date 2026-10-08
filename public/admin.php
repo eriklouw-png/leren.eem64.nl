@@ -148,36 +148,45 @@ $students=$pdo->query("
 <h1 class="mb-2">Studenten</h1>
 <div class="leren-list">
 <?php foreach($students as $student):?>
-<a href="student.php?id=<?=(int)$student['id']?>" class="leren-list-item text-decoration-none">
-<?php if($student['image_mime']):?>
-<div class="leren-list-item-thumbnail">
-<img src="student_image.php?id=<?=(int)$student['id']?>" alt="" loading="lazy">
-</div>
-<?php else:?>
-<div class="leren-list-item-thumbnail" aria-hidden="true"></div>
-<?php endif;?>
-<div class="leren-list-item-main">
+<?php
+$studentId=(int)$student['id'];
+$studentActions=[
+ ['label'=>'Bekijken','href'=>'student.php?id='.$studentId,'primary'=>true],
+ ['label'=>'Bewerken','href'=>'user_edit.php?id='.$studentId],
+];
+if(is_admin()){
+ $studentActions[]=['type'=>'form','label'=>'Student verwijderen','action'=>'user_edit.php','fields'=>['action'=>'delete','id'=>$studentId],'confirm'=>'Weet je zeker dat je deze student wilt verwijderen?','danger'=>true];
+}
+?>
+<div class="leren-list-item">
+<?php if($student['image_mime']):?><div class="leren-list-item-thumbnail"><img src="student_image.php?id=<?=$studentId?>" alt="" loading="lazy"></div>
+<?php else:?><div class="leren-list-item-thumbnail" aria-hidden="true"></div><?php endif;?>
+<a class="leren-list-item-main" href="student.php?id=<?=$studentId?>">
 <div class="leren-list-item-content">
-<div class="leren-list-item-heading">
-<div class="leren-list-item-title"><?=e($student['name'])?></div>
-</div>
+<div class="leren-list-item-heading"><div class="leren-list-item-title"><?=e($student['name'])?></div></div>
 <div class="leren-list-item-subtitle"><?=e($student['email'])?></div>
-<div class="leren-list-item-description">
-<?=e((string)$student['completed_tests'])?> toetsen
-&middot;
-<?=e(rtrim(rtrim(number_format((float)$student['average_score'],0,',','.'),'0'),','))?>% gemiddeld
-&middot;
-<?=e((string)intdiv((int)$student['active_seconds'],60))?> min. actief
-</div>
-</div>
+<div class="leren-list-item-description"><?=e((string)$student['completed_tests'])?> toetsen &middot; <?=e(rtrim(rtrim(number_format((float)$student['average_score'],0,',','.'),'0'),','))?>% gemiddeld &middot; <?=e((string)intdiv((int)$student['active_seconds'],60))?> min. actief</div>
 </div>
 </a>
+<button type="button" class="leren-list-item-menu" data-list-menu data-list-modal="studentOptionsModal" data-menu-title="<?=e($student['name'])?>" data-list-actions="<?=e(json_encode($studentActions,JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES))?>" aria-label="Opties voor <?=e($student['name'])?>">
+<span></span><span></span><span></span>
+</button>
+</div>
 <?php endforeach;?>
 </div>
 </section>
 <?php endif;?>
+<div class="leren-modal" id="studentOptionsModal" data-list-modal hidden aria-hidden="true">
+<div class="leren-modal-backdrop" data-list-modal-close></div>
+<div class="leren-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="studentOptionsTitle">
+<button type="button" class="leren-modal-close" data-list-modal-close aria-label="Sluiten">&times;</button>
+<h2 id="studentOptionsTitle" data-list-modal-title>Student</h2>
+<div class="leren-modal-actions" data-list-modal-actions></div>
+</div>
+</div>
 
 
+<section class="leren-section admin-subjects-section">
 <div class="d-flex justify-content-between align-items-center mb-3">
 <h1 class="mb-0">Vakken</h1>
 <div><a class="btn btn-outline-primary" href="subject_edit.php">Nieuw vak</a></div>
@@ -198,6 +207,7 @@ $students=$pdo->query("
 </div>
 <?php endforeach;?>
 </div>
+</section>
 
 
 
