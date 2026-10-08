@@ -135,9 +135,17 @@ $students=$pdo->query("
         SELECT student_id,
                COUNT(*) AS completed_tests,
                AVG(score) AS average_score
-        FROM attempts
-        WHERE status='finished' AND mode='normal'
-        GROUP BY student_id
+        FROM attempts a
+        WHERE a.status='finished' AND a.mode='normal'
+          AND EXISTS (
+              SELECT 1 FROM attempt_answers az
+              WHERE az.attempt_id=a.id
+                AND (
+                    (az.answer_text IS NOT NULL AND TRIM(az.answer_text)<>'')
+                    OR az.selected_option_id IS NOT NULL
+                )
+          )
+        GROUP BY a.student_id
     ) a ON a.student_id=u.id
     WHERE u.role='student' AND ($studentScopeSql)
     ORDER BY u.name
