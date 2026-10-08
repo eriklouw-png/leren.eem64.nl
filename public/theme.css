@@ -159,7 +159,7 @@ details .chevron{display:inline-block;transition:transform .15s ease;font-size:1
   border:0;
   border-radius:50%;
   background:rgba(0,0,0,.08);
-  color:transparent;
+  color:#6c757d;
   font-size:0;
   cursor:pointer;
   opacity:.7;
@@ -170,7 +170,7 @@ details .chevron{display:inline-block;transition:transform .15s ease;font-size:1
   left:50%;
   top:50%;
   transform:translate(-50%,-54%);
-  color:inherit;
+  color:#6c757d;
   font-family:Arial,sans-serif;
   font-size:1.35rem;
   font-weight:400;
