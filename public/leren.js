@@ -21,7 +21,7 @@ function parseActions(button){
 function addLinkAction(actions,action){
     if(!action || !action.label || !action.href)return;
     const link=document.createElement('a');
-    link.className='leren-modal-action'+(action.primary?' primary':'');
+    link.className='leren-modal-action'+(action.primary?' primary':'')+(action.class?' '+action.class:'');
     link.href=action.href;
     if(action.confirm)link.dataset.confirm=action.confirm;
     link.textContent=action.label;
