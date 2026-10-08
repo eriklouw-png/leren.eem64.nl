@@ -197,7 +197,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $summaryText=null;
                 if($useSummary && $ruleSummaryAllowed){
                     try{
-                        $summaryPrompt='Maak een complete, zelfstandige samenvatting van deze geüploade schoolboekpagina’s voor deze overhoring. Deze samenvatting wordt één afzonderlijke samenvatting binnen de overhoring en mag dus alleen de informatie uit deze nieuwe upload bevatten. Gebruik uitsluitend informatie uit de pagina’s. Neem belangrijke begrippen, namen, processen, voorbeelden en jaartallen mee. Schrijf in duidelijk Nederlands op het niveau van ongeveer 12-15 jaar. Deel de samenvatting logisch op in duidelijke onderwerpen. IEDER nieuw onderwerp moet beginnen met een Markdown-kopje op exact deze manier: "## Onderwerp". Gebruik dus letterlijk twee hekjes, gevolgd door één spatie en daarna de titel van het onderwerp, bijvoorbeeld "## Stofwisseling". Gebruik geen andere Markdown-kopniveaus zoals # of ###. Zet onder ieder kopje de bijbehorende uitleg in korte, duidelijke alinea’s. Verzin niets en vul ontbrekende informatie niet aan.';
+                        $summaryPrompt='Maak de zelfstandige leersamenvatting voor deze overhoring van de aangeleverde boekpagina’s.';
                         $summaryData=openai_generate_topic_summary($summaryPrompt,(array)($saved['images']??[]));
                         if(isset($summaryData['_leren_error']))throw new RuntimeException((string)$summaryData['_leren_error']);
                         $summaryJson=openai_output_json($summaryData);
@@ -520,10 +520,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
         if(!$errors){
             if($query!==''){
-                $prompt='Analyseer het onderwerp/de opdracht van de gebruiker voor het maken van een oefentoets. Bepaal vak, onderwerp, leerpunten en passende sub-testtypen. Gebruik de beheerde vakconfiguratie om te bepalen of een specifiek type van toepassing is. Geef alleen JSON volgens het opgegeven schema.'.$aiRulesPrompt;
+                $prompt='Analyseer de gebruikersopdracht voor deze oefentoets.';
                 $data=openai_generate_text_analysis($prompt,$aiRulesPrompt);
             }else{
-                $prompt='Analyseer de geüploade schoolboekpagina’s voor het maken van oefentoetsen. Identificeer vak en onderwerp, bepaal leerpunten en herken welke beheerde sub-testtypen bij de pagina’s passen. Gebruik uitsluitend informatie uit de pagina’s. Bepaal per passend type hoeveel verschillende, inhoudelijk zinvolle vragen de bron realistisch ondersteunt. Geef alleen JSON volgens het opgegeven schema.'.$aiRulesPrompt;
+                $prompt='Analyseer de geüploade schoolboekpagina’s voor deze oefentoets.';
                 $data=openai_generate_with_images($prompt,$valid,$aiRulesPrompt);
             }
 
