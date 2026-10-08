@@ -15,6 +15,22 @@ if(!$topic || !(int)$topic['is_active']){http_response_code(404);exit('Overhorin
 
 $summaryStmt=$pdo->prepare("SELECT id,name,summary,updated_at,created_at FROM topic_summaries WHERE topic_id=? AND is_active=1 ORDER BY created_at,id");
 $summaryStmt->execute([$topicId]);
+$cleanupZeroAttempts=$pdo->prepare("
+    DELETE a
+    FROM attempts a
+    JOIN tests t ON t.id=a.test_id
+    WHERE a.student_id=? AND t.topic_id=?
+      AND NOT EXISTS (
+          SELECT 1 FROM attempt_answers aa
+          WHERE aa.attempt_id=a.id
+            AND (
+                (aa.answer_text IS NOT NULL AND TRIM(aa.answer_text)<>'')
+                OR aa.selected_option_id IS NOT NULL
+            )
+      )
+");
+$cleanupZeroAttempts->execute([$studentId,$topicId]);
+
 $topicSummaries=$summaryStmt->fetchAll();
 usort($topicSummaries,function(array $a,array $b):int{
     return strnatcasecmp((string)$a['name'],(string)$b['name']);
@@ -83,6 +99,14 @@ if($tests){
         JOIN tests t ON t.id=a.test_id
         WHERE a.student_id=? AND a.status='finished' AND a.mode='normal'
           AND t.topic_id=? AND t.is_active=1
+          AND EXISTS (
+              SELECT 1 FROM attempt_answers az
+              WHERE az.attempt_id=a.id
+                AND (
+                    (az.answer_text IS NOT NULL AND TRIM(az.answer_text)<>'')
+                    OR az.selected_option_id IS NOT NULL
+                )
+          )
     ");
     $completedStmt->execute([$studentId,$topicId]);
     $completedCount=(int)$completedStmt->fetchColumn();
@@ -97,6 +121,14 @@ if($tests){
                 JOIN tests lt ON lt.id=a.test_id
                 WHERE a.student_id=? AND a.status='finished' AND a.mode='normal'
                   AND lt.topic_id=? AND lt.is_active=1
+                  AND EXISTS (
+                      SELECT 1 FROM attempt_answers az
+                      WHERE az.attempt_id=a.id
+                        AND (
+                            (az.answer_text IS NOT NULL AND TRIM(az.answer_text)<>'')
+                            OR az.selected_option_id IS NOT NULL
+                        )
+                  )
                 GROUP BY a.test_id
             ) latest ON latest.test_id=t.id
             JOIN attempts latest_attempt ON latest_attempt.id=latest.attempt_id
@@ -142,6 +174,14 @@ $historyStmt=$pdo->prepare("
     SELECT id,score,finished_at
     FROM attempts
     WHERE test_id=? AND student_id=? AND status='finished' AND mode='normal'
+      AND EXISTS (
+          SELECT 1 FROM attempt_answers az
+          WHERE az.attempt_id=attempts.id
+            AND (
+                (az.answer_text IS NOT NULL AND TRIM(az.answer_text)<>'')
+                OR az.selected_option_id IS NOT NULL
+            )
+      )
     ORDER BY finished_at DESC,id DESC
 ");
 $historyByTest=[];
