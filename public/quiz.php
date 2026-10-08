@@ -211,6 +211,14 @@ if(!$attempt){
                     JOIN tests lt ON lt.id=a.test_id
                     WHERE a.student_id=? AND a.status='finished' AND a.mode='normal'
                       AND lt.topic_id=? AND lt.is_active=1
+                      AND EXISTS (
+                          SELECT 1 FROM attempt_answers az
+                          WHERE az.attempt_id=a.id
+                            AND (
+                                (az.answer_text IS NOT NULL AND TRIM(az.answer_text)<>'')
+                                OR az.selected_option_id IS NOT NULL
+                            )
+                      )
                     GROUP BY a.test_id
                 ) latest ON latest.test_id=t.id
                 JOIN attempts latest_attempt ON latest_attempt.id=latest.attempt_id
@@ -237,13 +245,34 @@ if(!$attempt){
             if(!$mistakes)redirect('topic.php?id='.$topicId);
         }else{
             if($sourceAttemptId){
-                $x=$pdo->prepare("SELECT id FROM attempts WHERE id=? AND test_id=? AND student_id=? AND status='finished' AND mode='normal'");
+                $x=$pdo->prepare("SELECT a.id
+                FROM attempts a
+                WHERE a.id=? AND a.test_id=? AND a.student_id=? AND a.status='finished' AND a.mode='normal'
+                  AND EXISTS (
+                      SELECT 1 FROM attempt_answers az
+                      WHERE az.attempt_id=a.id
+                        AND (
+                            (az.answer_text IS NOT NULL AND TRIM(az.answer_text)<>'')
+                            OR az.selected_option_id IS NOT NULL
+                        )
+                  )");
                 $x->execute([$sourceAttemptId,$testId,$studentId]);
                 $validatedAttempt=$x->fetchColumn();
                 if(!$validatedAttempt){$sourceAttemptId=null;}
             }
             if(!$sourceAttemptId){
-                $x=$pdo->prepare("SELECT id FROM attempts WHERE test_id=? AND student_id=? AND status='finished' AND mode='normal' ORDER BY finished_at DESC,id DESC LIMIT 1");
+                $x=$pdo->prepare("SELECT a.id
+                FROM attempts a
+                WHERE a.test_id=? AND a.student_id=? AND a.status='finished' AND a.mode='normal'
+                  AND EXISTS (
+                      SELECT 1 FROM attempt_answers az
+                      WHERE az.attempt_id=a.id
+                        AND (
+                            (az.answer_text IS NOT NULL AND TRIM(az.answer_text)<>'')
+                            OR az.selected_option_id IS NOT NULL
+                        )
+                  )
+                ORDER BY a.finished_at DESC,a.id DESC LIMIT 1");
                 $x->execute([$testId,$studentId]);
                 $sourceAttemptId=(int)($x->fetchColumn()?:0);
             }
