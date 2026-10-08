@@ -37,7 +37,7 @@ function leren_navbar_html(string $area): string{
 ob_start(static function(string $html): string{
     $script=basename((string)($_SERVER['SCRIPT_NAME']??''));
     $adminPages=[
-        'admin.php','subject_manage.php','subject_edit.php','topic_new.php','topic_edit.php',
+        'admin.php','subject_manage.php','subject_edit.php','topic_manage.php','topic_new.php','topic_edit.php',
         'test_new.php','ai_test_generator.php','test_edit.php','import.php','vocabulary_import.php',
         'questions.php','question_edit.php','summary_edit.php','user_edit.php',
         'system_update.php','debug_question.php','ai_usage.php','ai_rules.php'
