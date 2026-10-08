@@ -69,7 +69,7 @@ $labels=['vocabulary'=>'Woordjes oefenen','sentences'=>'Zinnen oefenen','multipl
 .topic-header{border-bottom:0!important}
 }
 </style></head>
-<body class="bg-light"><main class="container py-4" style="max-width:1000px">
+<body class="bg-light"><main class="container py-4">
 <a href="admin.php">&larr; Beheer</a>
 <div class="card shadow-sm mt-3 overflow-hidden">
 <?php if($subject['image_mime']):?><img src="subject_image.php?id=<?=$id?>" style="height:180px;object-fit:cover" alt="<?=e($subject['name'])?>"><?php endif;?>
