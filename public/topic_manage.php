@@ -3,6 +3,22 @@ require __DIR__.'/../app/bootstrap.php';require_admin();
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if(!$id)redirect('admin.php');
 
+if($_SERVER['REQUEST_METHOD']==='POST'){
+    $action=$_POST['action']??'';
+    $itemId=filter_var($_POST['item_id']??null,FILTER_VALIDATE_INT);
+    if(!$itemId){http_response_code(400);exit('Ongeldig ID.');}
+    if($action==='delete_summary'){
+        $x=$pdo->prepare("UPDATE topic_summaries SET is_active=0,deleted_at=NOW(),updated_at=NOW() WHERE id=? AND topic_id=?");
+        $x->execute([$itemId,$id]);
+        redirect('topic_manage.php?id='.$id);
+    }
+    if($action==='delete_test'){
+        $x=$pdo->prepare("UPDATE tests SET is_active=0 WHERE id=? AND topic_id=?");
+        $x->execute([$itemId,$id]);
+        redirect('topic_manage.php?id='.$id);
+    }
+}
+
 $s=$pdo->prepare("SELECT tp.id,tp.name,tp.test_date,tp.is_active,s.id subject_id,s.name subject_name FROM topics tp JOIN subjects s ON s.id=tp.subject_id WHERE tp.id=?");
 $s->execute([$id]);$topic=$s->fetch();
 if(!$topic){http_response_code(404);exit('Overhoring niet gevonden.');}
@@ -64,10 +80,10 @@ if(type==='summary'){
 addAction('Samenvatting bewerken','summary_edit.php?id='+encodeURIComponent(itemId),true);
 const form=document.createElement('form');form.method='post';form.action='summary_edit.php?id='+encodeURIComponent(itemId);
 form.innerHTML='<input type="hidden" name="id" value="'+itemId+'"><input type="hidden" name="subject_id" value="<?=e((string)$topic['subject_id'])?>"><input type="hidden" name="topic_id" value="<?=e((string)$id)?>">';
-const b=document.createElement('button');b.type='submit';b.name='action';b.value='delete';b.className='leren-modal-action danger';b.textContent='Verwijderen';b.addEventListener('click',e=>{if(!confirm('Weet u zeker dat u deze samenvatting wilt verwijderen? De samenvatting verdwijnt uit de website, maar blijft in de database bewaard.'))e.preventDefault();});form.appendChild(b);actions.appendChild(form);
+const b=document.createElement('button');b.type='submit';b.name='action';b.value='delete';b.className='leren-modal-action danger';b.textContent='Verwijderen';form.dataset.confirm='Weet u zeker dat u deze samenvatting wilt verwijderen? De samenvatting verdwijnt uit de website, maar blijft in de database bewaard.';form.innerHTML='<input type="hidden" name="action" value="delete_summary"><input type="hidden" name="item_id" value="'+itemId+'">';form.appendChild(b);actions.appendChild(form);
 }else{
 addAction('Sub-test bewerken','test_edit.php?id='+encodeURIComponent(itemId),true);
-addAction('Vragen beheren','questions.php?test_id='+encodeURIComponent(itemId),false);
+addAction('Vragen beheren','questions.php?test_id='+encodeURIComponent(itemId),false);\nconst testForm=document.createElement('form');testForm.method='post';testForm.action='topic_manage.php?id='+'<?=e((string)$id)?>';testForm.dataset.confirm='Weet u zeker dat u deze sub-test wilt verwijderen? De sub-test verdwijnt uit de website, maar blijft in de database bewaard.';testForm.innerHTML='<input type="hidden" name="action" value="delete_test"><input type="hidden" name="item_id" value="'+itemId+'">';const testDel=document.createElement('button');testDel.type='submit';testDel.className='leren-modal-action danger';testDel.textContent='Verwijderen';testForm.appendChild(testDel);actions.appendChild(testForm);
 }
 modal.hidden=false;document.body.classList.add('leren-modal-open');
 }
