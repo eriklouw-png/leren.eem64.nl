@@ -4,6 +4,7 @@ require_admin();
 
 $studentId=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if(!$studentId){redirect('admin.php');}
+require_manage_student((int)$studentId);
 
 $x=$pdo->prepare("SELECT id,name,email,image_mime FROM users WHERE id=? AND role='student'");
 $x->execute([$studentId]);
