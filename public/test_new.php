@@ -144,8 +144,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 }
 ?>
 <!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nieuwe sub-test</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<style>.import-help{font-size:.9rem}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}</style></head>
-<body class="bg-light"><main class="container py-4" style="max-width:900px">
+</head>
+<body class="bg-light"><main class="container py-4">
 <a href="subject_manage.php?id=<?=$subjectId?>">&larr; <?=e($subject['name'])?></a>
 <div class="card shadow-sm mt-3"><div class="card-body p-4">
 <div class="d-flex justify-content-between align-items-start gap-3"><h1 class="h3 mb-0">Nieuwe sub-test — <?=e($subject['name'])?></h1><a class="btn btn-outline-primary" href="ai_test_generator.php?<?= $topicId ? 'topic_id='.(int)$topicId : 'subject_id='.(int)$subjectId ?>">AI toets maken</a></div>
