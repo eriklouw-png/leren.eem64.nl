@@ -74,13 +74,13 @@ if(in_array(($test['test_type']??'mixed'),['vocabulary','sentences'],true) && $n
     <p class="text-secondary">Kies eerst welke richting je wilt oefenen.</p>
     <div class="d-grid gap-3 mt-4">
     <?php if(in_array($allowed,['both','left_to_right'],true)):?>
-    <form method="post"><input type="hidden" name="vocab_direction" value="left_to_right"><button class="btn btn-primary btn-lg w-100" type="submit"><?=e($test['vocab_left_label'])?> → <?=e($test['vocab_right_label'])?></button></form>
+    <a class="btn btn-primary btn-lg w-100" href="quiz.php?id=<?=(int)$testId?>&new=1&direction=left_to_right"><?=e($test['vocab_left_label'])?> → <?=e($test['vocab_right_label'])?></a>
     <?php endif;?>
     <?php if(in_array($allowed,['both','right_to_left'],true)):?>
-    <form method="post"><input type="hidden" name="vocab_direction" value="right_to_left"><button class="btn btn-outline-primary btn-lg w-100" type="submit"><?=e($test['vocab_right_label'])?> → <?=e($test['vocab_left_label'])?></button></form>
+    <a class="btn btn-outline-primary btn-lg w-100" href="quiz.php?id=<?=(int)$testId?>&new=1&direction=right_to_left"><?=e($test['vocab_right_label'])?> → <?=e($test['vocab_left_label'])?></a>
     <?php endif;?>
     <?php if($allowed==='both'):?>
-    <form method="post"><input type="hidden" name="vocab_direction" value="both"><button class="btn btn-outline-secondary btn-lg w-100" type="submit">Beide richtingen</button></form>
+    <a class="btn btn-outline-secondary btn-lg w-100" href="quiz.php?id=<?=(int)$testId?>&new=1&direction=both">Beide richtingen</a>
     <?php endif;?>
     </div></div></div></main></body></html>
     <?php
