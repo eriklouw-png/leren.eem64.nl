@@ -2,7 +2,7 @@
 require __DIR__.'/../app/bootstrap.php';
 require __DIR__.'/../app/auth.php';
 
-if(is_logged_in())redirect(is_admin()?'admin.php':'index.php');
+if(is_logged_in())redirect(is_manager()?'admin.php':'index.php');
 
 $error='';
 $next=(string)($_GET['next']??$_POST['next']??'index.php');
