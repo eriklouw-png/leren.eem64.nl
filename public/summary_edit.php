@@ -77,7 +77,7 @@ if(!$isNew){
 <div class="mb-4"><label class="form-label">Samenvatting</label><textarea class="form-control" name="summary" rows="24" required><?=e($summary['summary'])?></textarea><div class="form-text">Je kunt de door AI gemaakte tekst hier volledig aanpassen.</div></div>
 <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
 <div>
-<?php if(!$isNew):?><button class="btn btn-outline-danger" type="submit" name="action" value="delete" onclick="return confirm('Weet u zeker dat u deze samenvatting wilt verwijderen? De samenvatting verdwijnt uit de website, maar blijft in de database bewaard.');">Verwijderen</button><?php endif;?>
+<?php if(!$isNew):?><button class="btn btn-danger" type="submit" name="action" value="delete" data-confirm="Weet u zeker dat u deze samenvatting wilt verwijderen? De samenvatting verdwijnt uit de website, maar blijft in de database bewaard.">Verwijderen</button><?php endif;?>
 </div>
 <div class="d-flex gap-2"><a class="btn btn-outline-secondary" href="subject_manage.php?id=<?=$summary['subject_id']?>">Annuleren</a><button class="btn btn-primary" type="submit" name="action" value="save">Opslaan</button></div>
 </div>
