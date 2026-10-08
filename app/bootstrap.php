@@ -144,6 +144,18 @@ try{
     // The named accounts are the two fixed application administrators.
     $pdo->exec("UPDATE users SET role='admin' WHERE name='Erik Louw'");
     $pdo->exec("UPDATE users SET role='beheerder' WHERE name='Loes Louw' AND role<>'admin'");
+    if(isset($_SESSION['user']['id'])){
+        $currentRoleStmt=$pdo->prepare("SELECT id,name,email,role FROM users WHERE id=? LIMIT 1");
+        $currentRoleStmt->execute([(int)$_SESSION['user']['id']]);
+        if($freshUser=$currentRoleStmt->fetch()){
+            $_SESSION['user']=[
+                'id'=>(int)$freshUser['id'],
+                'name'=>$freshUser['name'],
+                'email'=>$freshUser['email'],
+                'role'=>$freshUser['role'],
+            ];
+        }
+    }
 }catch(Throwable $e){
     // Authentication remains available even if an older database cannot be migrated automatically.
 }
