@@ -115,27 +115,6 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
 </section>
 <?php endif;?>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-<h1 class="mb-0">Vakken</h1>
-<div><a class="btn btn-outline-primary" href="subject_edit.php">Nieuw vak</a></div>
-</div>
-
-<div class="row g-3 mb-5 admin-grid">
-<?php foreach($subjects as $subject):?>
-<div class="col-6 col-md-6 col-lg-4 admin-col">
-<a href="subject_manage.php?id=<?=(int)$subject['id']?>" class="leren-tile text-decoration-none">
-<div class="subject-card-image" style="background-image:<?=($subject['image_mime']?'url(\'subject_image.php?id='.(int)$subject['id'].'\')':'none')?>;">
-<div class="subject-card-overlay"></div>
-<div class="card-body position-relative d-flex flex-column justify-content-end subject-card-body">
-<h2 class="h4 text-white mb-1 subject-card-title"><?=e($subject['name'])?></h2>
-<?php if($subject['description']):?><p class="mb-0 subject-card-description"><?=e($subject['description'])?></p><?php endif;?>
-</div>
-</div>
-</a>
-</div>
-<?php endforeach;?>
-</div>
-
 <?php
 $studentScopeSql=is_admin()
     ? '1=1'
@@ -197,6 +176,29 @@ $students=$pdo->query("
 </div>
 </section>
 <?php endif;?>
+
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+<h1 class="mb-0">Vakken</h1>
+<div><a class="btn btn-outline-primary" href="subject_edit.php">Nieuw vak</a></div>
+</div>
+
+<div class="row g-3 mb-5 admin-grid">
+<?php foreach($subjects as $subject):?>
+<div class="col-6 col-md-6 col-lg-4 admin-col">
+<a href="subject_manage.php?id=<?=(int)$subject['id']?>" class="leren-tile text-decoration-none">
+<div class="subject-card-image" style="background-image:<?=($subject['image_mime']?'url(\'subject_image.php?id='.(int)$subject['id'].'\')':'none')?>;">
+<div class="subject-card-overlay"></div>
+<div class="card-body position-relative d-flex flex-column justify-content-end subject-card-body">
+<h2 class="h4 text-white mb-1 subject-card-title"><?=e($subject['name'])?></h2>
+<?php if($subject['description']):?><p class="mb-0 subject-card-description"><?=e($subject['description'])?></p><?php endif;?>
+</div>
+</div>
+</a>
+</div>
+<?php endforeach;?>
+</div>
+
 
 
 </main><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script></body></html>
