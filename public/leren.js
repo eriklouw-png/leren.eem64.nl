@@ -23,6 +23,7 @@ function addLinkAction(actions,action){
     const link=document.createElement('a');
     link.className='leren-modal-action'+(action.primary?' primary':'');
     link.href=action.href;
+    if(action.confirm)link.dataset.confirm=action.confirm;
     link.textContent=action.label;
     actions.appendChild(link);
 }
@@ -143,6 +144,22 @@ function initConfirmModal(){
         if(!(form instanceof HTMLFormElement)||!form.dataset.confirm||form.dataset.confirmed==='1')return;
         event.preventDefault();
         open(form,event.submitter);
+    },true);
+
+    document.addEventListener('click',function(event){
+        const link=event.target.closest('a[data-confirm]');
+        if(!link || link.dataset.confirmed==='1')return;
+        event.preventDefault();
+        pendingForm={
+            dataset:{confirm:link.dataset.confirm},
+            submit:function(){window.location.href=link.href;}
+        };
+        pendingSubmitter=null;
+        if(message)message.textContent=link.dataset.confirm;
+        modal.hidden=false;
+        modal.setAttribute('aria-hidden','false');
+        document.body.classList.add('leren-modal-open');
+        if(ok)ok.focus();
     },true);
 
     if(ok){
