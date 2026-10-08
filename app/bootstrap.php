@@ -953,6 +953,24 @@ function ai_general_instruction(string $key):string{
                     $row=$pdo->query("SELECT * FROM ai_general_instructions WHERE id=1")->fetch();
                 }
             }
+            if(is_array($row)){
+                $sync=[];
+                $currentAnalysis=trim((string)($row['analysis_instructions']??''));
+                $analysisMarker='Als de bron een woordenlijst met losse woorden/woordparen bevat, zet is_vocabulary_list op true';
+                if($currentAnalysis!=='' && !str_contains($currentAnalysis,$analysisMarker)){
+                    $sync[]=['analysis_instructions',$defaults['analysis_instructions']];
+                }
+                $currentLanguage=trim((string)($row['language_instructions']??''));
+                $languageMarker='Deze regels gelden voor iedere taal, ook toekomstige talen die nog niet in de configuratie bestaan.';
+                if($currentLanguage!=='' && !str_contains($currentLanguage,$languageMarker)){
+                    $sync[]=['language_instructions',$defaults['language_instructions']];
+                }
+                foreach($sync as [$column,$value]){
+                    $stmt=$pdo->prepare("UPDATE ai_general_instructions SET ".$column."=? , updated_at=NOW() WHERE id=1");
+                    $stmt->execute([$value]);
+                    $row[$column]=$value;
+                }
+            }
             $rows=is_array($row)?$row:[];
         }catch(Throwable $e){$rows=[];}
     }
