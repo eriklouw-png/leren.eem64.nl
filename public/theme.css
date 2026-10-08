@@ -942,18 +942,26 @@ body.leren-admin .ai-source-error,
   font-size:1.05rem;
   font-weight:600;
 }
-.ai-question-meta{
+.ai-question-side{
   flex:0 0 auto;
-  min-width:2.35rem;
-  height:2.35rem;
   display:flex;
   align-items:center;
+  gap:.65rem;
+}
+.ai-question-meta{
+  display:inline-flex;
+  align-items:center;
   justify-content:center;
+  min-width:2.4rem;
+  min-height:2rem;
+  padding:.2rem .65rem;
   border:1px solid var(--leren-border);
-  border-radius:50%;
-  font-size:.85rem;
+  border-radius:999px;
+  font-size:.8rem;
+  line-height:1;
   font-weight:700;
   color:var(--leren-muted);
   background:var(--leren-surface-muted);
+  white-space:nowrap;
   text-transform:lowercase;
 }
