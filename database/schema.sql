@@ -183,3 +183,14 @@ INSERT INTO question_options(question_id,option_text,is_correct,sort_order) SELE
 INSERT INTO question_options(question_id,option_text,is_correct,sort_order) SELECT id,'Paars',0,2 FROM questions WHERE question_text='Welke kleur heeft gras meestal?' LIMIT 1;
 INSERT INTO question_options(question_id,option_text,is_correct,sort_order) SELECT id,'Zwart',0,3 FROM questions WHERE question_text='Welke kleur heeft gras meestal?' LIMIT 1;
 INSERT INTO question_options(question_id,option_text,is_correct,sort_order) SELECT id,'Oranje',0,4 FROM questions WHERE question_text='Welke kleur heeft gras meestal?' LIMIT 1;
+
+
+CREATE TABLE IF NOT EXISTS ai_general_instructions (
+  id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
+  source_validation_instructions TEXT NULL,
+  updated_at DATETIME NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO ai_general_instructions (id, source_validation_instructions)
+VALUES (1, 'Controleer iedere geüploade foto voordat deze als bron voor een toets wordt gebruikt. De afbeelding moet duidelijk schoolboekmateriaal, een werkblad of ander lesmateriaal zijn dat inhoudelijk bij het gekozen vak past. Keur een willekeurige foto, selfie, portret/gezichtsfoto of materiaal voor een ander vak af. Een gezicht dat onderdeel is van een relevante schoolboekpagina is toegestaan. Als de foto niet duidelijk bij het gekozen vak hoort, keur hem af.')
+ON DUPLICATE KEY UPDATE id=id;
