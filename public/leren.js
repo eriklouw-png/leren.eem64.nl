@@ -183,8 +183,27 @@ function initConfirmModal(){
     });
 }
 
+function initProgressBars(){
+    document.querySelectorAll('.progress-bar').forEach(function(bar){
+        const progress=bar.closest('.progress');
+        if(!progress)return;
+        let value=Number(progress.getAttribute('aria-valuenow'));
+        if(!Number.isFinite(value)){
+            const width=String(bar.style.width||'').replace('%','');
+            value=Number(width);
+        }
+        if(!Number.isFinite(value))return;
+        value=Math.max(0,Math.min(100,value));
+        bar.classList.remove('leren-progress-red','leren-progress-orange','leren-progress-green');
+        if(value<=24)bar.classList.add('leren-progress-red');
+        else if(value<=74)bar.classList.add('leren-progress-orange');
+        else bar.classList.add('leren-progress-green');
+    });
+}
+
 document.addEventListener('DOMContentLoaded',function(){
     initListMenus();
     initConfirmModal();
+    initProgressBars();
 });
 })();
