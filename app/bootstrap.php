@@ -1,6 +1,16 @@
 <?php
 declare(strict_types=1);
 
+// Keep authenticated sessions alive for several days.
+$sessionLifetime=7*24*60*60;
+ini_set('session.gc_maxlifetime',(string)$sessionLifetime);
+session_set_cookie_params([
+    'lifetime'=>$sessionLifetime,
+    'path'=>'/',
+    'secure'=>(!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS']!=='off'),
+    'httponly'=>true,
+    'samesite'=>'Lax',
+]);
 session_start();
 
 // Tijdens de ontwikkeling voorkomen we dat browser/CDN-caches oude HTML en CSS blijven tonen.
@@ -33,6 +43,8 @@ function leren_navbar_html(string $area): string{
         .'<a class="btn btn-outline-light btn-sm me-2" href="logout.php">Uitloggen</a>'.$right.'</div>'
         .'</div></nav>';
 }
+
+leren_apply_access_control();
 
 ob_start(static function(string $html): string{
     $script=basename((string)($_SERVER['SCRIPT_NAME']??''));
@@ -122,6 +134,20 @@ $dsn="mysql:host={$db['host']};port={$db['port']};dbname={$db['name']};charset={
 try{$pdo=new PDO($dsn,$db['user'],$db['password'],[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,PDO::ATTR_EMULATE_PREPARES=>false]);}
 catch(PDOException $e){http_response_code(500);exit('Databaseverbinding mislukt.');}
 
+// Extend the existing users role enum for the two management levels.
+try{
+    $roleType=$pdo->query("SHOW COLUMNS FROM users LIKE 'role'")->fetch();
+    if($roleType && strpos((string)$roleType['Type'],"'beheerder'")===false){
+        $pdo->exec("ALTER TABLE users MODIFY role ENUM('admin','beheerder','student') NOT NULL DEFAULT 'student'");
+    }
+    // The named accounts are the two fixed application administrators.
+    $pdo->exec("UPDATE users SET role='admin' WHERE name='Erik Louw'");
+    $pdo->exec("UPDATE users SET role='beheerder' WHERE name='Loes Louw' AND role<>'admin'");
+}catch(Throwable $e){
+    // Authentication remains available even if an older database cannot be migrated automatically.
+}
+
+
 /*
  * User profile images are stored directly in the users table.
  * Keep older installations compatible by adding the columns once when needed.
@@ -136,6 +162,50 @@ try{
 }
 
 function e(?string $v):string{return htmlspecialchars($v??'',ENT_QUOTES,'UTF-8');}
+function leren_user_role():string{
+    return isset($_SESSION['user']['role']) ? (string)$_SESSION['user']['role'] : '';
+}
+function is_admin():bool{return leren_user_role()==='admin';}
+function is_manager():bool{return in_array(leren_user_role(),['admin','beheerder'],true);}
+function can_manage_users():bool{return is_admin();}
+function require_manager():void{if(!is_manager())redirect('index.php');}
+function require_admin():void{if(!is_admin())redirect('index.php');}
+function require_login():void{if(leren_user_role()==='')redirect('login.php?next='.rawurlencode($_SERVER['REQUEST_URI']??'index.php'));}
+
+function leren_manager_pages():array{
+    return [
+        'admin.php','student.php','user_edit.php',
+        'subject_manage.php','subject_edit.php',
+        'topic_manage.php','topic_new.php','topic_edit.php',
+        'test_new.php','test_edit.php','questions.php','question_edit.php',
+        'summary_edit.php','ai_test_generator.php',
+        'import.php','vocabulary_import.php',
+    ];
+}
+function leren_admin_only_pages():array{
+    return [
+        'system_update.php','debug_question.php','ai_usage.php','ai_rules.php','ai_warmup.php',
+    ];
+}
+function leren_apply_access_control():void{
+    $script=basename((string)($_SERVER['SCRIPT_NAME']??''));
+    $public=['login.php','logout.php','setup.php'];
+    if(in_array($script,$public,true))return;
+
+    $role=leren_user_role();
+    if($role==='')redirect('login.php?next='.rawurlencode($_SERVER['REQUEST_URI']??'index.php'));
+
+    if(in_array($script,leren_admin_only_pages(),true) && $role!=='admin'){
+        http_response_code(403);exit('Geen toegang.');
+    }
+    if(in_array($script,leren_manager_pages(),true) && !in_array($role,['admin','beheerder'],true)){
+        if($script==='user_edit.php'){
+            return;
+        }
+        http_response_code(403);exit('Geen toegang.');
+    }
+}
+
 function ai_test_rules_ensure_table():void{
     global $pdo;
     static $ready=false;
@@ -186,8 +256,6 @@ function ai_test_rule_for_type(array $rules,string $type):?array{
     return null;
 }
 function redirect(string $url):never{header('Location: '.$url);exit;}
-function is_admin():bool{return isset($_SESSION['user'])&&$_SESSION['user']['role']==='admin';}
-function require_admin():void{if(!is_admin())redirect('login.php');}
 
 function normalize_open_answer(string $value):string{
     $value=trim($value);
