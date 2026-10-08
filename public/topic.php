@@ -290,16 +290,14 @@ if($t['in_progress_attempt_id']){
     $primaryLabel='Start';
 }
 $menuActions=[
-    ['label'=>$primaryLabel,'href'=>$primaryUrl,'primary'=>true],
+    ['label'=>$primaryLabel,'href'=>$primaryUrl,'primary'=>true,'class'=>$t['in_progress_attempt_id']?'leren-menu-continue':''],
 ];
-if($t['in_progress_attempt_id']){
-    $menuActions[]=['label'=>'Ga verder','href'=>$primaryUrl];
-}
 if($t['in_progress_attempt_id'] || $latestScore!==null){
     $menuActions[]=[
         'label'=>'Start opnieuw',
         'href'=>'quiz.php?id='.(int)$t['id'].'&new=1',
-        'confirm'=>'U gaat een toets opnieuw start. Uw huidige voortgang gaat hiermee verloren. Weet u het zeker?'
+        'confirm'=>'U gaat een toets opnieuw start. Uw huidige voortgang gaat hiermee verloren. Weet u het zeker?',
+        'class'=>'leren-menu-restart'
     ];
 }
 if(($mistakeCountByTest[(int)$t['id']]??0)>0){
