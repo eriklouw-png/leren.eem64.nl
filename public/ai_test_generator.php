@@ -724,8 +724,7 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 <?php foreach(($generatedSub['questions']??[]) as $qi=>$q):?>
 <div class="generated-question ai-question-list-item">
 <div class="ai-question-list-main">
-<div class="question-number">Vraag <?=($qi+1)?></div>
-<div class="question-text"><?=e($q['question'])?></div>
+<div class="question-text"><span class="question-number"><?=($qi+1)?>:</span> <?=e($q['question'])?></div>
 <?php
 $grammarLabel=mb_strtolower(trim((string)($q['grammar_label']??'')));
 $grammarParts=[];
