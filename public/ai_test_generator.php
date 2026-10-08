@@ -682,35 +682,17 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 </div>
 <div class="generated-question-list">
 <?php foreach(($generatedSub['questions']??[]) as $qi=>$q):?>
-<div class="generated-question">
-<div class="d-flex justify-content-between align-items-start gap-2 mb-2"><span class="question-number">Vraag <?=($qi+1)?></span><span class="badge rounded-pill text-bg-light"><?=e($q['type']==='mc'?'Multiple choice':'Open')?></span></div>
-<div class="question-text mb-3"><?=e($q['question'])?></div>
-<?php if(!empty($saved['vocabulary_mode'])):?>
-<div class="small text-secondary mt-2">Dit is een automatisch herkende woordenlijst. De woordparen worden rechtstreeks uit de AI-analyse opgeslagen.</div>
-<?php else:?>
-<div class="question-meta">
-<div>
-<div class="small fw-semibold mb-1">Afbeelding bij deze vraag</div>
-<div class="d-flex flex-wrap gap-3">
-<div class="form-check">
-<input class="form-check-input" type="radio" name="tests[<?=$si?>][questions][<?=$qi?>][use_image]" value="0" id="imgNo<?=$si?>_<?=$qi?>" <?=(!$q['use_image']||($q['image_method']??'none')==='none')?'checked':''?>>
-<label class="form-check-label small" for="imgNo<?=$si?>_<?=$qi?>">Geen afbeelding</label>
+<div class="generated-question ai-question-list-item">
+<div class="ai-question-list-main">
+<div class="question-number">Vraag <?=($qi+1)?></div>
+<div class="question-text"><?=e($q['question'])?></div>
 </div>
-<div class="form-check">
-<input class="form-check-input" type="radio" name="tests[<?=$si?>][questions][<?=$qi?>][use_image]" value="1" id="imgYes<?=$si?>_<?=$qi?>" <?=($q['use_image']&&($q['image_method']??'none')!=='none')?'checked':''?>>
-<label class="form-check-label small" for="imgYes<?=$si?>_<?=$qi?>">Afbeelding gebruiken</label>
-</div>
-</div>
-<div class="small text-secondary mt-1">
-<?php $methodLabel=['web'=>'Internetafbeelding','svg'=>'SVG','generate'=>'GPT-afbeelding','none'=>'Geen afbeelding'][$q['image_method']??'none']??'Onbekend';?>
-Voorgestelde methode: <?=e($methodLabel)?><?=($q['image_reason']??'')!==''?' · '.e((string)$q['image_reason']):''?>
-</div>
-</div>
-<span class="small text-secondary">Bronpagina <?=e((string)($q['source_page']??1))?></span>
-</div>
-][questions][<?=$qi?>][explanation]" value="<?=e($q['explanation']??'')?>">
-<?php endif;?>
-</div>
+<label class="ai-image-check" title="Afbeelding gebruiken">
+<input type="checkbox" name="tests[<?=$si?>][questions][<?=$qi?>][use_image]" value="1" <?=(!empty($q['use_image'])&&($q['image_method']??'none')!=='none')?'checked':''?>>
+<span aria-hidden="true">✓</span>
+<span class="visually-hidden">Afbeelding <?=(!empty($q['use_image'])&&($q['image_method']??'none')!=='none')?'gebruiken':'niet gebruiken'?></span>
+</label>
+</div></div>
 <?php endforeach;?>
 </div></div>
 <?php endforeach;?>
