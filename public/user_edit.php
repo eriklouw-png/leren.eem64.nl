@@ -6,7 +6,7 @@ $currentUser=current_user();
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT)?:0;
 if(!$id)$id=(int)$currentUser['id'];
 
-if($currentUser['role']!=='admin' && $id!==(int)$currentUser['id']){
+if(!is_manager() && $id!==(int)$currentUser['id']){
     http_response_code(403);
     exit('Geen toegang.');
 }
@@ -25,7 +25,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     if(!$postId){http_response_code(400);exit('Ongeldig ID.');}
 
     if($action==='delete'){
-        if($currentUser['role']!=='admin'){http_response_code(403);exit('Alleen een beheerder kan een student verwijderen.');}
+        if(!is_admin()){http_response_code(403);exit('Alleen een admin kan een student verwijderen.');}
         $x=$pdo->prepare("DELETE FROM users WHERE id=? AND role='student'");
         $x->execute([$postId]);
         redirect('admin.php?deleted=student');
