@@ -722,6 +722,7 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 </div>
 <div class="generated-question-list">
 <?php foreach(($generatedSub['questions']??[]) as $qi=>$q):?>
+<?php if($isPracticeList && ($qi % 2)!==0) continue; ?>
 <div class="generated-question ai-question-list-item">
 <div class="ai-question-list-main">
 <div class="question-text"><span class="question-number"><?=($qi+1)?>:</span> <?=e($isPracticeList ? ($q['learning_term']??$q['question']) : $q['question'])?></div>
