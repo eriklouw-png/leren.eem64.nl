@@ -453,6 +453,31 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $errors[]='Vul een onderwerp/opdracht in of selecteer minimaal één boekpagina.';
         }
 
+        if(!$errors && $query==='' && $valid){
+            $validationData=openai_validate_test_source_images($subjectName,$valid);
+            if(isset($validationData['_leren_error'])){
+                foreach($valid as $path)@unlink($path);
+                if($sessionDir&&is_dir($sessionDir))@rmdir($sessionDir);
+                $errors[]=$validationData['_leren_error'];
+            }else{
+                $validation=openai_output_json($validationData);
+                $validationImages=is_array($validation['images']??null)?$validation['images']:[];
+                if(!$validation||empty($validation['all_valid'])||count($validationImages)!==count($valid)){
+                    $rejected=[];
+                    foreach($validationImages as $index=>$imageResult){
+                        if(empty($imageResult['valid'])){
+                            $reason=trim((string)($imageResult['reason']??''));
+                            $rejected[]='Foto '.((int)$index+1).($reason!==''?': '.$reason:'.');
+                        }
+                    }
+                    $errors[]='De geüploade foto is niet geschikt als bron voor '.$subjectName.'.'.($rejected?' '.$rejected[0]:' Controleer of het een duidelijke schoolboekpagina of werkblad voor dit vak is.');
+                    foreach($valid as $path)@unlink($path);
+                    if($sessionDir&&is_dir($sessionDir))@rmdir($sessionDir);
+                    $valid=[];
+                }
+            }
+        }
+
         if(!$errors){
             if($query!==''){
                 $prompt='Analyseer het onderwerp/de opdracht van de gebruiker voor het maken van een oefentoets. Bepaal vak, onderwerp, leerpunten en passende sub-testtypen. Gebruik de beheerde vakconfiguratie om te bepalen of een specifiek type van toepassing is. Geef alleen JSON volgens het opgegeven schema.'.$aiRulesPrompt;
