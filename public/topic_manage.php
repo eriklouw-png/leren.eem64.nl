@@ -64,7 +64,7 @@ if(type==='summary'){
 addAction('Samenvatting bewerken','summary_edit.php?id='+encodeURIComponent(itemId),true);
 const form=document.createElement('form');form.method='post';form.action='summary_edit.php?id='+encodeURIComponent(itemId);
 form.innerHTML='<input type="hidden" name="id" value="'+itemId+'"><input type="hidden" name="subject_id" value="<?=e((string)$topic['subject_id'])?>"><input type="hidden" name="topic_id" value="<?=e((string)$id)?>">';
-const b=document.createElement('button');b.type='submit';b.name='action';b.value='delete';b.className='leren-modal-action';b.textContent='Verwijderen';b.addEventListener('click',e=>{if(!confirm('Weet u zeker dat u deze samenvatting wilt verwijderen? De samenvatting verdwijnt uit de website, maar blijft in de database bewaard.'))e.preventDefault();});form.appendChild(b);actions.appendChild(form);
+const b=document.createElement('button');b.type='submit';b.name='action';b.value='delete';b.className='leren-modal-action danger';b.textContent='Verwijderen';b.addEventListener('click',e=>{if(!confirm('Weet u zeker dat u deze samenvatting wilt verwijderen? De samenvatting verdwijnt uit de website, maar blijft in de database bewaard.'))e.preventDefault();});form.appendChild(b);actions.appendChild(form);
 }else{
 addAction('Sub-test bewerken','test_edit.php?id='+encodeURIComponent(itemId),true);
 addAction('Vragen beheren','questions.php?test_id='+encodeURIComponent(itemId),false);
