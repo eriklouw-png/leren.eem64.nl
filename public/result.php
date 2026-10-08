@@ -189,4 +189,8 @@ $doneMistakes=$correct<$total;
   </div>
 </div>
 <?php endforeach;?>
+
+<div class="mt-4 mb-2">
+  <a class="btn btn-primary" href="topic.php?id=<?=(int)$r['topic_id']?>">&larr; Terug naar <?=e($r['topic_name'])?></a>
+</div>
 </main></body></html>
