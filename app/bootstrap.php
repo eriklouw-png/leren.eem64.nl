@@ -718,7 +718,7 @@ function openai_generate_text_analysis(string $input,string $managedInstructions
         'model'=>openai_model(),
         'instructions'=>ai_general_instruction('analysis_instructions')."\n\n".ai_general_instruction('language_instructions')."\n\n".$managedInstructions,
         'input'=>[['role'=>'user','content'=>[['type'=>'input_text','text'=>$input]]]],
-        'max_output_tokens'=>4000,
+        'max_output_tokens'=>10000,
         'store'=>false,
         'text'=>['format'=>[
             'type'=>'json_schema',
@@ -801,7 +801,7 @@ function openai_generate_with_images(string $input,array $imagePaths,string $man
         'model'=>openai_model(),
         'instructions'=>ai_general_instruction('analysis_instructions')."\n\n".ai_general_instruction('language_instructions')."\n\n".ai_general_instruction('source_validation_instructions')."\n\n".$managedInstructions,
         'input'=>[['role'=>'user','content'=>$content]],
-        'max_output_tokens'=>4000,
+        'max_output_tokens'=>10000,
         'store'=>false,
         'text'=>[
             'format'=>[
