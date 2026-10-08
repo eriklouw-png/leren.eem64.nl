@@ -335,7 +335,7 @@ if($t['in_progress_attempt_id']){
 </div>
 </a>
 <?php if($latestScore!==null):?>
-<div class="leren-list-item-result leren-result-<?=((int)round($latestScore)<=24)?'red':(((int)round($latestScore)<=74)?'orange':'green')?>" aria-label="Resultaat <?=e((string)(int)round($latestScore))?> procent">
+<div class="leren-list-item-result leren-result-<?=((int)round($latestScore)<=24)?'red':(((int)round($latestScore)<=74)?'orange':'green')?>" style="--leren-result-percent:<?=max(0,min(100,(int)round($latestScore)))?>%;" aria-label="Resultaat <?=e((string)(int)round($latestScore))?> procent">
 <span>Resultaat</span>
 <strong><?=e((string)(int)round($latestScore))?>%</strong>
 </div>
