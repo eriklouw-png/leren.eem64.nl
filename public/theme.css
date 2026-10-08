@@ -688,3 +688,89 @@ body.leren-admin .leren-modal-close{background:#303b34;color:#fff}
 body.leren-admin .leren-modal-action{background:#303b34;border-color:#56635a;color:#fff!important}
 body.leren-admin .leren-modal-action:hover{background:#3b4c41;border-color:#6f9b7b}
 body.leren-admin .leren-modal-action.primary{background:#2f7d4a;border-color:#2f7d4a}
+
+
+/* Generic list component
+ * Every list item is a full-width interactive row. Content is composed of
+ * optional thumbnail, title, subtitle/meta and optional progress, with an
+ * optional action menu on the right.
+ */
+.leren-list{width:100%;display:flex;flex-direction:column;gap:.65rem}
+.leren-list-item{
+  position:relative;
+  display:flex;
+  align-items:stretch;
+  width:100%;
+  min-width:0;
+  overflow:hidden;
+  border:1px solid var(--leren-border);
+  border-radius:var(--leren-radius);
+  background:var(--leren-surface);
+  box-shadow:var(--leren-shadow);
+}
+.leren-list-item-main{
+  flex:1 1 auto;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  gap:.9rem;
+  padding:1rem 1.1rem;
+  color:inherit!important;
+  text-decoration:none!important;
+}
+.leren-list-item-main:hover{color:inherit!important}
+.leren-list-item-thumbnail{
+  flex:0 0 88px;
+  width:88px;
+  min-height:88px;
+  align-self:stretch;
+  object-fit:cover;
+  background:var(--leren-surface-muted);
+}
+.leren-list-item-content{min-width:0}
+.leren-list-item-heading{display:flex;align-items:center;gap:.5rem;min-width:0}
+.leren-list-item-title{
+  display:block;
+  margin:0;
+  font-size:1.05rem;
+  line-height:1.3;
+  font-weight:700;
+  overflow-wrap:anywhere;
+}
+.leren-list-item-subtitle,
+.leren-list-item-description{
+  font-size:.875rem;
+  line-height:1.4;
+  color:var(--leren-muted);
+}
+.leren-list-item-description{margin-top:.3rem}
+.leren-list-item-progress{width:min(100%,520px)}
+.leren-list-item-menu{
+  flex:0 0 48px;
+  align-self:stretch;
+  border:0;
+  border-left:1px solid var(--leren-border);
+  background:var(--leren-surface-muted);
+  color:var(--leren-muted);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:3px;
+  cursor:pointer;
+}
+.leren-list-item-menu:hover{background:var(--leren-green-light);color:var(--leren-green-dark)}
+.leren-list-item-menu span{width:4px;height:4px;border-radius:50%;background:currentColor}
+.leren-list-item-check{color:#198754;font-size:1.25rem;line-height:1;flex:0 0 auto}
+.leren-list-item.subtest-complete{border:2px solid #198754!important;background:var(--leren-surface)}
+.leren-list-item.subtest-complete .leren-list-item-title{color:#198754}
+body.leren-admin .leren-list-item{background:var(--leren-surface);border-color:var(--leren-border)}
+body.leren-admin .leren-list-item-menu{background:#303b34;color:#cbd5cf;border-color:#56635a}
+body.leren-admin .leren-list-item-menu:hover{background:#3b4c41;color:#fff}
+@media(max-width:576px){
+  .leren-list{gap:.5rem}
+  .leren-list-item-main{padding:.85rem .9rem}
+  .leren-list-item-menu{flex-basis:44px}
+  .leren-list-item-progress{width:100%}
+  .leren-list-item-thumbnail{flex-basis:72px;width:72px;min-height:72px}
+}
