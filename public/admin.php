@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../app/bootstrap.php';require_admin();
+require __DIR__.'/../app/bootstrap.php';require_manager();
 if($_SERVER['REQUEST_METHOD']==='POST'){
     $action=$_POST['action']??'';
     $id=filter_var($_POST['id']??null,FILTER_VALIDATE_INT);
