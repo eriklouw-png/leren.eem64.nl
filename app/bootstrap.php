@@ -137,6 +137,14 @@ catch(PDOException $e){http_response_code(500);exit('Databaseverbinding mislukt.
 
 // Extend the existing users role enum for the two management levels.
 try{
+    $pdo->exec("CREATE TABLE IF NOT EXISTS manager_students (
+        manager_id INT UNSIGNED NOT NULL,
+        student_id INT UNSIGNED NOT NULL,
+        PRIMARY KEY (manager_id,student_id),
+        KEY idx_manager_students_student(student_id),
+        CONSTRAINT fk_manager_students_manager FOREIGN KEY(manager_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT fk_manager_students_student FOREIGN KEY(student_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $roleType=$pdo->query("SHOW COLUMNS FROM users LIKE 'role'")->fetch();
     if($roleType && strpos((string)$roleType['Type'],"'beheerder'")===false){
         $pdo->exec("ALTER TABLE users MODIFY role ENUM('admin','beheerder','student') NOT NULL DEFAULT 'student'");
@@ -208,6 +216,38 @@ function can(string $permission):bool{
     return in_array(leren_user_role(),leren_permissions()[$permission]??[],true);
 }
 function can_manage_users():bool{return can('manage_students');}
+function can_manage_student(int $studentId):bool{
+    if($studentId<=0)return false;
+    if(is_admin())return true;
+    if(leren_user_role()==='student'){
+        return isset($_SESSION['user']['id']) && (int)$_SESSION['user']['id']===$studentId;
+    }
+    if(leren_user_role()!=='beheerder')return false;
+    global $pdo;
+    static $cache=[];
+    if(array_key_exists($studentId,$cache))return $cache[$studentId];
+    $managerId=(int)($_SESSION['user']['id']??0);
+    if(!$managerId)return $cache[$studentId]=false;
+    $x=$pdo->prepare("SELECT 1 FROM manager_students WHERE manager_id=? AND student_id=? LIMIT 1");
+    $x->execute([$managerId,$studentId]);
+    return $cache[$studentId]=(bool)$x->fetchColumn();
+}
+function managed_student_ids():array{
+    if(is_admin())return [];
+    if(leren_user_role()!=='beheerder')return [];
+    global $pdo;
+    $managerId=(int)($_SESSION['user']['id']??0);
+    if(!$managerId)return [];
+    $x=$pdo->prepare("SELECT student_id FROM manager_students WHERE manager_id=? ORDER BY student_id");
+    $x->execute([$managerId]);
+    return array_map('intval',$x->fetchAll(PDO::FETCH_COLUMN));
+}
+function require_manage_student(int $studentId):void{
+    if(!can_manage_student($studentId)){
+        http_response_code(403);
+        exit('Geen toegang.');
+    }
+}
 function require_manager():void{if(!can('access_admin'))redirect('index.php');}
 function require_admin():void{
     if(!can('access_admin'))redirect('index.php');
