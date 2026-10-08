@@ -61,7 +61,7 @@ ob_start(static function(string $html): string{
         $themeVersion=is_file($themeFile)?(string)filemtime($themeFile):(string)time();
         $jsFile=__DIR__.'/../public/leren.js';
         $jsVersion=is_file($jsFile)?(string)filemtime($jsFile):(string)time();
-        $theme='<link rel="stylesheet" href="/theme.css?v='.rawurlencode($themeVersion).'"><link rel="icon" type="image/svg+xml" href="/assets/leren-logo.svg"><link rel="apple-touch-icon" href="/assets/leren-logo.svg"><script src="/leren.js?v='.rawurlencode($jsVersion).'" defer></script>';
+        $theme='<link rel="stylesheet" href="/theme.css?v='.rawurlencode($themeVersion).'"><link rel="icon" type="image/svg+xml" href="/assets/leren-logo.svg"><link rel="apple-touch-icon" href="/assets/leren-logo.svg"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Leren"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="mobile-web-app-capable" content="yes"><meta name="theme-color" content="#198754"><script src="/leren.js?v='.rawurlencode($jsVersion).'" defer></script>';
         $html=preg_replace('~</head>~i',$theme.'</head>',$html,1)??$html;
     }
 
