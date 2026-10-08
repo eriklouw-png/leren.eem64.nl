@@ -245,6 +245,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                             'image_method'=>'none','image_reason'=>'','grammar_label'=>$label
                         ];
                     }
+                    // Bewaar expliciet dat deze generatie een woorden-/zinnenoefening is.
+                    // De save-stap gebruikt dit om test_type correct als vocabulary/sentences
+                    // op te slaan in plaats van terug te vallen naar "open".
+                    $_SESSION['ai_test_analysis']['vocabulary_mode']=true;
+                    $_SESSION['ai_test_analysis']['practice_mode']=$isSentenceList?'sentences':'vocabulary';
                     $_SESSION['ai_test_analysis']['generated']=[
                         'subtests'=>[[
                             'title'=>$isSentenceList?'Zinnen oefenen':'Woordjes oefenen',
@@ -289,6 +294,18 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $sourceImages=(array)($saved['images']??[]);
             $isVocabularyMode=!empty($saved['vocabulary_mode']);
             $practiceMode=(string)($saved['practice_mode']??($isVocabularyMode?'vocabulary':''));
+            // Fallback voor eerder gegenereerde sessies waarin de modus nog niet
+            // expliciet was opgeslagen.
+            if(!in_array($practiceMode,['vocabulary','sentences'],true)){
+                $savedPairs=is_array($saved['analysis']['vocabulary_pairs']??null)?$saved['analysis']['vocabulary_pairs']:[];
+                if(!empty($saved['analysis']['is_vocabulary_list'])&&$savedPairs){
+                    $isVocabularyMode=true;
+                    $practiceMode='vocabulary';
+                }elseif(!empty($saved['analysis']['is_sentence_list'])&&$savedPairs){
+                    $isVocabularyMode=true;
+                    $practiceMode='sentences';
+                }
+            }
             $isPracticeMode=in_array($practiceMode,['vocabulary','sentences'],true);
             $validTests=[];
             foreach($posted as $si=>$test){                if(!isset($generated[$si])||!is_array($test))continue;
@@ -729,7 +746,7 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 <div class="ai-question-list-main">
 <div class="question-text"><span class="question-number"><?=($isPracticeList?$visibleQuestionNumber:($qi+1))?>:</span> <?=e($isPracticeList ? ($q['learning_term']??$q['question']) : $q['question'])?></div>
 <?php
-$grammarLabel=mb_strtolower(trim((string)($q['grammar_label']??'')));
+$grammarLabel=mb_strtolower(trim((string)($q['grammatical_label']??$q['grammar_label']??'')));
 $grammarParts=[];
 if(str_contains($grammarLabel,'mannelijk'))$grammarParts[]='m';
 if(str_contains($grammarLabel,'vrouwelijk'))$grammarParts[]='v';
