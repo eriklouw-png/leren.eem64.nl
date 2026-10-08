@@ -817,7 +817,7 @@ body.leren-manager a[href*="activity.php"]{
 .system-update-step.active{border-left-color:var(--leren-green);background:var(--leren-green-light);color:var(--leren-green-dark)}
 .system-update-step.done{border-left-color:#198754;background:var(--leren-surface-muted)}
 .system-update-step.error{border-left-color:#dc3545;background:rgba(220,53,69,.12)}
-.system-update-page .log{
+.system-update-card .log{
   white-space:pre-wrap;
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
   font-size:.82rem;
