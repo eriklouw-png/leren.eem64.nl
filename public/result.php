@@ -4,7 +4,7 @@ require __DIR__.'/../app/bootstrap.php';
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if(!$id)redirect('index.php');
 
-$s=$pdo->prepare("SELECT a.id,a.score,a.mode,a.source_attempt_id,a.test_id,t.title,t.test_type,t.topic_id,tp.subject_id FROM attempts a JOIN tests t ON t.id=a.test_id JOIN topics tp ON tp.id=t.topic_id WHERE a.id=?");
+$s=$pdo->prepare("SELECT a.id,a.score,a.mode,a.source_attempt_id,a.test_id,t.title,t.test_type,t.topic_id,tp.name topic_name,tp.subject_id FROM attempts a JOIN tests t ON t.id=a.test_id JOIN topics tp ON tp.id=t.topic_id WHERE a.id=?");
 $s->execute([$id]);$r=$s->fetch();
 if(!$r){http_response_code(404);exit('Resultaat niet gevonden.');}
 
@@ -141,8 +141,8 @@ $doneMistakes=$correct<$total;
 })();
 </script>
 <?php endif;?>
-<main class="container py-4" style="max-width:850px">
-<a href="topic.php?id=<?=(int)$r['topic_id']?>">&larr; Terug naar <?=e($r['title'])?></a>
+<main class="container py-4">
+<a href="topic.php?id=<?=(int)$r['topic_id']?>">&larr; Terug naar <?=e($r['topic_name'])?></a>
 <div class="card shadow-sm mt-3 mb-4 text-center">
   <div class="card-body p-4">
     <h1>Resultaat</h1>
@@ -152,14 +152,7 @@ $doneMistakes=$correct<$total;
   </div>
 </div>
 
-<div class="d-grid gap-2 mb-4">
-  <?php if($r['title']==='Fouten oefenen'):?>
-  <a class="btn btn-primary" href="topic.php?id=<?=(int)$r['topic_id']?>">Terug naar de overhoring</a>
-  <?php else:?>
-  <a class="btn btn-primary" href="quiz.php?id=<?=(int)$r['test_id']?>&new=1">Sub-Test opnieuw maken</a>
-  <?php if($doneMistakes):?><a class="btn btn-warning" href="quiz.php?id=<?=(int)$r['test_id']?>&mode=mistakes&source=<?=(int)$r['id']?>">Alleen mijn fouten oefenen</a><?php endif;?>
-  <?php endif;?>
-</div>
+
 
 <?php foreach($questions as $i=>$q):?>
 <div class="card shadow-sm mb-3">
