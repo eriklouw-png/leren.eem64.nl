@@ -716,7 +716,7 @@ function openai_generate_text_analysis(string $input,string $managedInstructions
     if($apiKey==='')return ['_leren_error'=>'OPENAI_API_KEY ontbreekt in de container.'];
     $payload=[
         'model'=>openai_model(),
-        'instructions'=>ai_general_instruction('language_instructions')."\n\n".$managedInstructions,
+        'instructions'=>ai_general_instruction('analysis_instructions')."\n\n".ai_general_instruction('language_instructions')."\n\n".$managedInstructions,
         'input'=>[['role'=>'user','content'=>[['type'=>'input_text','text'=>$input]]]],
         'max_output_tokens'=>4000,
         'store'=>false,
@@ -881,6 +881,7 @@ function openai_generate_with_images(string $input,array $imagePaths,string $man
 function ai_general_instruction_defaults():array{
     return [
         'source_validation_instructions'=>'Controleer iedere geüploade foto voordat deze als bron voor een toets wordt gebruikt. De afbeelding moet duidelijk schoolboekmateriaal, een werkblad of ander lesmateriaal zijn dat inhoudelijk bij het gekozen vak past. Keur een willekeurige foto, selfie, portret/gezichtsfoto of materiaal voor een ander vak af. Een gezicht dat onderdeel is van een relevante schoolboekpagina is toegestaan. Als de foto niet duidelijk bij het gekozen vak hoort, keur hem af.',
+        'analysis_instructions'=>'Analyseer de aangeleverde opdracht of schoolboekpagina’s voor het maken van een oefentoets. Bepaal vak, onderwerp, leerpunten en passende sub-testtypen. Gebruik de beheerde vakconfiguratie om te bepalen welke typen bij de bron passen. Geef uitsluitend JSON volgens het opgegeven schema.',
         'language_instructions'=>'Bij een herkende woordenlijst is vocabulary_language de taal die geleerd wordt. Zet source altijd in de leertaal en translation in het Nederlands, of omgekeerd als Nederlands de leertaal is. Maak van iedere expliciet op de bron vermelde grammaticale vorm een afzonderlijke vocabulary_pair. Alleen wanneer zowel enkelvoud als meervoud op de bron staan, maak je een afzonderlijke entry voor beide vormen. Alleen wanneer zowel een mannelijke als vrouwelijke variant expliciet op de bron staat, maak je een afzonderlijke entry voor beide varianten. Maak geen dubbele entries op basis van aannames of algemene taalkennis. Zorg dat een expliciet vermelde meervoudsvorm ook een bijbehorende meervoudsvertaling krijgt wanneer die betrouwbaar kan worden afgeleid; bijvoorbeeld "het kopje - die Tasse - die Tassen" wordt "het kopje" ↔ "die Tasse" (enkelvoud) én "de kopjes" ↔ "die Tassen" (meervoud). Behoud alle relevante grammaticale kenmerken per entry in grammatical_label. Deze regels gelden voor iedere taal, ook toekomstige talen die nog niet in de configuratie bestaan.',
         'question_generation_instructions'=>'Maak schooltoetsvragen geschikt voor een leerling van ongeveer 12-15 jaar. Bij multiple choice zijn er exact vier opties en is exact één optie correct. Bij open vragen geef je één of meer inhoudelijk gelijkwaardige geaccepteerde antwoorden. Gebruik verschillende inhoudelijk passende vraagvormen en invalshoeken wanneer de bron dat ondersteunt en vermijd vrijwel identieke vragen.',
         'summary_instructions'=>'Maak een Nederlandse samenvatting van foto’s van schoolboekpagina’s. Gebruik uitsluitend informatie die zichtbaar of leesbaar in de aangeleverde pagina’s staat. Verzin niets en gebruik geen algemene kennis om ontbrekende informatie aan te vullen. De samenvatting is bedoeld voor een leerling van ongeveer 12-15 jaar en moet overzichtelijk, leerbaar en inhoudelijk volledig zijn. Behoud belangrijke begrippen, namen, processen, voorbeelden en jaartallen uit de bron. Deel de samenvatting op in logische onderwerpen. Elk nieuw onderwerp MOET beginnen met een Markdown-kopje in exact dit formaat: ## Onderwerp. Dus twee hekjes, één spatie en daarna de titel. Gebruik geen # of ### kopjes.',
@@ -907,6 +908,7 @@ function ai_general_instruction(string $key):string{
             $pdo->exec("CREATE TABLE IF NOT EXISTS ai_general_instructions (
                 id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
                 source_validation_instructions TEXT NULL,
+                analysis_instructions TEXT NULL,
                 language_instructions TEXT NULL,
                 question_generation_instructions TEXT NULL,
                 summary_instructions TEXT NULL,
@@ -916,7 +918,8 @@ function ai_general_instruction(string $key):string{
                 updated_at DATETIME NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
             foreach([
-                'language_instructions'=>'ALTER TABLE ai_general_instructions ADD COLUMN language_instructions TEXT NULL AFTER source_validation_instructions',
+                'analysis_instructions'=>'ALTER TABLE ai_general_instructions ADD COLUMN analysis_instructions TEXT NULL AFTER source_validation_instructions',
+                'language_instructions'=>'ALTER TABLE ai_general_instructions ADD COLUMN language_instructions TEXT NULL AFTER analysis_instructions',
                 'question_generation_instructions'=>'ALTER TABLE ai_general_instructions ADD COLUMN question_generation_instructions TEXT NULL AFTER language_instructions',
                 'summary_instructions'=>'ALTER TABLE ai_general_instructions ADD COLUMN summary_instructions TEXT NULL AFTER question_generation_instructions',
                 'image_generation_instructions'=>'ALTER TABLE ai_general_instructions ADD COLUMN image_generation_instructions TEXT NULL AFTER summary_instructions',
@@ -930,7 +933,7 @@ function ai_general_instruction(string $key):string{
                 $defaults=ai_general_instruction_defaults();
                 $stmt=$pdo->prepare("INSERT INTO ai_general_instructions(id,source_validation_instructions,language_instructions,question_generation_instructions,summary_instructions,image_generation_instructions,image_validation_instructions,rule_generation_instructions,updated_at) VALUES(1,?,?,?,?,?,?,?,NOW())");
                 $stmt->execute([
-                    $defaults['source_validation_instructions'],$defaults['language_instructions'],$defaults['question_generation_instructions'],
+                    $defaults['source_validation_instructions'],$defaults['analysis_instructions'],$defaults['language_instructions'],$defaults['question_generation_instructions'],
                     $defaults['summary_instructions'],$defaults['image_generation_instructions'],$defaults['image_validation_instructions'],$defaults['rule_generation_instructions']
                 ]);
                 $row=$pdo->query("SELECT * FROM ai_general_instructions WHERE id=1")->fetch();
