@@ -235,14 +235,14 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                             'options'=>[],'correct_option'=>0,'accepted_answers'=>[$sourceAnswer],
                             'explanation'=>$sourceExplanation,'source_page'=>1,'use_image'=>false,
                             'image_prompt'=>'','image_search_query'=>'','svg_code'=>'',
-                            'image_method'=>'none','image_reason'=>''
+                            'image_method'=>'none','image_reason'=>'','grammar_label'=>$label
                         ];
                         $generatedQuestions[]=[
                             'type'=>'open','question'=>$translation,'correct_answer'=>$translationAnswer,
                             'options'=>[],'correct_option'=>0,'accepted_answers'=>[$translationAnswer],
                             'explanation'=>$reverseExplanation,'source_page'=>1,'use_image'=>false,
                             'image_prompt'=>'','image_search_query'=>'','svg_code'=>'',
-                            'image_method'=>'none','image_reason'=>''
+                            'image_method'=>'none','image_reason'=>'','grammar_label'=>$label
                         ];
                     }
                     $_SESSION['ai_test_analysis']['generated']=[
@@ -726,13 +726,18 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 <div class="ai-question-list-main">
 <div class="question-number">Vraag <?=($qi+1)?></div>
 <div class="question-text"><?=e($q['question'])?></div>
+<?php
+$grammarLabel=trim((string)($q['grammar_label']??''));
+$grammarShort=$grammarLabel==='mannelijk'?'m':($grammarLabel==='vrouwelijk'?'v':($grammarLabel==='meervoud'?'mv':'ev'));
+?>
+<div class="ai-question-meta"><?=$grammarShort?></div>
 </div>
 <label class="ai-image-check" title="Afbeelding gebruiken">
 <input type="checkbox" name="tests[<?=$si?>][questions][<?=$qi?>][use_image]" value="1" <?=(!empty($q['use_image'])&&($q['image_method']??'none')!=='none')?'checked':''?>>
 <span aria-hidden="true">✓</span>
 <span class="visually-hidden">Afbeelding <?=(!empty($q['use_image'])&&($q['image_method']??'none')!=='none')?'gebruiken':'niet gebruiken'?></span>
 </label>
-</div></div>
+</div>
 <?php endforeach;?>
 </div></div>
 <?php endforeach;?>
