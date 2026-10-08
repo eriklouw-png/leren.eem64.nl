@@ -169,7 +169,13 @@ function is_admin():bool{return leren_user_role()==='admin';}
 function is_manager():bool{return in_array(leren_user_role(),['admin','beheerder'],true);}
 function can_manage_users():bool{return is_admin();}
 function require_manager():void{if(!is_manager())redirect('index.php');}
-function require_admin():void{if(!is_admin())redirect('index.php');}
+function require_admin():void{
+    if(!is_manager())redirect('index.php');
+    $script=basename((string)($_SERVER['SCRIPT_NAME']??''));
+    if(in_array($script,leren_admin_only_pages(),true) && !is_admin()){
+        http_response_code(403);exit('Geen toegang.');
+    }
+}
 function require_login():void{if(leren_user_role()==='')redirect('login.php?next='.rawurlencode($_SERVER['REQUEST_URI']??'index.php'));}
 
 function leren_manager_pages():array{
