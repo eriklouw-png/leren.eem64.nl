@@ -561,7 +561,7 @@ $savedSummaryText=(string)($_SESSION['ai_test_analysis']['summary_text']??'');
 <div class="card shadow-sm mt-3"><div class="card-body p-4">
 <h1 class="h3 mb-1">AI toets maken</h1>
 <div class="text-secondary mb-4">Vak: <strong><?=e($subjectName)?></strong> · <strong><?=e($displayTopicName)?></strong></div>
-<?php foreach($errors as $error):?><div class="alert alert-danger"><?=e($error)?></div><?php endforeach;?>
+<?php foreach($errors as $error):?><div class="ai-source-error alert alert-danger"><?=e($error)?></div><?php endforeach;?>
 
 <?php
 $hasGenerated=isset($_SESSION['ai_test_analysis']['generated']['subtests']) && is_array($_SESSION['ai_test_analysis']['generated']['subtests']);
