@@ -145,7 +145,10 @@ $students=$pdo->query("
 ?>
 <?php if($students):?>
 <section class="leren-section mt-4">
-<h1 class="mb-2">Studenten</h1>
+<div class="d-flex justify-content-between align-items-center mb-3">
+<h1 class="mb-0">Studenten</h1>
+<a class="btn btn-outline-primary" href="student_new.php">Nieuwe student</a>
+</div>
 <div class="leren-list">
 <?php foreach($students as $student):?>
 <?php
