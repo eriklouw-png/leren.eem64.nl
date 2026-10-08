@@ -111,15 +111,12 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
 <div class="row g-3 mb-5 admin-grid">
 <?php foreach($subjects as $subject):?>
 <div class="col-6 col-md-6 col-lg-4 admin-col">
-<a href="subject_manage.php?id=<?=(int)$subject['id']?>" class="text-decoration-none text-dark">
-<div class="card shadow-sm h-100 admin-tile overflow-hidden">
+<a href="subject_manage.php?id=<?=(int)$subject['id']?>" class="leren-tile text-decoration-none">
 <div class="subject-card-image" style="background-image:<?=($subject['image_mime']?'url(\'subject_image.php?id='.(int)$subject['id'].'\')':'none')?>;">
 <div class="subject-card-overlay"></div>
-<div class="card-body position-relative d-flex flex-column justify-content-end subject-card-body" style="min-height:180px;">
+<div class="card-body position-relative d-flex flex-column justify-content-end subject-card-body">
 <h2 class="h4 text-white mb-1 subject-card-title"><?=e($subject['name'])?></h2>
-<?php if($subject['description']):?><p class="mb-2 subject-card-description"><?=e($subject['description'])?></p><?php endif;?>
-<div class="btn btn-primary w-100 admin-action mt-1">Naar <?=e($subject['name'])?> →</div>
-</div>
+<?php if($subject['description']):?><p class="mb-0 subject-card-description"><?=e($subject['description'])?></p><?php endif;?>
 </div>
 </div>
 </a>
@@ -159,8 +156,8 @@ $students=$pdo->query("
 <div class="row g-3 student-grid">
 <?php foreach($students as $student):?>
 <div class="col-6 col-md-6 col-lg-4 student-col">
-<a href="student.php?id=<?=(int)$student['id']?>" class="text-decoration-none text-dark">
-<div class="card shadow-sm admin-tile student-tile overflow-hidden subject-card-image" style="background-image:<?=($student['image_mime']?'url(\'student_image.php?id='.(int)$student['id'].'\')':'none')?>;">
+<a href="student.php?id=<?=(int)$student['id']?>" class="leren-tile text-decoration-none">
+<div class="subject-card-image" style="background-image:<?=($student['image_mime']?'url(\'student_image.php?id='.(int)$student['id'].'\')':'none')?>;">
 <div class="subject-card-overlay"></div>
 <div class="card-body position-relative d-flex flex-column justify-content-end subject-card-body">
 <h2 class="h4 text-white mb-1 subject-card-title"><?=e($student['name'])?></h2>
@@ -169,7 +166,6 @@ $students=$pdo->query("
 <div class="col-4"><div class="bg-light bg-opacity-75 rounded p-2 text-center"><strong><?=e(rtrim(rtrim(number_format((float)$student['average_score'],0,',','.'),'0'),','))?>%</strong><div class="text-secondary">gem.</div></div></div>
 <div class="col-4"><div class="bg-light bg-opacity-75 rounded p-2 text-center"><strong><?=e((string)intdiv((int)$student['active_seconds'],60))?></strong><div class="text-secondary">min.</div></div></div>
 </div>
-<div class="btn btn-primary w-100 admin-action mt-2">Naar <?=e($student['name'])?> →</div>
 </div>
 </div>
 </a>
