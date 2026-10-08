@@ -301,7 +301,7 @@ if($t['in_progress_attempt_id']){
 <h2 id="subtestOptionsTitle">Sub-test</h2>
 <div class="leren-modal-actions" id="subtestOptionsActions"></div>
 </div>
-</div><?php endif;?>
+</div>
 
 <script>
 (function(){
