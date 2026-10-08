@@ -182,7 +182,18 @@ if(!$attempt && (($mode==='normal' && !$newAttempt) || $reviewMode)){
     if($reviewMode){
         $x=$pdo->prepare("SELECT a.*, (SELECT COUNT(*) FROM attempt_answers aa WHERE aa.attempt_id=a.id AND ((aa.answer_text IS NOT NULL AND TRIM(aa.answer_text)<>'') OR aa.selected_option_id IS NOT NULL)) AS answered_count FROM attempts a WHERE a.test_id=? AND a.student_id=? AND a.status='in_progress' AND a.mode=? AND (SELECT COUNT(*) FROM attempt_answers aa0 WHERE aa0.attempt_id=a.id AND ((aa0.answer_text IS NOT NULL AND TRIM(aa0.answer_text)<>'') OR aa0.selected_option_id IS NOT NULL)) > 0 ORDER BY answered_count DESC, a.id DESC LIMIT 1");
     }else{
-        $x=$pdo->prepare("SELECT * FROM attempts WHERE test_id=? AND student_id=? AND status='in_progress' AND mode=? ORDER BY started_at DESC LIMIT 1");
+        $x=$pdo->prepare("SELECT a.*
+        FROM attempts a
+        WHERE a.test_id=? AND a.student_id=? AND a.status='in_progress' AND a.mode=?
+          AND EXISTS (
+              SELECT 1 FROM attempt_answers az
+              WHERE az.attempt_id=a.id
+                AND (
+                    (az.answer_text IS NOT NULL AND TRIM(az.answer_text)<>'')
+                    OR az.selected_option_id IS NOT NULL
+                )
+          )
+        ORDER BY a.started_at DESC LIMIT 1");
     }
     $x->execute([$testId,$studentId,$resumeMode]);$attempt=$x->fetch();
 }
@@ -242,6 +253,27 @@ if(!$attempt){
             if(!$mistakes)redirect('result.php?id='.$sourceAttemptId.'&done=1');
         }
     }
+    if($mode==='normal'){
+        if(in_array(($test['test_type']??'mixed'),['vocabulary','sentences'],true)){
+            if($vocabDirectionChoice==='left_to_right'){
+                $emptyCheck=$pdo->prepare("SELECT COUNT(*) FROM questions WHERE test_id=? AND explanation=?");
+                $emptyCheck->execute([$testId,'Vertaal naar '.$test['vocab_right_label'].'.']);
+            }elseif($vocabDirectionChoice==='right_to_left'){
+                $emptyCheck=$pdo->prepare("SELECT COUNT(*) FROM questions WHERE test_id=? AND explanation=?");
+                $emptyCheck->execute([$testId,'Vertaal naar '.$test['vocab_left_label'].'.']);
+            }else{
+                $emptyCheck=$pdo->prepare("SELECT COUNT(*) FROM questions WHERE test_id=?");
+                $emptyCheck->execute([$testId]);
+            }
+        }else{
+            $emptyCheck=$pdo->prepare("SELECT COUNT(*) FROM questions WHERE test_id=?");
+            $emptyCheck->execute([$testId]);
+        }
+        if((int)$emptyCheck->fetchColumn()===0){
+            redirect('topic.php?id='.(int)$test['topic_id']);
+        }
+    }
+
     $pdo->beginTransaction();
     try{
         $x=$pdo->prepare("INSERT INTO attempts(test_id,student_id,status,mode,source_attempt_id,browser_token) VALUES(?,?,'in_progress',?,?,?)");
@@ -278,9 +310,26 @@ if(!$attempt){
 $attemptId=(int)$attempt['id'];
 
 if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='finish'){
-    $x=$pdo->prepare("SELECT COUNT(*) total,SUM(CASE WHEN aa.is_correct=1 THEN 1 ELSE 0 END) correct FROM attempt_questions aq LEFT JOIN attempt_answers aa ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id WHERE aq.attempt_id=?");
+    $x=$pdo->prepare("SELECT COUNT(*) total,
+        SUM(CASE WHEN aa.id IS NOT NULL
+              AND ((aa.answer_text IS NOT NULL AND TRIM(aa.answer_text)<>'') OR aa.selected_option_id IS NOT NULL)
+            THEN 1 ELSE 0 END) answered,
+        SUM(CASE WHEN aa.is_correct=1 THEN 1 ELSE 0 END) correct
+        FROM attempt_questions aq
+        LEFT JOIN attempt_answers aa ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id
+        WHERE aq.attempt_id=?");
     $x->execute([$attemptId]);$stats=$x->fetch();
-    $total=(int)$stats['total'];$correct=(int)$stats['correct'];$score=$total?round($correct/$total*100,2):0;
+    $total=(int)$stats['total'];
+    $answered=(int)$stats['answered'];
+    $correct=(int)$stats['correct'];
+    if($total===0 || $answered===0){
+        $deleteEmpty=$pdo->prepare("DELETE FROM attempts WHERE id=? AND student_id=? AND status='in_progress'");
+        $deleteEmpty->execute([$attemptId,$studentId]);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok'=>false,'empty'=>true,'redirect'=>'topic.php?id='.(int)$test['topic_id']]);
+        exit;
+    }
+    $score=round($correct/$total*100,2);
     $x=$pdo->prepare("UPDATE attempts SET status='finished',score=?,finished_at=NOW() WHERE id=? AND status='in_progress'");
     $x->execute([$score,$attemptId]);
 
@@ -443,7 +492,9 @@ unset($q);
    btnFinishState();
    try{
      const response=await fetch(saveUrl,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({action:'finish',attempt_id:attemptId})});
-     if(!response.ok)throw new Error('finish_failed_'+response.status);
+     const finishData=await response.json();
+     if(finishData.empty && finishData.redirect){window.location.href=finishData.redirect;return;}
+     if(!response.ok || !finishData.ok)throw new Error('finish_failed_'+response.status);
      window.location.href='result.php?id='+attemptId;
    }catch(e){
      const card=cards[cards.length-1];
