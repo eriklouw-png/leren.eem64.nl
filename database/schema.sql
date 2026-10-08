@@ -188,9 +188,30 @@ INSERT INTO question_options(question_id,option_text,is_correct,sort_order) SELE
 CREATE TABLE IF NOT EXISTS ai_general_instructions (
   id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
   source_validation_instructions TEXT NULL,
+  analysis_instructions TEXT NULL,
+  language_instructions TEXT NULL,
+  question_generation_instructions TEXT NULL,
+  summary_instructions TEXT NULL,
+  image_generation_instructions TEXT NULL,
+  image_validation_instructions TEXT NULL,
+  rule_generation_instructions TEXT NULL,
   updated_at DATETIME NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO ai_general_instructions (id, source_validation_instructions)
-VALUES (1, 'Controleer iedere geüploade foto voordat deze als bron voor een toets wordt gebruikt. De afbeelding moet duidelijk schoolboekmateriaal, een werkblad of ander lesmateriaal zijn dat inhoudelijk bij het gekozen vak past. Keur een willekeurige foto, selfie, portret/gezichtsfoto of materiaal voor een ander vak af. Een gezicht dat onderdeel is van een relevante schoolboekpagina is toegestaan. Als de foto niet duidelijk bij het gekozen vak hoort, keur hem af.')
+INSERT INTO ai_general_instructions (
+  id,source_validation_instructions,analysis_instructions,language_instructions,
+  question_generation_instructions,summary_instructions,image_generation_instructions,
+  image_validation_instructions,rule_generation_instructions
+)
+VALUES (
+  1,
+  'Controleer iedere geüploade foto voordat deze als bron voor een toets wordt gebruikt. De afbeelding moet duidelijk schoolboekmateriaal, een werkblad of ander lesmateriaal zijn dat inhoudelijk bij het gekozen vak past. Keur een willekeurige foto, selfie, portret/gezichtsfoto of materiaal voor een ander vak af. Een gezicht dat onderdeel is van een relevante schoolboekpagina is toegestaan. Als de foto niet duidelijk bij het gekozen vak hoort, keur hem af.',
+  'Analyseer de aangeleverde opdracht of schoolboekpagina’s voor het maken van een oefentoets. Bepaal vak, onderwerp, leerpunten en passende sub-testtypen. Gebruik de beheerde vakconfiguratie om te bepalen welke typen bij de bron passen. Geef uitsluitend JSON volgens het opgegeven schema.',
+  'Bij een herkende woordenlijst is vocabulary_language de taal die geleerd wordt. Zet source altijd in de leertaal en translation in het Nederlands, of omgekeerd als Nederlands de leertaal is. Maak van iedere expliciet op de bron vermelde grammaticale vorm een afzonderlijke vocabulary_pair. Alleen wanneer zowel enkelvoud als meervoud op de bron staan, maak je een afzonderlijke entry voor beide vormen. Alleen wanneer zowel een mannelijke als vrouwelijke variant expliciet op de bron staat, maak je een afzonderlijke entry voor beide varianten. Maak geen dubbele entries op basis van aannames of algemene taalkennis. Zorg dat een expliciet vermelde meervoudsvorm ook een bijbehorende meervoudsvertaling krijgt wanneer die betrouwbaar kan worden afgeleid; bijvoorbeeld "het kopje - die Tasse - die Tassen" wordt "het kopje" ↔ "die Tasse" (enkelvoud) én "de kopjes" ↔ "die Tassen" (meervoud). Behoud alle relevante grammaticale kenmerken per entry in grammatical_label. Deze regels gelden voor iedere taal, ook toekomstige talen die nog niet in de configuratie bestaan.',
+  'Maak schooltoetsvragen geschikt voor een leerling van ongeveer 12-15 jaar. Bij multiple choice zijn er exact vier opties en is exact één optie correct. Bij open vragen geef je één of meer inhoudelijk gelijkwaardige geaccepteerde antwoorden. Gebruik verschillende inhoudelijk passende vraagvormen en invalshoeken wanneer de bron dat ondersteunt en vermijd vrijwel identieke vragen.',
+  'Maak een Nederlandse samenvatting van foto’s van schoolboekpagina’s. Gebruik uitsluitend informatie die zichtbaar of leesbaar in de aangeleverde pagina’s staat. Verzin niets en gebruik geen algemene kennis om ontbrekende informatie aan te vullen. De samenvatting is bedoeld voor een leerling van ongeveer 12-15 jaar en moet overzichtelijk, leerbaar en inhoudelijk volledig zijn. Behoud belangrijke begrippen, namen, processen, voorbeelden en jaartallen uit de bron. Deel de samenvatting op in logische onderwerpen. Elk nieuw onderwerp MOET beginnen met een Markdown-kopje in exact dit formaat: ## Onderwerp. Dus twee hekjes, één spatie en daarna de titel. Gebruik geen # of ### kopjes.',
+  'Maak een eenvoudige educatieve illustratie voor een schoolvraag. Gebruik een rustige, duidelijke compositie, weinig details en geen decoratieve elementen. Zet geen tekst, labels of antwoorden in de afbeelding tenzij de afbeelding dat inhoudelijk noodzakelijk maakt. De afbeelding moet vooral functioneel en direct herkenbaar zijn.',
+  'Je bent een strenge kwaliteitscontroleur voor educatieve afbeeldingen. Beoordeel uitsluitend of de afbeelding inhoudelijk klopt en bruikbaar is voor de opgegeven vraag. Geef geen cosmetische kritiek.',
+  'Je maakt een eerste set beheerde AI-instructies voor een nieuw schoolvak in een Nederlandse oefentoets-app. Gebruik bestaande vakconfiguraties als voorbeelden. Zoek vooral een inhoudelijk vergelijkbaar vak en neem daarvan de structuur en het detailniveau over. Maak alleen typen die voor dit vak logisch zijn. Gebruik bij taalvakken de bestaande taalstructuur als uitgangspunt. Neem de centrale taal- en woordenlijstregels mee in iedere relevante taalregel, zodat expliciet vermelde enkelvoud/meervoud- en mannelijk/vrouwelijkvarianten volgens de centrale regels worden verwerkt. Voor gewone schoolvakken is meestal één mixed-regel voldoende. Neem samenvattingen, afbeeldingen, multiple choice en open vragen alleen op als ze voor het vak zinvol zijn. Schrijf compacte, concrete Nederlandse instructies die een docent direct kan bewerken. Verzin geen specifieke methode, lesboek of leerstof die je niet uit de vaknaam kunt afleiden. Geef uitsluitend JSON terug volgens het gevraagde schema.'
+)
 ON DUPLICATE KEY UPDATE id=id;
