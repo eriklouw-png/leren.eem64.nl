@@ -5,7 +5,7 @@ $subjects=$pdo->query("SELECT s.id,s.name,s.description,s.image_mime,COUNT(DISTI
 
 function subject_visual(string $name):array{
     $n=mb_strtolower(trim($name),'UTF-8');
-    if(str_contains($n,'biolog')) return ['bi-leaf','green'];
+    if(str_contains($n,'biolog')) return ['bi-leaf-fill','green'];
     if(str_contains($n,'duits') || str_contains($n,'duitse')) return ['bi-book','orange'];
     if(str_contains($n,'geschiedenis')) return ['bi-bank','purple'];
     if(str_contains($n,'spaans') || str_contains($n,'spaanse')) return ['bi-globe-europe-africa','red'];
