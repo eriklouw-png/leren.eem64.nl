@@ -290,7 +290,7 @@ if($t['in_progress_attempt_id']){
     $primaryLabel='Start';
 }
 $menuActions=[
-    ['label'=>$primaryLabel,'href'=>$primaryUrl,'primary'=>true,'class'=>$t['in_progress_attempt_id']?'leren-menu-continue':''],
+    ['label'=>$primaryLabel,'href'=>$primaryUrl,'primary'=>!$t['in_progress_attempt_id'],'class'=>$t['in_progress_attempt_id']?'leren-menu-continue':''],
 ];
 if($t['in_progress_attempt_id'] || $latestScore!==null){
     $menuActions[]=[
