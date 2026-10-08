@@ -60,7 +60,7 @@ $menuActions=[
 </div>
 <?php endif;?>
 
-<div class="d-flex justify-content-between align-items-center gap-2 mb-3"><h2 class="h4 mb-0">Sub-testen</h2><a class="btn btn-primary" href="test_new.php?topic_id=<?=$id?>">Nieuwe sub-test</a></div>
+<div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap"><h2 class="h4 mb-0">Sub-testen</h2><div class="d-flex gap-2 flex-wrap"><a class="btn btn-primary" href="ai_test_generator.php?topic_id=<?=$id?>">AI-test maken</a><a class="btn btn-primary" href="test_new.php?topic_id=<?=$id?>">Nieuwe sub-test</a></div></div>
 <?php if(!$tests):?><div class="alert alert-info">Nog geen sub-testen binnen deze overhoring.</div><?php else:?>
 <div class="leren-list">
 <?php foreach($tests as $t):?>
