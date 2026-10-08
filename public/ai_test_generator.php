@@ -727,11 +727,17 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 <div class="question-number">Vraag <?=($qi+1)?></div>
 <div class="question-text"><?=e($q['question'])?></div>
 <?php
-$grammarLabel=trim((string)($q['grammar_label']??''));
-$grammarShort=$grammarLabel==='mannelijk'?'m':($grammarLabel==='vrouwelijk'?'v':($grammarLabel==='meervoud'?'mv':'ev'));
+$grammarLabel=mb_strtolower(trim((string)($q['grammar_label']??'')));
+$grammarParts=[];
+if(str_contains($grammarLabel,'mannelijk'))$grammarParts[]='m';
+if(str_contains($grammarLabel,'vrouwelijk'))$grammarParts[]='v';
+if(str_contains($grammarLabel,'meervoud'))$grammarParts[]='mv';
+if(str_contains($grammarLabel,'enkelvoud'))$grammarParts[]='ev';
+$grammarShort=implode(' · ',$grammarParts);
 ?>
-<div class="ai-question-meta"><?=$grammarShort?></div>
 </div>
+<div class="ai-question-side">
+<?php if($grammarShort!==''):?><span class="ai-question-meta" title="<?=e($grammarLabel)?>"><?=$grammarShort?></span><?php endif;?>
 <label class="ai-image-check" title="Afbeelding gebruiken">
 <input type="checkbox" name="tests[<?=$si?>][questions][<?=$qi?>][use_image]" value="1" <?=(!empty($q['use_image'])&&($q['image_method']??'none')!=='none')?'checked':''?>>
 <span aria-hidden="true">✓</span>
