@@ -64,8 +64,7 @@ foreach($newSubjectRules as $r){
 $rules=$pdo->query("SELECT * FROM ai_test_rules ORDER BY subject_id,sort_order,label")->fetchAll();
 $bySubject=[];foreach($rules as $r)$bySubject[(int)$r['subject_id']][]=$r;
 ?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI-instructies per vak</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<style>.rule-card{border:1px solid #465149;border-radius:14px;padding:1rem;margin-bottom:1rem;background:#202722}.rule-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.rule-options{display:flex;flex-wrap:wrap;gap:.75rem 1.25rem;margin:.75rem 0}.rule-type{font-size:.8rem;opacity:.75;text-transform:uppercase;letter-spacing:.04em}@media(max-width:767px){.rule-grid{grid-template-columns:1fr}}.rule-card input.form-control{min-width:220px}.rule-card textarea{min-height:140px}.rule-card{box-shadow:0 2px 8px rgba(0,0,0,.12)}
-</style></head><body><main class="container py-4">
+</head><body><main class="container py-4">
 <div class="d-flex justify-content-between align-items-center mb-4"><div><h1 class="mb-1">AI-instructies per vak</h1><div class="text-secondary">Beheer per vak en type sub-test de AI-herkenning, opties en instructies.</div></div><a class="btn btn-outline-light" href="admin.php">← Beheer</a></div>
 <?php if(isset($_GET['saved'])):?><div class="alert alert-success">De AI-instructies zijn opgeslagen.</div><?php endif;?>
 <form method="post"><input type="hidden" name="action" value="save">
