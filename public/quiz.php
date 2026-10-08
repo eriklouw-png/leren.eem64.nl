@@ -418,7 +418,9 @@ if(!$viewMode && $_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==
     }
 
     unset($_SESSION['current_attempt_id']);
-    redirect('result.php?id='.$attemptId);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['ok'=>true,'finished'=>true,'attempt_id'=>$attemptId,'redirect'=>'result.php?id='.$attemptId]);
+    exit;
 }
 
 $x=$pdo->prepare("SELECT q.id,q.question_text,q.image_path,q.question_type,q.explanation,aq.sort_order,aa.selected_option_id,aa.answer_text,aa.is_correct FROM attempt_questions aq JOIN questions q ON q.id=aq.question_id LEFT JOIN attempt_answers aa ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id WHERE aq.attempt_id=? ORDER BY aq.sort_order,q.id");
@@ -566,7 +568,9 @@ if($q['question_type']==='multiple_choice'){
        if(finishData.empty && finishData.redirect){window.location.href=finishData.redirect;return;}
      }
      if(!response.ok)throw new Error('finish_failed_'+response.status);
-     window.location.href='result.php?id='+attemptId;
+     const finishResult=await response.json();
+     if(!finishResult.ok||!finishResult.finished||!finishResult.redirect)throw new Error('finish_invalid_response');
+     window.location.href=finishResult.redirect;
    }catch(e){
      const card=cards[cards.length-1];
      const b=card.querySelector('.feedback');
