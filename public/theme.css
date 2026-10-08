@@ -745,7 +745,7 @@ body.leren-admin .leren-modal-action.primary{background:#2f7d4a;border-color:#2f
   color:var(--leren-muted);
 }
 .leren-list-item-description{margin-top:.3rem}
-.leren-list-item-progress{width:min(100%,520px)}
+.leren-list-item-progress{width:100%;max-width:100%}
 .leren-list-item-menu{
   flex:0 0 48px;
   align-self:stretch;
