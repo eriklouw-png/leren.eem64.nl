@@ -8,6 +8,21 @@ $s=$pdo->prepare("SELECT a.id,a.score,a.mode,a.source_attempt_id,a.test_id,t.tit
 $s->execute([$id]);$r=$s->fetch();
 if(!$r){http_response_code(404);exit('Resultaat niet gevonden.');}
 
+$answeredCheck=$pdo->prepare("
+    SELECT COUNT(*)
+    FROM attempt_answers
+    WHERE attempt_id=?
+      AND (
+          (answer_text IS NOT NULL AND TRIM(answer_text)<>'')
+          OR selected_option_id IS NOT NULL
+      )
+");
+$answeredCheck->execute([$id]);
+if((int)$answeredCheck->fetchColumn()===0){
+    $pdo->prepare("DELETE FROM attempts WHERE id=?")->execute([$id]);
+    redirect('topic.php?id='.(int)$r['topic_id']);
+}
+
 $s=$pdo->prepare("
     SELECT
         q.id,q.question_text,q.question_type,q.explanation,
