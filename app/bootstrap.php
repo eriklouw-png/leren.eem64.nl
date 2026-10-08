@@ -724,7 +724,7 @@ function openai_generate_text_analysis(string $input,string $managedInstructions
     if($apiKey==='')return ['_leren_error'=>'OPENAI_API_KEY ontbreekt in de container.'];
     $payload=[
         'model'=>openai_model(),
-        'instructions'=>'Je helpt een docent bij het maken van oefentoetsen. Gebruik de gebruikersopdracht als onderwerp en inhoudelijke basis. Gebruik algemene kennis wanneer er geen schoolboekpagina’s zijn aangeleverd. Verzin geen details over een specifieke methode, boek of bron die niet uit de gebruikersopdracht blijken. Als er vakregels zijn meegegeven, gebruik die uitsluitend voor het herkennen en configureren van het passende type. Bij een herkende woordenlijst: zet in grammatical_label alle relevante grammaticale kenmerken die uit de bron blijken. Dit kan een combinatie zijn, bijvoorbeeld "mannelijk, enkelvoud", "mannelijk, meervoud", "vrouwelijk, enkelvoud" of "mannelijk, enkelvoud en meervoud". Gebruik geen grammaticaal kenmerk als het niet betrouwbaar uit de bron blijkt. '.$managedInstructions,
+        'instructions'=>'Je helpt een docent bij het maken van oefentoetsen. Gebruik de gebruikersopdracht als onderwerp en inhoudelijke basis. Gebruik algemene kennis wanneer er geen schoolboekpagina’s zijn aangeleverd. Verzin geen details over een specifieke methode, boek of bron die niet uit de gebruikersopdracht blijken. Als er vakregels zijn meegegeven, gebruik die uitsluitend voor het herkennen en configureren van het passende type. Bij een herkende woordenlijst: zet in grammatical_label alle relevante grammaticale kenmerken die uit de bron blijken. Dit kan een combinatie zijn, bijvoorbeeld "mannelijk, enkelvoud", "mannelijk, meervoud", "vrouwelijk, enkelvoud" of "mannelijk, enkelvoud en meervoud". Geef bij ieder woord in een woordenlijst de relevante grammaticale kenmerken die uit de bron blijken. Dit mogen meerdere kenmerken tegelijk zijn, bijvoorbeeld "mannelijk, enkelvoud", "mannelijk, meervoud", "vrouwelijk, enkelvoud" of "vrouwelijk, meervoud". Gebruik ook grammaticale kenmerken die de bron expliciet met lidwoord of aanduiding geeft. Laat het veld alleen leeg als er echt geen betrouwbaar kenmerk uit de bron blijkt. '.$managedInstructions,
         'input'=>[['role'=>'user','content'=>[['type'=>'input_text','text'=>$input]]]],
         'max_output_tokens'=>4000,
         'store'=>false,
@@ -832,7 +832,7 @@ function openai_generate_with_images(string $input,array $imagePaths,string $man
                             'properties'=>[
                                 'source'=>['type'=>'string'],
                                 'translation'=>['type'=>'string'],
-                                'grammatical_label'=>['type'=>'string','enum'=>['','mannelijk','vrouwelijk','meervoud']]
+                                'grammatical_label'=>['type'=>'string']
                             ],
                             'required'=>['source','translation','grammatical_label'],
                             'additionalProperties'=>false
