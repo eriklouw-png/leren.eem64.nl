@@ -124,6 +124,28 @@ details .chevron{display:inline-block;transition:transform .15s ease;font-size:1
 .subtest-progress{max-width:420px}
 
 
+.quiz-question-title{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:.5rem;
+}
+.quiz-grammar-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:1.8rem;
+  padding:.2rem .55rem;
+  border:1px solid var(--leren-border);
+  border-radius:999px;
+  background:var(--leren-surface-muted);
+  color:var(--leren-muted);
+  font-size:.75rem;
+  line-height:1;
+  font-weight:700;
+  white-space:nowrap;
+}
+
 .quiz-check-btn{
   background:#fd7e14!important;
   border-color:#fd7e14!important;
