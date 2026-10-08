@@ -291,7 +291,12 @@ body.leren-admin .form-check-input:focus{
 .leren-navbar{background:linear-gradient(135deg,#19c873 0%,#0b8f52 58%,#087443 100%)!important}
 .leren-navbar .navbar-brand,.leren-navbar .leren-user-name{color:#fff!important}
 .leren-logo{border-radius:10px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.18)}
-@media(max-width:576px){.leren-navbar .leren-user-name{display:none!important}.leren-navbar .container{gap:.5rem}.leren-navbar .navbar-brand img{width:36px;height:36px}}
+@media(max-width:576px){
+  .leren-navbar .leren-user-name{display:none!important}
+  .leren-navbar .container{gap:.5rem}
+  .leren-navbar .navbar-brand img{width:36px;height:36px}
+  .leren-navbar .navbar-brand span{display:none!important}
+}
 
 /* Admin dark mode — same components, different tokens */
 body.leren-admin{
@@ -452,3 +457,106 @@ body.leren-admin .ai-loading-card .text-secondary{color:#cbd5cf!important}
 
 /* The quiz warning is superseded by the floating feedback component. */
 body:has(#quizForm) main > .alert-warning{display:none!important}
+
+
+/* Unified clickable tiles */
+.leren-tile{
+  position:relative;
+  display:block;
+  width:100%;
+  aspect-ratio:1 / 1;
+  min-height:0;
+  overflow:hidden;
+  border:1px solid var(--leren-border,#dee5e0);
+  border-radius:var(--leren-radius,.75rem);
+  background:var(--leren-surface,#fff);
+  box-shadow:var(--leren-shadow,0 .15rem .5rem rgba(0,0,0,.06));
+  color:inherit!important;
+  text-decoration:none!important;
+  cursor:pointer;
+  transition:transform .15s ease,box-shadow .15s ease;
+}
+.leren-tile:hover{
+  color:inherit!important;
+  transform:translateY(-2px);
+  box-shadow:0 .4rem 1rem rgba(0,0,0,.14);
+}
+.leren-tile:focus-visible{
+  outline:3px solid rgba(47,125,74,.45);
+  outline-offset:2px;
+}
+.leren-tile .subject-card-image{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  min-height:0;
+  background-size:cover;
+  background-position:center center;
+  background-repeat:no-repeat;
+}
+.leren-tile .subject-card-overlay{
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg,rgba(0,0,0,.12) 0%,rgba(0,0,0,.22) 42%,rgba(0,0,0,.78) 100%);
+}
+.leren-tile .subject-card-body{
+  position:absolute!important;
+  inset:0;
+  z-index:2;
+  display:flex!important;
+  flex-direction:column;
+  justify-content:flex-end;
+  padding:1rem!important;
+  min-height:0!important;
+  height:100%!important;
+}
+.leren-tile .subject-card-title{
+  margin-bottom:.35rem!important;
+  font-size:clamp(1.15rem,2.4vw,1.55rem);
+  line-height:1.1;
+  color:#fff!important;
+  text-shadow:0 2px 5px rgba(0,0,0,.8);
+  overflow-wrap:anywhere;
+}
+.leren-tile .subject-card-description{
+  margin:0 0 .35rem!important;
+  font-size:.95rem;
+  line-height:1.35;
+  color:#fff!important;
+  text-shadow:0 1px 4px rgba(0,0,0,.9);
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:3;
+  overflow:hidden;
+}
+.leren-tile .badge{
+  align-self:flex-start;
+  margin-top:.2rem;
+}
+.leren-tile .student-stats{
+  margin-top:.65rem!important;
+}
+.leren-tile .student-stats>div{
+  min-width:0;
+}
+.leren-tile .student-stats>div>div{
+  background:rgba(255,255,255,.82)!important;
+  color:#212529!important;
+  backdrop-filter:blur(3px);
+}
+body.leren-admin .leren-tile{
+  border-color:#465149;
+  background:#202722;
+}
+body.leren-admin .leren-tile:hover{
+  box-shadow:0 .4rem 1rem rgba(0,0,0,.42);
+}
+@media(max-width:767.98px){
+  .leren-tile .subject-card-body{padding:.8rem!important}
+  .leren-tile .subject-card-title{font-size:1.15rem}
+  .leren-tile .subject-card-description{font-size:.82rem;line-height:1.25;-webkit-line-clamp:3}
+  .leren-tile .badge{font-size:.7rem}
+  .leren-tile .student-stats{font-size:.7rem;line-height:1.1}
+  .leren-tile .student-stats .p-2{padding:.35rem!important}
+}
