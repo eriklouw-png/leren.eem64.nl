@@ -43,6 +43,9 @@ body:has(#quizForm) main > .alert-warning{
   display:none!important;
 }
 
+/* Global page spacing: keep the first back-link closer to the header. */
+main.container.py-4{padding-top:.75rem!important}
+
 /* Shared page container — follows the same Bootstrap container as the header. */
 .leren-container{
   width:100%;
