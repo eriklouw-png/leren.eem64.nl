@@ -325,6 +325,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='finish'){
     if($total===0 || $answered===0){
         $deleteEmpty=$pdo->prepare("DELETE FROM attempts WHERE id=? AND student_id=? AND status='in_progress'");
         $deleteEmpty->execute([$attemptId,$studentId]);
+        http_response_code(409);
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['ok'=>false,'empty'=>true,'redirect'=>'topic.php?id='.(int)$test['topic_id']]);
         exit;
@@ -492,9 +493,11 @@ unset($q);
    btnFinishState();
    try{
      const response=await fetch(saveUrl,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({action:'finish',attempt_id:attemptId})});
-     const finishData=await response.json();
-     if(finishData.empty && finishData.redirect){window.location.href=finishData.redirect;return;}
-     if(!response.ok || !finishData.ok)throw new Error('finish_failed_'+response.status);
+     if(response.status===409){
+       const finishData=await response.json();
+       if(finishData.empty && finishData.redirect){window.location.href=finishData.redirect;return;}
+     }
+     if(!response.ok)throw new Error('finish_failed_'+response.status);
      window.location.href='result.php?id='+attemptId;
    }catch(e){
      const card=cards[cards.length-1];
