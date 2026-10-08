@@ -69,24 +69,24 @@ if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='start'){
 $status=read_update_status($statusFile);
 ?>
 <!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Website bijwerken</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<style>.step{padding:.8rem 1rem;border-left:4px solid #dee2e6;margin-bottom:.5rem;background:#f8f9fa}.step.active{border-left-color:#0d6efd}.step.done{border-left-color:#198754}.step.error{border-left-color:#dc3545}.log{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82rem;max-height:350px;overflow:auto;background:#111;color:#eee;padding:1rem;border-radius:.5rem}</style></head>
+</head>
 <body class="bg-light"><nav class="navbar navbar-dark bg-dark"><div class="container"><a class="navbar-brand" href="admin.php">Leren beheer</a><a class="btn btn-outline-light btn-sm" href="admin.php">Beheer</a></div></nav>
-<main class="container py-4" style="max-width:850px">
+<main class="container py-4 system-update-page">
 <a href="admin.php">&larr; Beheer</a>
-<div class="card shadow-sm mt-3"><div class="card-body p-4">
-<h1 class="h3">Website bijwerken</h1>
+<section class="leren-section system-update-card mt-3"><div class="system-update-card-body">
+<h1>Website bijwerken</h1>
 <p class="text-secondary">De nieuwste versie wordt uit GitHub gehaald en de Docker-container wordt opnieuw opgebouwd.</p>
 <div id="statusBox" class="alert alert-secondary">Status wordt opgehaald...</div>
 <div class="mb-3">
-<div class="step" id="stepRequest">1. Update aanvragen</div>
-<div class="step" id="stepPull">2. GitHub bijwerken</div>
-<div class="step" id="stepBuild">3. Docker-container bouwen</div>
-<div class="step" id="stepDone">4. Website weer beschikbaar</div>
+<div class="system-update-step" id="stepRequest">1. Update aanvragen</div>
+<div class="system-update-step" id="stepPull">2. GitHub bijwerken</div>
+<div class="system-update-step" id="stepBuild">3. Docker-container bouwen</div>
+<div class="system-update-step" id="stepDone">4. Website weer beschikbaar</div>
 </div>
 <button id="startBtn" class="btn btn-primary btn-lg">Website bijwerken</button>
 <a href="admin.php" class="btn btn-outline-secondary btn-lg ms-2">Annuleren</a>
 <div id="details" class="mt-4 d-none"><h2 class="h5">Uitvoer</h2><div class="log" id="log"></div></div>
-</div></div>
+</div></section>
 </main>
 <script>
 const statusBox=document.getElementById('statusBox'),btn=document.getElementById('startBtn'),details=document.getElementById('details'),log=document.getElementById('log');
@@ -99,7 +99,7 @@ function render(s){
  else if(state==='success'){statusBox.className='alert alert-success';statusBox.textContent=s.message||'Website is succesvol bijgewerkt.';btn.disabled=false;}
  else {statusBox.className='alert alert-danger';statusBox.textContent=s.message||'De update is mislukt.';btn.disabled=false;}
 
- document.querySelectorAll('.step').forEach(x=>x.className='step');
+ document.querySelectorAll('.system-update-step').forEach(x=>x.className='system-update-step');
  if(state==='requested')document.getElementById('stepRequest').classList.add('active');
  if(state==='running'){
    document.getElementById('stepRequest').classList.add('done');
