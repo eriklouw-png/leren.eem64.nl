@@ -164,7 +164,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $errors[]='Je kunt maximaal tien sub-testen tegelijk genereren.';
             }
             if(!$errors){
-                $useSummary=!$isPracticeList && !empty($_POST['use_summary']) && !empty($saved['images']);
+                $useSummary=!$isPracticeList && $ruleSummaryAllowed && $query==='' && !empty($saved['images']);
 
                 if($topicId){
                     $topicSummarySetting=$pdo->prepare("UPDATE topics SET use_summary=? WHERE id=?");
@@ -590,8 +590,6 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 <div class="analysis-overview card border-0 bg-light mb-4"><div class="card-body">
 <div class="small text-uppercase text-secondary fw-semibold mb-1">Analyse voltooid</div>
 <h2 class="h4 mb-1"><?=e($analysis['subject'])?> — <?=e($analysis['topic'])?></h2>
-<p class="text-secondary mb-3"><?=e($analysis['summary'])?></p>
-<?php if(!empty($analysis['learning_points'])):?><div class="small fw-semibold mb-1">Belangrijkste leerpunten</div><ul class="small mb-0 ps-3"><?php foreach(array_slice((array)$analysis['learning_points'],0,6) as $point):?><li><?=e($point)?></li><?php endforeach;?></ul><?php endif;?>
 </div></div>
 <div class="mb-3">
 <h2 class="h4 mb-1">2. Toets instellen</h2><p class="text-secondary mb-0">Kies hier de instellingen. Je hoeft dit maar één keer te doen.</p>
@@ -611,8 +609,8 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 </div>
 </div></div><?php endif;?>
 <?php if($detectedPracticeList):?><div class="alert alert-success mb-4"><strong><?= $detectedSentenceList?'Zinnenlijst':'Woordenlijst' ?> herkend</strong><br><?=count($analysis['vocabulary_pairs'])?> <?= $detectedSentenceList?'zinnen':'woordparen' ?> gevonden. Leren maakt automatisch één sub-test <strong><?= $detectedSentenceList?'Zinnen oefenen':'Woordjes oefenen' ?></strong> met beide richtingen.</div><?php else:?><div class="card mb-4"><div class="card-body">
-<div class="d-flex justify-content-between align-items-center mb-3"><div><strong>Sub-testen</strong><div class="small text-secondary">Bepaal aantal en vraagtype per sub-test.</div></div><button type="button" class="btn btn-outline-secondary btn-sm" id="addSpecAfter">+ Sub-test</button></div>
-<div id="specRowsAfter"></div><div class="small text-secondary mt-2">Totaal gevraagd: <strong id="specTotal">0</strong> vragen.</div>
+<div class="mb-3"><strong>Vragen</strong><div class="small text-secondary">Kies het aantal vragen en het vraagtype.</div></div>
+<div id="specRowsAfter"></div>
 </div></div><?php endif;?>
 <div class="d-flex flex-column flex-sm-row-reverse gap-2">
 <button class="btn btn-primary btn-lg flex-grow-1" type="submit" id="generateButton">Genereer vragen</button>
@@ -689,11 +687,9 @@ dropzone?.addEventListener('dragover',e=>{e.preventDefault();dropzone.classList.
 dropzone?.addEventListener('dragleave',()=>dropzone.classList.remove('dragover'));
 dropzone?.addEventListener('drop',e=>{e.preventDefault();dropzone.classList.remove('dragover');if(input&&e.dataTransfer.files.length){input.files=e.dataTransfer.files;renderFiles()}});
 
-const savedSpecs=<?=json_encode($savedRequest['specs']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;const detectedVocabulary=<?= $detectedPracticeList?'true':'false' ?>;const specDefaults=savedSpecs.length?savedSpecs:[{type:'mixed',count:10}];
-function addSpecRow(container,row,index){const wrap=document.createElement('div');wrap.className='row g-2 align-items-end mb-2 spec-row';wrap.innerHTML='<div class="col-5 col-md-3"><label class="form-label small">Aantal</label><input class="form-control" type="number" name="specs['+index+'][count]" min="1" max="100" value="'+(row.count||10)+'" required></div><div class="col-5 col-md-4"><label class="form-label small">Type</label><select class="form-select" name="specs['+index+'][type]"><option value="mc" '+(row.type==='mc'?'selected':'')+'>Multiple choice</option><option value="open" '+(row.type==='open'?'selected':'')+'>Open vragen</option><option value="mixed" '+(row.type==='mixed'?'selected':'')+'>Combinatie</option></select></div><div class="col-2 col-md-2"><button type="button" class="btn btn-outline-danger w-100 remove-spec">×</button></div>';container.appendChild(wrap);wrap.querySelector('.remove-spec').addEventListener('click',()=>{wrap.remove();updateTotals(container)})}
-function fillSpecs(container,specs){container.innerHTML='';(specs.length?specs:[{type:'mixed',count:10}]).forEach((row,i)=>addSpecRow(container,row,i));updateTotals(container)}
-function updateTotals(container){if(!container)return;let total=0;container.querySelectorAll('input[name$="[count]"]').forEach(el=>total+=Math.max(0,parseInt(el.value||'0',10)));const totalEl=document.getElementById('specTotal');if(totalEl)totalEl.textContent=total}
-const afterContainer=document.getElementById('specRowsAfter');if(afterContainer){fillSpecs(afterContainer,specDefaults);if(!detectedVocabulary)document.getElementById('addSpecAfter')?.addEventListener('click',()=>{addSpecRow(afterContainer,{type:'mixed',count:10},afterContainer.children.length);updateTotals(afterContainer)});afterContainer.addEventListener('input',()=>updateTotals(afterContainer));afterContainer.addEventListener('change',()=>updateTotals(afterContainer))}
+const savedSpecs=<?=json_encode($savedRequest['specs']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;const specDefaults=savedSpecs.length?[savedSpecs[0]]:[{type:'mixed',count:10}];
+function fillSpecs(container,row){container.innerHTML='';const wrap=document.createElement('div');wrap.className='row g-2 align-items-end spec-row';wrap.innerHTML='<div class="col-6 col-md-4"><label class="form-label small">Aantal vragen</label><input class="form-control" type="number" name="specs[0][count]" min="1" max="100" value="'+(row.count||10)+'" required></div><div class="col-6 col-md-5"><label class="form-label small">Type</label><select class="form-select" name="specs[0][type]"><option value="mc" '+(row.type==='mc'?'selected':'')+'>Multiple choice</option><option value="open" '+(row.type==='open'?'selected':'')+'>Open vragen</option><option value="mixed" '+(row.type==='mixed'?'selected':'')+'>Combinatie</option></select></div>';container.appendChild(wrap)}
+const afterContainer=document.getElementById('specRowsAfter');if(afterContainer)fillSpecs(afterContainer,specDefaults[0]);
 const aiLoading=document.getElementById('aiLoading'),aiLoadingTitle=document.getElementById('aiLoadingTitle'),aiLoadingText=document.getElementById('aiLoadingText');let aiLoadingTimer=null;function showAiLoading(kind){if(!aiLoading)return;clearInterval(aiLoadingTimer);if(kind==='analyze'){const queryField=document.getElementById('query');const hasQuery=!!queryField&&queryField.value.trim()!=='';const hasPages=!!input&&!!input.files&&input.files.length>0;if(hasQuery&&!hasPages){aiLoadingTitle.textContent='Opdracht analyseren...';aiLoadingText.textContent='De AI werkt je onderwerp of opdracht uit. Dit kan even duren.'}else if(hasQuery&&hasPages){aiLoadingTitle.textContent='Toetsbron analyseren...';aiLoadingText.textContent='De AI verwerkt je opdracht en de boekpagina’s. Dit kan even duren.'}else{aiLoadingTitle.textContent='Boekpagina’s analyseren...';aiLoadingText.textContent='De AI leest de boekpagina’s. Dit kan even duren.'}}else if(kind==='generate'){aiLoadingTitle.textContent='Toets maken...';aiLoadingText.textContent='GPT maakt de vragen en eventuele samenvatting.'}else{aiLoadingTitle.textContent='Toets opslaan...';const messages=['Leren verwerkt de gegenereerde vragen...','Leren controleert de gegenereerde SVG technisch...','Daarna worden de afbeeldingen veilig opgeslagen...','De afbeeldingen worden opgeslagen bij de vragen...','Bijna klaar — Leren rondt de toets af...'];let i=0;aiLoadingText.textContent=messages[0];aiLoadingTimer=setInterval(()=>{i=(i+1)%messages.length;aiLoadingText.textContent=messages[i]},2800)}aiLoading.classList.remove('d-none');document.body.style.overflow='hidden'}
 document.getElementById('analyzeForm')?.addEventListener('submit',()=>showAiLoading('analyze'));document.getElementById('generateForm')?.addEventListener('submit',()=>showAiLoading('generate'));document.getElementById('saveForm')?.addEventListener('submit',e=>{const submit=e.submitter;if(submit&&submit.name==='action'&&submit.value==='clear')return;showAiLoading('save');if(submit){submit.disabled=true;submit.dataset.originalText=submit.textContent;submit.textContent='Opslaan...'}});
 </script>
