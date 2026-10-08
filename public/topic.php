@@ -169,22 +169,7 @@ $browserToken=$_SESSION['learner_token'];
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?=e($topic['name'])?> - Leren</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<style>
-.subject-header{position:relative;min-height:220px;border-radius:1rem;overflow:hidden;background:#6c757d}
-.subject-header-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.subject-header-overlay{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.68),rgba(0,0,0,.2))}
-.subject-header-content{position:relative;z-index:1;min-height:220px;display:flex;flex-direction:column;justify-content:end;padding:2rem;color:#fff}
-.subject-header-content h1{font-size:clamp(2rem,7vw,3.5rem);margin:0}
-.subject-header-content p{margin:.35rem 0 0;color:rgba(255,255,255,.8)}
-.subtest-history summary{cursor:pointer;list-style:none}
-.subtest-history summary::-webkit-details-marker{display:none}
-.history-chevron{width:10px;height:10px;border-right:2px solid #6c757d;border-bottom:2px solid #6c757d;transform:rotate(45deg);transition:transform .15s ease;margin-right:4px;margin-top:-5px}
-.subtest-history[open] .history-chevron{transform:rotate(225deg);margin-top:5px}
-.subtest-complete{border:2px solid #198754!important;background:#e9f7ef}
-.subtest-complete .subtest-title{color:#198754}
-.subtest-check{color:#198754;font-size:1.35rem;line-height:1}
-.subtest-progress{max-width:420px}
-</style>
+
 </head>
 <body class="bg-light">
 <main class="container py-4">
