@@ -85,7 +85,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <nav class="navbar navbar-dark bg-dark">
 <div class="container"><a class="navbar-brand" href="admin.php">Leren beheer</a></div>
 </nav>
-<main class="container py-4" style="max-width:800px">
+<main class="container py-4">
 <a href="student.php?id=<?=$id?>">&larr; Terug naar student</a>
 <h1 class="mt-3">Gebruiker bewerken</h1>
 
