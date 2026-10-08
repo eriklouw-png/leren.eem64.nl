@@ -213,8 +213,47 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 foreach($requestedSpecs as $i=>$spec){
                     $requested[]=['number'=>$i+1,'type'=>$spec['type'],'type_label'=>ai_type_label($spec['type']),'question_count'=>$spec['count']];
                 }
-                $prompt='Maak concrete oefentoetsvragen voor precies de gevraagde sub-tests. Gebruik uitsluitend de bron wanneer er boekpagina’s zijn aangeleverd; gebruik bij een query de gebruikersopdracht en algemene kennis. Pas de beheerde vak- en sub-testconfiguratie toe. Maak exact het gevraagde aantal sub-tests en vragen. Bij mc zijn er exact vier opties en één correct antwoord. Bij open zijn er inhoudelijk geldige accepted_answers. Bij combinatie een evenwichtige mix. Verzin geen informatie die niet uit de bron of opdracht volgt.'.$aiRulesPrompt.' De gewenste opdrachten zijn: '.json_encode($requested,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'.';
-                                $data=openai_generate_test_questions($prompt,(array)($saved['images']??[]),$query!=='' && empty($saved['images']));
+                if($isPracticeList){
+                    /*
+                     * Een herkende woorden-/zinnenlijst hoeft niet opnieuw door GPT te worden
+                     * omgezet naar vragen. De analyse bevat de woordparen al. Bouw de twee
+                     * richtingen lokaal op; zo voorkomen we een onnodige lange AI-aanroep
+                     * (bijvoorbeeld 49 paren = 98 vragen) en daarmee time-outs.
+                     */
+                    $generatedQuestions=[];
+                    foreach($vocabularyPairs as $pair){
+                        $source=trim((string)($pair['source']??''));
+                        $translation=trim((string)($pair['translation']??''));
+                        if($source===''||$translation==='')continue;
+                        $label=trim((string)($pair['grammatical_label']??''));
+                        $sourceAnswer=$translation;
+                        $translationAnswer=$source;
+                        $sourceExplanation=$label!==''?'Vertaal het woord. '.$label.'.':'Vertaal het woord naar de andere taal.';
+                        $reverseExplanation='Vertaal het woord naar de andere taal.';
+                        $generatedQuestions[]=[
+                            'type'=>'open','question'=>$source,'correct_answer'=>$sourceAnswer,
+                            'options'=>[],'correct_option'=>0,'accepted_answers'=>[$sourceAnswer],
+                            'explanation'=>$sourceExplanation,'source_page'=>1,'use_image'=>false,
+                            'image_prompt'=>'','image_search_query'=>'','svg_code'=>'',
+                            'image_method'=>'none','image_reason'=>''
+                        ];
+                        $generatedQuestions[]=[
+                            'type'=>'open','question'=>$translation,'correct_answer'=>$translationAnswer,
+                            'options'=>[],'correct_option'=>0,'accepted_answers'=>[$translationAnswer],
+                            'explanation'=>$reverseExplanation,'source_page'=>1,'use_image'=>false,
+                            'image_prompt'=>'','image_search_query'=>'','svg_code'=>'',
+                            'image_method'=>'none','image_reason'=>''
+                        ];
+                    }
+                    $_SESSION['ai_test_analysis']['generated']=[
+                        'subtests'=>[[
+                            'title'=>$isSentenceList?'Zinnen oefenen':'Woordjes oefenen',
+                            'description'=>'','questions'=>$generatedQuestions
+                        ]]
+                    ];
+                }else{
+                    $prompt='Maak concrete oefentoetsvragen voor precies de gevraagde sub-tests. Gebruik uitsluitend de bron wanneer er boekpagina’s zijn aangeleverd; gebruik bij een query de gebruikersopdracht en algemene kennis. Pas de beheerde vak- en sub-testconfiguratie toe. Maak exact het gevraagde aantal sub-tests en vragen. Bij mc zijn er exact vier opties en één correct antwoord. Bij open zijn er inhoudelijk geldige accepted_answers. Bij combinatie een evenwichtige mix. Verzin geen informatie die niet uit de bron of opdracht volgt.'.$aiRulesPrompt.' De gewenste opdrachten zijn: '.json_encode($requested,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'.';
+                    $data=openai_generate_test_questions($prompt,(array)($saved['images']??[]),$query!=='' && empty($saved['images']));
                     if(isset($data['_leren_error']))$errors[]=$data['_leren_error'];
                     else{
                         $generated=openai_output_json($data);
@@ -229,6 +268,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                             $_SESSION['ai_test_analysis']['generated']=$generated;
                         }
                     }
+                }
                 }
             }
         }
