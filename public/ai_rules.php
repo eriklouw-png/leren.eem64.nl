@@ -20,19 +20,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
   $stmt->execute([$value]);
   redirect('ai_rules.php?saved=1');
  }
- (
- id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, subject_id INT UNSIGNED NOT NULL, test_type VARCHAR(40) NOT NULL,
- label VARCHAR(120) NOT NULL, enabled TINYINT(1) NOT NULL DEFAULT 1, allow_summary TINYINT(1) NOT NULL DEFAULT 0,
- allow_images TINYINT(1) NOT NULL DEFAULT 0, allow_multiple_choice TINYINT(1) NOT NULL DEFAULT 0, allow_open TINYINT(1) NOT NULL DEFAULT 1,
- recognition_instructions TEXT NULL, generation_instructions TEXT NULL, sort_order INT NOT NULL DEFAULT 0,
- created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME NULL,
- UNIQUE KEY uq_ai_test_rules_subject_type(subject_id,test_type), KEY idx_ai_test_rules_subject(subject_id),
- CONSTRAINT fk_ai_test_rules_subject FOREIGN KEY(subject_id) REFERENCES subjects(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-
-if($_SERVER['REQUEST_METHOD']==='POST'){
- $action=$_POST['action']??'';
- if($action==='save'){
+if($action==='save'){
   $ids=$_POST['id']??[];
   if(is_array($ids)){
    $stmt=$pdo->prepare("UPDATE ai_test_rules SET label=?,enabled=?,allow_summary=?,allow_images=?,allow_multiple_choice=?,allow_open=?,recognition_instructions=?,generation_instructions=?,sort_order=?,updated_at=NOW() WHERE id=?");
@@ -52,6 +40,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
   $stmt->execute([$subjectId,$type,$label]);redirect('ai_rules.php?saved=1');
  }
  if($action==='delete'){ $id=filter_var($_POST['id']??null,FILTER_VALIDATE_INT);if($id)$pdo->prepare("DELETE FROM ai_test_rules WHERE id=?")->execute([$id]);redirect('ai_rules.php?saved=1');}
+}
 }
 $subjects=$pdo->query("SELECT id,name FROM subjects ORDER BY name")->fetchAll();
 $seedRules=[
@@ -80,6 +69,7 @@ $ruleInsert=$pdo->prepare("INSERT IGNORE INTO ai_test_rules(subject_id,test_type
 foreach($newSubjectRules as $r){
     $ruleInsert->execute([$r[1],$r[2],$r[3],$r[4],$r[5],$r[6],$r[7],$r[8],$r[9],$r[10],$r[0]]);
 }
+$generalInstructions=(string)($pdo->query("SELECT source_validation_instructions FROM ai_general_instructions WHERE id=1")->fetchColumn()??'');
 $generalInstructions=(string)($pdo->query("SELECT source_validation_instructions FROM ai_general_instructions WHERE id=1")->fetchColumn()??'');
 $rules=$pdo->query("SELECT * FROM ai_test_rules ORDER BY subject_id,sort_order,label")->fetchAll();
 $bySubject=[];foreach($rules as $r)$bySubject[(int)$r['subject_id']][]=$r;
