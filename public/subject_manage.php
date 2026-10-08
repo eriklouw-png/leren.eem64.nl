@@ -38,30 +38,30 @@ foreach($summaries as $summary){$topicId=(int)$summary['topic_id'];if(!isset($co
 <?php if(!$topics):?><div class="alert alert-info">Nog geen overhoringen voor dit vak.</div><?php else:?>
 <div class="leren-list">
 <?php foreach($topics as $topic):$topicId=(int)$topic['id'];$counts=$countsByTopic[$topicId]??['tests'=>0,'summaries'=>0];$archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d');$parts=[];$parts[]=$counts['tests'].' '.($counts['tests']===1?'sub-test':'sub-testen');$parts[]=$counts['summaries'].' '.($counts['summaries']===1?'samenvatting':'samenvattingen');$parts[]=$topic['test_date']?date('d-m-Y',strtotime($topic['test_date'])):'Geen overhoringsdatum';$parts[]=$archived?'Gearchiveerd':'Actief';?>
+<?php
+$menuActions=[
+    ['label'=>'Overhoring openen','href'=>'topic_manage.php?id='.$topicId,'primary'=>true],
+    ['label'=>'Overhoring bewerken','href'=>'topic_edit.php?id='.$topicId],
+    ['label'=>'AI toets maken','href'=>'ai_test_generator.php?topic_id='.$topicId],
+    ['type'=>'form','label'=>'Verwijderen','danger'=>true,'action'=>'subject_manage.php?id='.$id,'fields'=>['action'=>'delete_topic','topic_id'=>$topicId],'confirm'=>'Weet u zeker dat u deze overhoring wilt verwijderen? De overhoring verdwijnt uit de website, maar blijft in de database bewaard.'],
+];
+?>
 <div class="leren-list-item">
 <a class="leren-list-item-main" href="topic_manage.php?id=<?=$topicId?>">
 <div class="leren-list-item-content"><div class="leren-list-item-heading"><strong class="leren-list-item-title"><?=e($topic['name'])?></strong></div><div class="leren-list-item-subtitle"><?=e(implode(' · ',$parts))?></div></div>
 </a>
-<button class="leren-list-item-menu" type="button" data-topic-menu data-id="<?=$topicId?>" data-title="<?=e($topic['name'])?>" aria-label="Opties voor <?=e($topic['name'])?>"><span></span><span></span><span></span></button>
+<button class="leren-list-item-menu" type="button" data-list-menu data-list-modal="topicOptionsModal" data-menu-title="<?=e($topic['name'])?>" data-list-actions="<?=e(json_encode($menuActions, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES))?>" aria-label="Opties voor <?=e($topic['name'])?>"><span></span><span></span><span></span></button>
 </div>
 <?php endforeach;?>
 </div>
 <?php endif;?>
 
-<div class="leren-modal" id="topicOptionsModal" hidden><div class="leren-modal-backdrop" data-topic-modal-close></div><div class="leren-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="topicOptionsTitle"><button class="leren-modal-close" type="button" data-topic-modal-close aria-label="Sluiten">&times;</button><h2 id="topicOptionsTitle">Opties</h2><div class="leren-modal-actions" id="topicOptionsActions"></div></div></div>
-<script>
-(function(){
-const modal=document.getElementById('topicOptionsModal'),title=document.getElementById('topicOptionsTitle'),actions=document.getElementById('topicOptionsActions');
-function closeModal(){modal.hidden=true;document.body.classList.remove('leren-modal-open');}
-function openModal(button){const itemId=button.dataset.id;title.textContent=button.dataset.title||'Overhoring';actions.innerHTML='';
-const open=document.createElement('a');open.className='leren-modal-action primary';open.href='topic_manage.php?id='+encodeURIComponent(itemId);open.textContent='Overhoring openen';actions.appendChild(open);
-const edit=document.createElement('a');edit.className='leren-modal-action';edit.href='topic_edit.php?id='+encodeURIComponent(itemId);edit.textContent='Overhoring bewerken';actions.appendChild(edit);
-const ai=document.createElement('a');ai.className='leren-modal-action';ai.href='ai_test_generator.php?topic_id='+encodeURIComponent(itemId);ai.textContent='AI toets maken';actions.appendChild(ai);
-const form=document.createElement('form');form.method='post';form.action='subject_manage.php?id='+'<?=e((string)$id)?>';form.dataset.confirm='Weet u zeker dat u deze overhoring wilt verwijderen? De overhoring verdwijnt uit de website, maar blijft in de database bewaard.';form.innerHTML='<input type="hidden" name="action" value="delete_topic"><input type="hidden" name="topic_id" value="'+itemId+'">';const del=document.createElement('button');del.type='submit';del.className='leren-modal-action danger';del.textContent='Verwijderen';form.appendChild(del);actions.appendChild(form);
-modal.hidden=false;document.body.classList.add('leren-modal-open');}
-document.querySelectorAll('[data-topic-menu]').forEach(b=>b.addEventListener('click',()=>openModal(b)));
-document.querySelectorAll('[data-topic-modal-close]').forEach(el=>el.addEventListener('click',closeModal));
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!modal.hidden)closeModal();});
-})();
-</script>
+<div class="leren-modal" id="topicOptionsModal" data-list-modal hidden aria-hidden="true">
+<div class="leren-modal-backdrop" data-list-modal-close></div>
+<div class="leren-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="topicOptionsTitle">
+<button class="leren-modal-close" type="button" data-list-modal-close aria-label="Sluiten">&times;</button>
+<h2 id="topicOptionsTitle" data-list-modal-title>Opties</h2>
+<div class="leren-modal-actions" data-list-modal-actions></div>
+</div>
+</div>
 </main></body></html>
