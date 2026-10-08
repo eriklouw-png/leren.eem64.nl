@@ -78,26 +78,11 @@ if($studentId && $topics){
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?=e($subject['name'])?> - Leren</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<style>
-.topic-card{transition:transform .12s ease,box-shadow .12s ease}
-.topic-card:hover{transform:translateY(-2px);box-shadow:0 .5rem 1rem rgba(0,0,0,.12)!important}
-.topic-archived{filter:grayscale(1);opacity:.58}
-.topic-complete{border:2px solid #198754!important;background:#e9f7ef}
-.topic-complete .topic-title{color:#198754}
-.topic-check{color:#198754;font-size:1.35rem;line-height:1}
-.topic-progress{min-width:180px}
-.subject-header{position:relative;min-height:220px;border-radius:1rem;overflow:hidden;background:#6c757d}
-.subject-header-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.subject-header-overlay{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.68),rgba(0,0,0,.2))}
-.subject-header-content{position:relative;z-index:1;min-height:220px;display:flex;flex-direction:column;justify-content:end;padding:2rem;color:#fff}
-.subject-header-content h1{font-size:clamp(2rem,7vw,3.5rem);margin:0}
-.subject-header-content p{margin:.35rem 0 0;color:rgba(255,255,255,.8)}
-</style>
 </head>
-<body class="bg-light">
-<main class="container py-4">
+<body>
+<main>
 <a href="index.php">&larr; Alle vakken</a>
+
 <div class="subject-header mt-3">
 <?php if($subject['image_mime']):?><img class="subject-header-image" src="subject_image.php?id=<?=(int)$subject['id']?>" alt=""><?php endif;?>
 <div class="subject-header-overlay"></div>
@@ -107,55 +92,79 @@ if($studentId && $topics){
 </div>
 </div>
 
-<h2 class="h3 mt-4 mb-3">Overhoringen</h2>
+<section class="leren-section">
+<div class="leren-section-title">
+<h2>Overhoringen</h2>
+</div>
 
 <?php if(!$topics):?>
-<div class="alert alert-info">Er zijn nog geen overhoringen voor dit vak.</div>
+<div class="leren-empty">Er zijn nog geen overhoringen voor dit vak.</div>
 <?php else:?>
-<div class="list-group shadow-sm">
+<div class="leren-list">
 <?php foreach($topics as $topic):
     $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d');
+    $topicUrl='topic.php?id='.(int)$topic['id'];
+    $menuActions=[
+        ['label'=>'Bekijken','href'=>$topicUrl,'primary'=>true],
+    ];
+    if($archived){
+        $menuActions[]=[
+            'type'=>'form',
+            'label'=>'Heractiveren',
+            'action'=>'subject.php?id='.(int)$subjectId,
+            'fields'=>[
+                'action'=>'reactivate_topic',
+                'topic_id'=>(int)$topic['id'],
+            ],
+        ];
+    }
 ?>
-<div class="list-group-item p-0 <?=$archived?'topic-archived ':''?><?=!empty($topic['is_complete'])?' topic-complete':''?>">
-<div class="d-flex justify-content-between align-items-center gap-3 p-3">
-<div class="min-w-0">
-<a class="text-decoration-none text-dark d-block" href="topic.php?id=<?=(int)$topic['id']?>">
-<div class="d-flex align-items-center gap-2">
-<?php if(!empty($topic['is_complete'])):?><span class="topic-check" aria-label="100 procent behaald">✓</span><?php endif;?>
-<strong class="fs-5 topic-title"><?=e($topic['name'])?></strong>
+<div class="leren-list-item<?=$archived?' topic-archived':''?><?=$topic['is_complete']??false?' subtest-complete':''?>">
+<a class="leren-list-item-main" href="<?=e($topicUrl)?>">
+<div class="leren-list-item-content">
+<div class="leren-list-item-heading">
+<?php if(!empty($topic['is_complete'])):?><span class="leren-list-item-check" aria-label="100 procent behaald">✓</span><?php endif;?>
+<strong class="leren-list-item-title"><?=e($topic['name'])?></strong>
 </div>
+<div class="leren-list-item-subtitle">
 <?php if($topic['test_date']):?>
-<div class="small text-secondary">Overhoring: <?=e(date('d-m-Y',strtotime($topic['test_date'])))?><?=$archived?' · Gearchiveerd':''?></div>
+Overhoring: <?=e(date('d-m-Y',strtotime($topic['test_date'])))?><?=$archived?' · Gearchiveerd':''?>
+<?php else:?>
+Overhoring
 <?php endif;?>
-<?php if((int)($topic['progress_total']??0)>0):?>
-<div class="topic-progress mt-2">
-<div class="d-flex justify-content-between small text-secondary mb-1">
-<span>Voortgang</span>
-<strong><?=$topic['progress_percent']?>%</strong>
 </div>
-<div class="progress" role="progressbar" aria-label="Voortgang van overhoring" aria-valuenow="<?=$topic['progress_percent']?>" aria-valuemin="0" aria-valuemax="100" style="height:8px">
-<div class="progress-bar bg-success" style="width:<?=$topic['progress_percent']?>%"></div>
+<?php if((int)($topic['progress_total']??0)>0):?>
+<div class="leren-list-item-progress">
+<div class="d-flex justify-content-between small text-secondary mb-1"><span>Voortgang</span><strong><?=$topic['progress_percent']?>%</strong></div>
+<div class="progress" role="progressbar" aria-label="Voortgang van overhoring" aria-valuenow="<?=$topic['progress_percent']?>" aria-valuemin="0" aria-valuemax="100">
+<div class="progress-bar" style="width:<?=$topic['progress_percent']?>%"></div>
 </div>
 <div class="small text-secondary mt-1"><?=$topic['progress_done']?> van <?=$topic['progress_total']?> sub-testen afgerond</div>
 </div>
 <?php endif;?>
+</div>
+<div class="leren-list-item-menu-indicator" aria-hidden="true"></div>
 </a>
-</div>
-<div class="d-flex align-items-center gap-2">
-<?php if($archived):?>
-<form method="post" class="m-0">
-<input type="hidden" name="action" value="reactivate_topic">
-<input type="hidden" name="topic_id" value="<?=$topic['id']?>">
-<button class="btn btn-outline-secondary btn-sm" type="submit">Heractiveren</button>
-</form>
-<?php endif;?>
-<a class="btn btn-primary btn-sm" href="topic.php?id=<?=(int)$topic['id']?>">Bekijken</a>
-</div>
-</div>
+<button type="button" class="leren-list-item-menu" data-list-menu data-list-modal="topicOptionsModal"
+ data-menu-title="<?=e($topic['name'])?>"
+ data-list-actions="<?=e(json_encode($menuActions,JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES))?>"
+ aria-label="Opties voor <?=e($topic['name'])?>">
+<span></span><span></span><span></span>
+</button>
 </div>
 <?php endforeach;?>
 </div>
 <?php endif;?>
+</section>
+
+<div class="leren-modal" id="topicOptionsModal" data-list-modal hidden aria-hidden="true">
+<div class="leren-modal-backdrop" data-list-modal-close></div>
+<div class="leren-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="topicOptionsTitle">
+<button type="button" class="leren-modal-close" data-list-modal-close aria-label="Sluiten">&times;</button>
+<h2 id="topicOptionsTitle" data-list-modal-title>Overhoring</h2>
+<div class="leren-modal-actions" data-list-modal-actions></div>
+</div>
+</div>
 </main>
 </body>
 </html>
