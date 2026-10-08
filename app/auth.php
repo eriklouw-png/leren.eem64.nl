@@ -11,12 +11,6 @@ function is_logged_in(): bool{
     return current_user() !== null;
 }
 
-function require_login(): void{
-    if(!is_logged_in()){
-        $next=$_SERVER['REQUEST_URI']??'index.php';
-        redirect('login.php?next='.rawurlencode($next));
-    }
-}
 
 function auth_login(int $userId): bool{
     global $pdo;
