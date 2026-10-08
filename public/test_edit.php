@@ -106,7 +106,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <td><?=e(date('d-m-Y',strtotime((string)($attempt['finished_at']?:$attempt['started_at']))))?></td>
 <td><?=e(date('H:i',strtotime((string)($attempt['finished_at']?:$attempt['started_at']))))?></td>
 <td><?php if($attempt['score']!==null):?><strong><?=e(number_format((float)$attempt['score'],2,',','.'))?>%</strong><?php else:?><span class="text-secondary"><?=($attempt['status']??'')==='finished'?'Geen resultaat':'Bezig'?></span><?php endif;?><?php if(($attempt['mode']??'normal')==='mistakes'):?> <span class="badge text-bg-secondary">Fouten oefenen</span><?php endif;?></td>
-<td class="text-end"><form method="post" class="m-0" onsubmit="return confirm('Deze oefensessie en de bijbehorende antwoorden verwijderen?');"><input type="hidden" name="action" value="delete_attempt"><input type="hidden" name="attempt_id" value="<?=e((string)$attempt['id'])?>"><button type="submit" class="btn btn-danger btn-sm">Verwijderen</button></form></td>
+<td class="text-end"><form method="post" class="m-0" data-confirm="Deze oefensessie en de bijbehorende antwoorden verwijderen?"><input type="hidden" name="action" value="delete_attempt"><input type="hidden" name="attempt_id" value="<?=e((string)$attempt['id'])?>"><button type="submit" class="btn btn-danger btn-sm">Verwijderen</button></form></td>
 </tr>
 <?php endforeach;?>
 </tbody></table></div>
