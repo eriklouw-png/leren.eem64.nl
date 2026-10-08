@@ -180,6 +180,20 @@ try{
     // Do not make the complete website unavailable if an older database cannot be migrated here.
 }
 
+/*
+ * Question grammar labels are stored separately so AI-recognized
+ * grammatical features remain available when a question is shown.
+ * Keep existing installations compatible by adding the column once.
+ */
+try{
+    $grammarColumn=$pdo->query("SHOW COLUMNS FROM questions LIKE 'grammar_label'")->fetch();
+    if(!$grammarColumn){
+        $pdo->exec("ALTER TABLE questions ADD COLUMN grammar_label VARCHAR(255) NULL AFTER explanation");
+    }
+}catch(Throwable $e){
+    // Do not make the complete website unavailable if an older database cannot be migrated here.
+}
+
 function e(?string $v):string{return htmlspecialchars($v??'',ENT_QUOTES,'UTF-8');}
 function leren_user_role():string{
     return isset($_SESSION['user']['role']) ? (string)$_SESSION['user']['role'] : '';
