@@ -43,17 +43,11 @@ body:has(#quizForm) main > .alert-warning{
   display:none!important;
 }
 
-/* Shared page container — one horizontal rhythm across the entire website. */
+/* Shared page container — follows the same Bootstrap container as the header. */
 .leren-container{
-  width:calc(100% - 32px)!important;
-  max-width:960px!important;
-  margin-left:auto!important;
-  margin-right:auto!important;
-}
-@media(max-width:576px){
-  .leren-container{
-    width:calc(100% - 32px)!important;
-  }
+  width:100%;
+  margin-left:auto;
+  margin-right:auto;
 }
 
 /* Shared page shell */
