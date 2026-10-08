@@ -931,7 +931,7 @@ function ai_general_instruction(string $key):string{
             $row=$pdo->query("SELECT * FROM ai_general_instructions WHERE id=1")->fetch();
             if(!$row){
                 $defaults=ai_general_instruction_defaults();
-                $stmt=$pdo->prepare("INSERT INTO ai_general_instructions(id,source_validation_instructions,language_instructions,question_generation_instructions,summary_instructions,image_generation_instructions,image_validation_instructions,rule_generation_instructions,updated_at) VALUES(1,?,?,?,?,?,?,? ,?,NOW())");
+                $stmt=$pdo->prepare("INSERT INTO ai_general_instructions(id,source_validation_instructions,analysis_instructions,language_instructions,question_generation_instructions,summary_instructions,image_generation_instructions,image_validation_instructions,rule_generation_instructions,updated_at) VALUES(1,?,?,?,?,?,?,?,?,NOW())");
                 $stmt->execute([
                     $defaults['source_validation_instructions'],$defaults['analysis_instructions'],$defaults['language_instructions'],$defaults['question_generation_instructions'],
                     $defaults['summary_instructions'],$defaults['image_generation_instructions'],$defaults['image_validation_instructions'],$defaults['rule_generation_instructions']
