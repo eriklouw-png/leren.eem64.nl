@@ -282,9 +282,9 @@ $isComplete=$latestScore!==null && $latestScore>=100;
 if($t['in_progress_attempt_id']){
     $primaryUrl='quiz.php?id='.(int)$t['id'];
     $primaryLabel='Ga verder';
-}elseif($latestScore!==null){
-    $primaryUrl='quiz.php?id='.(int)$t['id'];
-    $primaryLabel='Opnieuw maken';
+}elseif($latestScore!==null && !empty($history[0]['id'])){
+    $primaryUrl='quiz.php?id='.(int)$t['id'].'&view=1&attempt='.(int)$history[0]['id'];
+    $primaryLabel='Bekijken';
 }else{
     $primaryUrl='quiz.php?id='.(int)$t['id'];
     $primaryLabel='Start';
