@@ -95,6 +95,7 @@ CREATE TABLE questions (
  question_text TEXT NOT NULL,
  image_path VARCHAR(500) NULL,
  question_type ENUM('multiple_choice','open') NOT NULL DEFAULT 'multiple_choice',
+ vocab_direction ENUM('left_to_right','right_to_left') NULL,
  explanation TEXT NULL,
  grammar_label VARCHAR(255) NULL,
  sort_order INT UNSIGNED NOT NULL DEFAULT 0,
