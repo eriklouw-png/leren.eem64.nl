@@ -141,9 +141,7 @@ try{
     if($roleType && strpos((string)$roleType['Type'],"'beheerder'")===false){
         $pdo->exec("ALTER TABLE users MODIFY role ENUM('admin','beheerder','student') NOT NULL DEFAULT 'student'");
     }
-    // The named accounts are the two fixed application administrators.
-    $pdo->exec("UPDATE users SET role='admin' WHERE name='Erik Louw'");
-    $pdo->exec("UPDATE users SET role='beheerder' WHERE name='Loes Louw' AND role<>'admin'");
+    // Roles are maintained on the user record and are not tied to a person's name.
     if(isset($_SESSION['user']['id'])){
         $currentRoleStmt=$pdo->prepare("SELECT id,name,email,role FROM users WHERE id=? LIMIT 1");
         $currentRoleStmt->execute([(int)$_SESSION['user']['id']]);
@@ -180,12 +178,41 @@ function leren_user_role():string{
 }
 function is_admin():bool{return leren_user_role()==='admin';}
 function is_manager():bool{return in_array(leren_user_role(),['admin','beheerder'],true);}
-function can_manage_users():bool{return is_admin();}
-function require_manager():void{if(!is_manager())redirect('index.php');}
+
+/*
+ * Central permission model. Permissions are role-based, never person-based.
+ * Admin has unrestricted access; Beheerder receives only the permissions listed here.
+ */
+function leren_permissions():array{
+    return [
+        'admin_full'=>['admin'],
+        'access_admin'=>['admin','beheerder'],
+        'manage_subjects'=>['admin','beheerder'],
+        'manage_topics'=>['admin','beheerder'],
+        'manage_tests'=>['admin','beheerder'],
+        'manage_questions'=>['admin','beheerder'],
+        'manage_students'=>['admin','beheerder'],
+        'manage_imports'=>['admin','beheerder'],
+        'manage_ai_generator'=>['admin','beheerder'],
+        'manage_ai_settings'=>['admin'],
+        'view_ai_usage'=>['admin'],
+        'system_update'=>['admin'],
+        'debug'=>['admin'],
+        'view_activity'=>['admin'],
+        'delete_student'=>['admin'],
+        'manage_student_role'=>['admin'],
+    ];
+}
+function can(string $permission):bool{
+    if(is_admin())return true;
+    return in_array(leren_user_role(),leren_permissions()[$permission]??[],true);
+}
+function can_manage_users():bool{return can('manage_students');}
+function require_manager():void{if(!can('access_admin'))redirect('index.php');}
 function require_admin():void{
-    if(!is_manager())redirect('index.php');
+    if(!can('access_admin'))redirect('index.php');
     $script=basename((string)($_SERVER['SCRIPT_NAME']??''));
-    if(in_array($script,leren_admin_only_pages(),true) && !is_admin()){
+    if(in_array($script,leren_admin_only_pages(),true) && !can('admin_full')){
         http_response_code(403);exit('Geen toegang.');
     }
 }
@@ -214,10 +241,10 @@ function leren_apply_access_control():void{
     $role=leren_user_role();
     if($role==='')redirect('login.php?next='.rawurlencode($_SERVER['REQUEST_URI']??'index.php'));
 
-    if(in_array($script,leren_admin_only_pages(),true) && $role!=='admin'){
+    if(in_array($script,leren_admin_only_pages(),true) && !can('admin_full')){
         http_response_code(403);exit('Geen toegang.');
     }
-    if(in_array($script,leren_manager_pages(),true) && !in_array($role,['admin','beheerder'],true)){
+    if(in_array($script,leren_manager_pages(),true) && !can('access_admin')){
         if($script==='user_edit.php'){
             return;
         }
