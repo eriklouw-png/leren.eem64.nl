@@ -96,32 +96,7 @@ foreach($sessions as $s){
 }
 ksort($sessionGroups);
 function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds%60;return $m.' min '.str_pad((string)$s,2,'0',STR_PAD_LEFT).' sec';}
-?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Beheer - Leren</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><style>
-.subject-card-image{position:relative;background-size:cover;background-position:center;min-height:180px;background-color:#6c757d}
-.subject-card-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,.76))}
-.subject-card-title{font-weight:700;font-size:1.6rem;text-shadow:0 2px 5px rgba(0,0,0,.75)}
-.subject-card-description{font-weight:600;color:#fff!important;text-shadow:0 1px 4px rgba(0,0,0,.9)}
-@media(max-width:767.98px){
-  .admin-grid{--bs-gutter-x:.65rem;--bs-gutter-y:.65rem}
-  .admin-grid>.admin-col{width:50%;padding-left:calc(var(--bs-gutter-x)*.5);padding-right:calc(var(--bs-gutter-x)*.5)}
-  .admin-tile{aspect-ratio:1/1;overflow:hidden}
-  .admin-tile .subject-card-image{height:100%;min-height:0}
-  .admin-tile .card-body{height:100%;padding:0!important}
-  .admin-tile .subject-card-body{min-height:0!important;padding:.8rem!important}
-  .admin-tile .subject-card-title{font-size:1.15rem}
-  .admin-tile .subject-card-description{font-size:.82rem;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-  .admin-tile .admin-action{font-size:.75rem;padding:.3rem .4rem}
-  .student-grid{--bs-gutter-x:.65rem;--bs-gutter-y:.65rem}
-  .student-grid>.student-col{width:50%;padding-left:calc(var(--bs-gutter-x)*.5);padding-right:calc(var(--bs-gutter-x)*.5)}
-  .student-tile{aspect-ratio:1/1!important;height:auto!important;min-height:0!important;overflow:hidden;align-self:flex-start}
-  .student-tile .student-card-body{min-height:0!important;padding:.8rem!important}
-  .student-tile .card-body{height:auto!important;min-height:0!important}
-  .student-tile .student-title{font-size:1.15rem}
-  .student-tile .student-stats{font-size:.7rem;line-height:1.1}
-  .student-tile .student-stats .p-2{padding:.35rem!important}
-  .student-tile .admin-action{font-size:.75rem;padding:.3rem .4rem}
-}
-details .chevron{display:inline-block;transition:transform .15s ease;font-size:1.5rem;line-height:1}details[open] .chevron{transform:rotate(180deg)}</style></head><body class="bg-light"><nav class="navbar navbar-dark bg-dark"><div class="container"><a class="navbar-brand" href="admin.php">Leren beheer</a><div><span class="text-white me-3"><?=e($_SESSION['user']['name'])?></span><a class="btn btn-outline-light btn-sm" href="index.php">Website</a> <a class="btn btn-outline-light btn-sm" href="logout.php">Uitloggen</a></div></div></nav><main class="container py-4">
+?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Beheer - Leren</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><nav class="navbar navbar-dark bg-dark"><div class="container"><a class="navbar-brand" href="admin.php">Leren beheer</a><div><span class="text-white me-3"><?=e($_SESSION['user']['name'])?></span><a class="btn btn-outline-light btn-sm" href="index.php">Website</a> <a class="btn btn-outline-light btn-sm" href="logout.php">Uitloggen</a></div></div></nav><main class="container py-4">
 <?php if(isset($_GET['saved'])):?><div class="alert alert-success">Het vak is opgeslagen.</div><?php endif;?>
 <?php if(isset($_GET['ai_rules'])):?>
 <div class="alert alert-<?=($_GET['ai_rules']==='created'?'success':'warning')?>">
