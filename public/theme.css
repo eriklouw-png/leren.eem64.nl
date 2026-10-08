@@ -778,3 +778,13 @@ body.leren-admin .leren-list-item-menu:hover{background:#3b4c41;color:#fff}
   .leren-list-item-progress{width:100%}
   .leren-list-item-thumbnail{flex-basis:72px;width:72px;min-height:72px}
 }
+
+
+/* Role-based visibility: server-side access control remains authoritative. */
+body.leren-manager a[href*="system_update.php"],
+body.leren-manager a[href*="debug_question.php"],
+body.leren-manager a[href*="ai_usage.php"],
+body.leren-manager a[href*="ai_rules.php"],
+body.leren-manager a[href*="ai_warmup.php"]{
+  display:none!important;
+}
