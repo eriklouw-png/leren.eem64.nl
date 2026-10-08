@@ -35,98 +35,21 @@ ob_start(static function(string $html): string{
     $isAdminPage=in_array($script,$adminPages,true);
 
     if(stripos($html,'</head>')!==false){
-        $theme='<link rel="stylesheet" href="/theme.css"><link rel="icon" type="image/svg+xml" href="/assets/leren-logo.svg"><link rel="apple-touch-icon" href="/assets/leren-logo.svg"><style id="leren-navbar-theme">
-.leren-navbar{background:linear-gradient(135deg,#19c873 0%,#0b8f52 58%,#087443 100%)!important}
-.leren-navbar .navbar-brand{color:#fff!important;font-weight:600}
-.leren-navbar .leren-user-name{color:#fff!important}
-.leren-logo{border-radius:10px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.18)}
-@media(max-width:576px){
-  .leren-navbar .leren-user-name{display:none!important}
-  .leren-navbar .container{gap:.5rem}
-  .leren-navbar .navbar-brand img{width:36px;height:36px}
-}
-</style>';
-        if($isAdminPage){
-            $theme.='<style id="leren-admin-theme">
-/* Beheeromgeving: volledige dark mode. */
-body.leren-admin,
-body.leren-admin:has(nav.navbar.bg-dark a[href="index.php"]){
-  background:#29332c!important;color:#fff!important;
-  --bs-body-bg:#29332c;--bs-body-color:#fff;--bs-secondary-color:#c7cec9;
-  --bs-tertiary-bg:#202722;--bs-border-color:#465149;
-}
-body.leren-admin main,body.leren-admin section,body.leren-admin header,body.leren-admin footer{color:#fff!important}
-body.leren-admin h1,body.leren-admin h2,body.leren-admin h3,body.leren-admin h4,body.leren-admin h5,body.leren-admin h6,
-body.leren-admin p,body.leren-admin label,body.leren-admin small,body.leren-admin .text-body,
-body.leren-admin .text-dark,body.leren-admin .text-secondary,body.leren-admin .form-text,
-body.leren-admin .form-label,body.leren-admin .table,body.leren-admin .table th,body.leren-admin .table td{color:#fff!important}
-body.leren-admin a:not(.btn){color:#fff!important}
-body.leren-admin a:not(.btn):hover{color:#d7e0da!important}
-body.leren-admin .card,body.leren-admin .accordion-item,body.leren-admin .list-group-item,
-body.leren-admin .modal-content,body.leren-admin .dropdown-menu,body.leren-admin .offcanvas,
-body.leren-admin .popover,body.leren-admin .alert{
-  background:#202722!important;color:#fff!important;border-color:#465149!important;
-}
-body.leren-admin .card-header,body.leren-admin .card-footer,body.leren-admin .accordion-header,
-body.leren-admin .accordion-button{background:#252e28!important;color:#fff!important;border-color:#465149!important}
-body.leren-admin .accordion-button:not(.collapsed){background:#303b34!important;color:#fff!important;box-shadow:none}
-body.leren-admin .accordion-button::after{filter:invert(1) grayscale(1)}
-body.leren-admin .card h1,body.leren-admin .card h2,body.leren-admin .card h3,body.leren-admin .card h4,
-body.leren-admin .card h5,body.leren-admin .card h6,body.leren-admin .card p,body.leren-admin .card label,
-body.leren-admin .card small,body.leren-admin .card .text-secondary,body.leren-admin .accordion-body,
-body.leren-admin .list-group-item,body.leren-admin .alert{color:#fff!important}
-body.leren-admin .bg-light,body.leren-admin .bg-white,body.leren-admin .bg-body,
-body.leren-admin .bg-body-tertiary,body.leren-admin .bg-secondary-subtle{
-  background:#252e28!important;color:#fff!important;
-}
-body.leren-admin .table{
-  --bs-table-bg:#202722;--bs-table-color:#fff;--bs-table-border-color:#465149;
-  --bs-table-striped-bg:#252e28;--bs-table-striped-color:#fff;
-  --bs-table-hover-bg:#303b34;--bs-table-hover-color:#fff;
-}
-body.leren-admin .form-control,body.leren-admin .form-select,body.leren-admin textarea,
-body.leren-admin input,body.leren-admin select{
-  background:#202722!important;color:#fff!important;border-color:#56635a!important;
-}
-body.leren-admin .form-control::placeholder,body.leren-admin textarea::placeholder{color:#9da8a1!important}
-body.leren-admin .form-control:focus,body.leren-admin .form-select:focus,body.leren-admin textarea:focus,
-body.leren-admin input:focus,body.leren-admin select:focus{
-  background:#252e28!important;color:#fff!important;border-color:#6b8a76!important;
-  box-shadow:0 0 0 .25rem rgba(111,145,122,.25)!important;
-}
-body.leren-admin .btn-outline-primary{color:#b9d5c0!important;border-color:#6f9b7b!important}
-body.leren-admin .btn-outline-primary:hover{background:#31583d!important;color:#fff!important}
-body.leren-admin .btn-primary{background:#2f7d4a!important;border-color:#2f7d4a!important;color:#fff!important}
-body.leren-admin .btn-secondary,body.leren-admin .btn-outline-secondary{
-  background:#3a453e!important;border-color:#5b675f!important;color:#fff!important;
-}
-body.leren-admin .btn-light,body.leren-admin .btn-outline-light{color:#fff!important}
-body.leren-admin .alert a,body.leren-admin .card a:not(.btn),body.leren-admin .accordion-body a,
-body.leren-admin .list-group-item a{color:#8fc39b!important}
-body.leren-admin .leren-navbar{background:#1b211e!important}
-body.leren-admin .navbar.bg-dark{background:#1b211e!important}
-body.leren-admin .border,body.leren-admin .border-top,body.leren-admin .border-end,
-body.leren-admin .border-bottom,body.leren-admin .border-start{border-color:#465149!important}
-body.leren-admin hr{border-color:#56635a!important;opacity:1}
-body.leren-admin .modal-backdrop{background-color:#000}
-body.leren-admin .btn-close{filter:invert(1) grayscale(1)}
-body.leren-admin .form-check-input{
-  background-color:#3a453e!important;
-  border-color:#819087!important;
-  background-image:radial-gradient(circle at 25% 50%,#fff 0 34%,transparent 36%)!important;
-}
-body.leren-admin .form-check-input:checked{
-  background-color:#2f7d4a!important;
-  border-color:#6fa27c!important;
-  background-image:radial-gradient(circle at 75% 50%,#fff 0 34%,transparent 36%)!important;
-}
-body.leren-admin .form-check-input:focus{
-  border-color:#8eb79a!important;
-  box-shadow:0 0 0 .25rem rgba(111,145,122,.25)!important;
-}
-</style>';
+        $theme='<link rel="stylesheet" href="/theme.css"><link rel="icon" type="image/svg+xml" href="/assets/leren-logo.svg"><link rel="apple-touch-icon" href="/assets/leren-logo.svg">';
+';
         }
         $html=preg_replace('~</head>~i',$theme.'</head>',$html,1)??$html;
+    }
+
+    if(stripos($html,'<main')!==false){
+        $html=preg_replace_callback('~<main\\b([^>]*)>~i',static function(array $m):string{
+            $attrs=$m[1];
+            if(preg_match('~\\bclass="([^"]*)"~i',$attrs,$cm)){
+                $classes=trim($cm[1].' leren-page');
+                $attrs=preg_replace('~\\bclass="[^"]*"~i','class="'.htmlspecialchars($classes,ENT_QUOTES,'UTF-8').'"',$attrs,1)??$attrs;
+            }else{$attrs=' class="leren-page"'.$attrs;}
+            return '<main'.$attrs.'>';
+        },$html,1)??$html;
     }
 
     if(isset($_SESSION['user']) && is_array($_SESSION['user']) && stripos($html,'<body')!==false){
