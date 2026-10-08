@@ -3,6 +3,14 @@ require __DIR__.'/../app/bootstrap.php';require_admin();
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if(!$id)redirect('admin.php');
 
+if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='delete_topic'){
+    $topicId=filter_var($_POST['topic_id']??null,FILTER_VALIDATE_INT);
+    if(!$topicId){http_response_code(400);exit('Ongeldig overhoring-ID.');}
+    $x=$pdo->prepare("UPDATE topics SET is_active=0 WHERE id=? AND subject_id=?");
+    $x->execute([$topicId,$id]);
+    redirect('subject_manage.php?id='.$id);
+}
+
 $s=$pdo->prepare("SELECT id,name,description,image_mime FROM subjects WHERE id=?");$s->execute([$id]);$subject=$s->fetch();
 if(!$subject){http_response_code(404);exit('Vak niet gevonden.');}
 
@@ -48,7 +56,7 @@ function closeModal(){modal.hidden=true;document.body.classList.remove('leren-mo
 function openModal(button){const itemId=button.dataset.id;title.textContent=button.dataset.title||'Overhoring';actions.innerHTML='';
 const open=document.createElement('a');open.className='leren-modal-action primary';open.href='topic_manage.php?id='+encodeURIComponent(itemId);open.textContent='Overhoring openen';actions.appendChild(open);
 const edit=document.createElement('a');edit.className='leren-modal-action';edit.href='topic_edit.php?id='+encodeURIComponent(itemId);edit.textContent='Overhoring bewerken';actions.appendChild(edit);
-const ai=document.createElement('a');ai.className='leren-modal-action';ai.href='ai_test_generator.php?topic_id='+encodeURIComponent(itemId);ai.textContent='AI toets maken';actions.appendChild(ai);
+const ai=document.createElement('a');ai.className='leren-modal-action';ai.href='ai_test_generator.php?topic_id='+encodeURIComponent(itemId);ai.textContent='AI toets maken';actions.appendChild(ai);\nconst form=document.createElement('form');form.method='post';form.action='subject_manage.php?id='+'<?=e((string)$id)?>';form.dataset.confirm='Weet u zeker dat u deze overhoring wilt verwijderen? De overhoring verdwijnt uit de website, maar blijft in de database bewaard.';form.innerHTML='<input type="hidden" name="action" value="delete_topic"><input type="hidden" name="topic_id" value="'+itemId+'">';const del=document.createElement('button');del.type='submit';del.className='leren-modal-action danger';del.textContent='Verwijderen';form.appendChild(del);actions.appendChild(form);
 modal.hidden=false;document.body.classList.add('leren-modal-open');}
 document.querySelectorAll('[data-topic-menu]').forEach(b=>b.addEventListener('click',()=>openModal(b)));
 document.querySelectorAll('[data-topic-modal-close]').forEach(el=>el.addEventListener('click',closeModal));
