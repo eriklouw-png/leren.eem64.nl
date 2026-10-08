@@ -186,6 +186,7 @@ $historyStmt=$pdo->prepare("
 ");
 $historyByTest=[];
 $mistakeCountByTest=[];
+$completedProgressByTest=[];
 foreach($tests as $testRow){
     $historyStmt->execute([(int)$testRow['id'],$studentId]);
     $historyByTest[(int)$testRow['id']]=$historyStmt->fetchAll();
@@ -194,6 +195,15 @@ foreach($tests as $testRow){
         $wrongCountStmt=$pdo->prepare("SELECT COUNT(*) FROM attempt_answers WHERE attempt_id=? AND is_correct=0");
         $wrongCountStmt->execute([$latestAttemptId]);
         $mistakeCountByTest[(int)$testRow['id']]=(int)$wrongCountStmt->fetchColumn();
+        $completedProgressStmt=$pdo->prepare("
+            SELECT COUNT(*) total_count,
+                   COUNT(CASE WHEN (answer_text IS NOT NULL AND TRIM(answer_text)<>'') OR selected_option_id IS NOT NULL THEN 1 END) answered_count
+            FROM attempt_questions aq
+            LEFT JOIN attempt_answers aa ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id
+            WHERE aq.attempt_id=?
+        ");
+        $completedProgressStmt->execute([$latestAttemptId]);
+        $completedProgressByTest[(int)$testRow['id']]=$completedProgressStmt->fetch() ?: ['total_count'=>0,'answered_count'=>0];
     }else{
         $mistakeCountByTest[(int)$testRow['id']]=0;
     }
@@ -312,7 +322,7 @@ if(($mistakeCountByTest[(int)$t['id']]??0)>0){
 <strong class="leren-list-item-title"><?=e($t['title'])?></strong>
 </div>
 <div class="leren-list-item-subtitle"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=((int)$t['question_count'])?> vragen · Aangemaakt <?=e(date('d-m-Y H:i',strtotime((string)$t['created_at'])))?></div>
-<?php if($t['in_progress_attempt_id'] && $latestScore===null):?><div class="leren-list-item-progress-text">Voortgang: <?=((int)$t['in_progress_answered_count'])?> van <?=((int)$t['in_progress_total_count'])?> vragen gedaan.</div><?php endif;?>
+<?php if($t['in_progress_attempt_id']):?><div class="leren-list-item-progress-text">Voortgang: <?=((int)$t['in_progress_answered_count'])?> van <?=((int)$t['in_progress_total_count'])?> vragen gedaan.</div><?php elseif($latestScore!==null):?><?php $completedProgress=$completedProgressByTest[(int)$t['id']]??['total_count'=>0,'answered_count'=>0]; ?><div class="leren-list-item-progress-text">Voortgang: <?=((int)$completedProgress['answered_count'])?> van <?=((int)$completedProgress['total_count'])?> vragen gedaan.</div><?php endif;?>
 <?php if($t['description']):?><div class="leren-list-item-description"><?=e($t['description'])?></div><?php endif;?>
 </div>
 <div class="leren-list-item-progress">
