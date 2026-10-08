@@ -55,7 +55,7 @@ ob_start(static function(string $html): string{
         $html=preg_replace_callback('~<main\\b([^>]*)>~i',static function(array $m):string{
             $attrs=$m[1];
             if(preg_match('~\\bclass="([^"]*)"~i',$attrs,$cm)){
-                $classes=trim($cm[1].' leren-page');
+                $classes=trim($cm[1].' leren-page leren-container');
                 $attrs=preg_replace('~\\bclass="[^"]*"~i','class="'.htmlspecialchars($classes,ENT_QUOTES,'UTF-8').'"',$attrs,1)??$attrs;
             }else{$attrs=' class="leren-page"'.$attrs;}
             return '<main'.$attrs.'>';
