@@ -107,8 +107,8 @@ ob_start(static function(string $html): string{
         }
     }
 
-    // Shared confirmation modal for destructive actions in de beheeromgeving.
-    if($isAdminPage && stripos($html,'</body>')!==false && !str_contains($html,'id="lerenConfirmModal"')){
+    // Shared confirmation modal for actions that require explicit confirmation.
+    if(stripos($html,'</body>')!==false && !str_contains($html,'id="lerenConfirmModal"')){
         $confirmModal=''
             .'<div class="leren-modal" id="lerenConfirmModal" hidden aria-hidden="true">'
             .'<div class="leren-modal-backdrop" data-confirm-close></div>'
