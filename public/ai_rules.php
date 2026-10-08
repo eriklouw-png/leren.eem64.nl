@@ -1,7 +1,26 @@
 <?php
 require __DIR__.'/../app/bootstrap.php';
 require_admin();
-$pdo->exec("CREATE TABLE IF NOT EXISTS ai_test_rules (
+$pdo->exec("CREATE TABLE IF NOT EXISTS ai_general_instructions (
+ id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
+ source_validation_instructions TEXT NULL,
+ updated_at DATETIME NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+$defaultGeneralInstructions='Controleer iedere geüploade foto voordat deze als bron voor een toets wordt gebruikt. De afbeelding moet duidelijk schoolboekmateriaal, een werkblad of ander lesmateriaal zijn dat inhoudelijk bij het gekozen vak past. Keur een willekeurige foto, selfie, portret/gezichtsfoto of materiaal voor een ander vak af. Een gezicht dat onderdeel is van een relevante schoolboekpagina is toegestaan. Als de foto niet duidelijk bij het gekozen vak hoort, keur hem af.';
+$generalRow=$pdo->query("SELECT source_validation_instructions FROM ai_general_instructions WHERE id=1")->fetch();
+if(!$generalRow){
+    $stmt=$pdo->prepare("INSERT INTO ai_general_instructions(id,source_validation_instructions,updated_at) VALUES(1,?,NOW())");
+    $stmt->execute([$defaultGeneralInstructions]);
+}
+if($_SERVER['REQUEST_METHOD']==='POST'){
+ $action=$_POST['action']??'';
+ if($action==='save_general'){
+  $value=trim((string)($_POST['source_validation_instructions']??''));
+  $stmt=$pdo->prepare("UPDATE ai_general_instructions SET source_validation_instructions=?,updated_at=NOW() WHERE id=1");
+  $stmt->execute([$value]);
+  redirect('ai_rules.php?saved=1');
+ }
+ (
  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, subject_id INT UNSIGNED NOT NULL, test_type VARCHAR(40) NOT NULL,
  label VARCHAR(120) NOT NULL, enabled TINYINT(1) NOT NULL DEFAULT 1, allow_summary TINYINT(1) NOT NULL DEFAULT 0,
  allow_images TINYINT(1) NOT NULL DEFAULT 0, allow_multiple_choice TINYINT(1) NOT NULL DEFAULT 0, allow_open TINYINT(1) NOT NULL DEFAULT 1,
@@ -61,12 +80,21 @@ $ruleInsert=$pdo->prepare("INSERT IGNORE INTO ai_test_rules(subject_id,test_type
 foreach($newSubjectRules as $r){
     $ruleInsert->execute([$r[1],$r[2],$r[3],$r[4],$r[5],$r[6],$r[7],$r[8],$r[9],$r[10],$r[0]]);
 }
+$generalInstructions=(string)($pdo->query("SELECT source_validation_instructions FROM ai_general_instructions WHERE id=1")->fetchColumn()??'');
 $rules=$pdo->query("SELECT * FROM ai_test_rules ORDER BY subject_id,sort_order,label")->fetchAll();
 $bySubject=[];foreach($rules as $r)$bySubject[(int)$r['subject_id']][]=$r;
 ?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI-instructies per vak</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head><body><main class="container py-4">
 <div class="d-flex justify-content-between align-items-center mb-4"><div><h1 class="mb-1">AI-instructies per vak</h1><div class="text-secondary">Beheer per vak en type sub-test de AI-herkenning, opties en instructies.</div></div><a class="btn btn-outline-light" href="admin.php">← Beheer</a></div>
 <?php if(isset($_GET['saved'])):?><div class="alert alert-success">De AI-instructies zijn opgeslagen.</div><?php endif;?>
+<section class="mb-5"><h2 class="h3 mb-3">Algemeen</h2>
+<div class="rule-card"><form method="post">
+<input type="hidden" name="action" value="save_general">
+<label class="form-label fw-semibold">AI-broncontrole van geüploade foto’s</label>
+<textarea class="form-control" name="source_validation_instructions" rows="8"><?=e($generalInstructions)?></textarea>
+<div class="form-text">Deze instructie geldt voor alle vakken. De AI controleert hiermee of een geüploade foto geschikt lesmateriaal is voor het gekozen vak, en kan bijvoorbeeld willekeurige foto’s, gezichten/selfies of materiaal voor een ander vak afkeuren.</div>
+<button class="btn btn-primary mt-3" type="submit">Algemene AI-instructie opslaan</button>
+</form></div></section>
 <form method="post"><input type="hidden" name="action" value="save">
 <?php foreach($subjects as $subject):?><section class="mb-5"><h2 class="h3 mb-3"><?=e($subject['name'])?></h2>
 <?php if(empty($bySubject[(int)$subject['id']])):?><div class="text-secondary">Nog geen AI-regels ingesteld voor dit vak.</div><?php else:foreach($bySubject[(int)$subject['id']] as $rule):$id=(int)$rule['id'];?>
