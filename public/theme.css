@@ -161,8 +161,10 @@ details .chevron{display:inline-block;transition:transform .15s ease;font-size:1
   background:rgba(0,0,0,.08);
   color:inherit;
   font-size:1.5rem;
-  line-height:1.8rem;
-  text-align:center;
+  line-height:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   cursor:pointer;
   opacity:.7;
 }
