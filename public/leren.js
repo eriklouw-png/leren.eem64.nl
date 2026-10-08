@@ -72,7 +72,7 @@ function openListModal(button){
     modal.setAttribute('aria-hidden','false');
     document.body.classList.add('leren-modal-open');
 
-    const close=modal.querySelector('[data-list-modal-close]');
+    const close=modal.querySelector('button[data-list-modal-close]');
     if(close)close.focus();
 }
 
