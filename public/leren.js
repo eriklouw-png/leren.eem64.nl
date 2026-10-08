@@ -120,6 +120,7 @@ function initConfirmModal(){
     const ok=modal.querySelector('[data-confirm-ok]');
     let pendingForm=null;
     let pendingSubmitter=null;
+    let pendingLinkHref=null;
 
     function close(){
         modal.hidden=true;
@@ -127,6 +128,7 @@ function initConfirmModal(){
         document.body.classList.remove('leren-modal-open');
         pendingForm=null;
         pendingSubmitter=null;
+        pendingLinkHref=null;
     }
 
     function open(form,submitter){
@@ -150,11 +152,9 @@ function initConfirmModal(){
         const link=event.target.closest('a[data-confirm]');
         if(!link || link.dataset.confirmed==='1')return;
         event.preventDefault();
-        pendingForm={
-            dataset:{confirm:link.dataset.confirm},
-            submit:function(){window.location.href=link.href;}
-        };
+        pendingForm=null;
         pendingSubmitter=null;
+        pendingLinkHref=link.href;
         if(message)message.textContent=link.dataset.confirm;
         modal.hidden=false;
         modal.setAttribute('aria-hidden','false');
@@ -167,8 +167,14 @@ function initConfirmModal(){
             if(!pendingForm)return;
             const form=pendingForm;
             const submitter=pendingSubmitter;
-            form.dataset.confirmed='1';
+            const linkHref=pendingLinkHref;
             close();
+            if(linkHref){
+                window.location.href=linkHref;
+                return;
+            }
+            if(!form)return;
+            form.dataset.confirmed='1';
             if(submitter && typeof form.requestSubmit==='function')form.requestSubmit(submitter);
             else form.submit();
         });
