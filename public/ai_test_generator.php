@@ -539,14 +539,37 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 <?php elseif($stage===1):?>
 <div class="upload-intro mb-4">
 <h2 class="h4 mb-2">1. Toetsbron kiezen</h2>
-<p class="text-secondary mb-3">Upload boekpagina’s óf geef hieronder een onderwerp/opdracht. De AI gebruikt daarna de gekozen bron om de toets te maken.</p>
+<p class="text-secondary mb-3">Kies eerst hoe je de toets wilt laten maken.</p>
 </div>
+
+<div id="sourceChoice" class="row g-3 mb-4">
+<div class="col-md-6">
+<button type="button" class="btn btn-outline-primary w-100 text-start p-4 h-100 source-choice-card" data-source="query">
+<div class="fs-2 mb-2">✏️</div>
+<div class="fs-5 fw-semibold">QUERY</div>
+<div class="small text-secondary mt-1">Geef een onderwerp of beschrijf precies wat je wilt oefenen.</div>
+</button>
+</div>
+<div class="col-md-6">
+<button type="button" class="btn btn-outline-primary w-100 text-start p-4 h-100 source-choice-card" data-source="book">
+<div class="fs-2 mb-2">📚</div>
+<div class="fs-5 fw-semibold">BOEKFOTO</div>
+<div class="small text-secondary mt-1">Upload één of meerdere foto’s van de pagina’s uit je schoolboek.</div>
+</button>
+</div>
+</div>
+
 <form method="post" enctype="multipart/form-data" id="analyzeForm" data-ai-loading="analyze">
-<input type="hidden" name="action" value="analyze"><div class="card bg-light border-0 mb-3"><div class="card-body">
+<input type="hidden" name="action" value="analyze">
+<div id="querySource" class="source-panel d-none">
+<div class="card bg-light border-0 mb-3"><div class="card-body">
 <label class="form-label fw-semibold" for="query">Onderwerp of opdracht</label>
 <textarea class="form-control" id="query" name="query" rows="3" placeholder="Bijvoorbeeld: Maak een toets over de Griekse stadstaten, met aandacht voor Athene, Sparta en de democratie."><?=e($query)?></textarea>
 <div class="form-text">Je kunt hier ook precies beschrijven wat je wilt oefenen. Zonder boekpagina’s gebruikt de AI haar algemene kennis.</div>
 </div></div>
+</div>
+
+<div id="bookSource" class="source-panel d-none">
 <label class="dropzone d-block mb-3" for="pages" id="dropzone">
 <div class="upload-icon">📚</div>
 <div class="fw-semibold fs-5">Sleep boekpagina’s hierheen</div>
@@ -555,7 +578,9 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 <input class="d-none" id="pages" type="file" name="pages[]" accept="image/jpeg,image/png,image/webp" multiple>
 </label>
 <div id="fileList" class="upload-file-list mb-4"></div>
-<div class="d-flex flex-column flex-sm-row gap-2">
+</div>
+
+<div id="sourceActions" class="d-none d-flex flex-column flex-sm-row gap-2">
 <button class="btn btn-primary btn-lg" type="submit" id="analyzeButton">Start met verwerken</button>
 <a class="btn btn-outline-secondary btn-lg" href="subject_manage.php?id=<?=$subjectId?>">Annuleren</a>
 </div>
@@ -652,10 +677,18 @@ Voorgestelde methode: <?=e($methodLabel)?><?=($q['image_reason']??'')!==''?' · 
 
 </div></div></main>
 <script>
-const input=document.getElementById('pages'),list=document.getElementById('fileList'),dropzone=document.getElementById('dropzone'),analyzeButton=document.getElementById('analyzeButton');
-function renderFiles(){if(!input||!list)return;const files=[...input.files];list.innerHTML='';if(!files.length){if(analyzeButton)analyzeButton.disabled=true;return;}files.forEach((file,index)=>{const item=document.createElement('div');item.className='upload-file';item.innerHTML='<span>🖼️</span><div class="flex-grow-1 min-w-0"><div class="upload-file-name">'+(index+1)+'. '+file.name.replace(/[<>&"]/g,'')+'</div><div class="small text-secondary">'+Math.round(file.size/1024)+' KB</div></div>';list.appendChild(item)});if(analyzeButton)analyzeButton.disabled=false}
+const input=document.getElementById('pages'),list=document.getElementById('fileList'),dropzone=document.getElementById('dropzone'),analyzeButton=document.getElementById('analyzeButton'),queryInput=document.getElementById('query'),sourceChoice=document.getElementById('sourceChoice'),querySource=document.getElementById('querySource'),bookSource=document.getElementById('bookSource'),sourceActions=document.getElementById('sourceActions'),analyzeForm=document.getElementById('analyzeForm');
+let selectedSource='';
+function updateAnalyzeButton(){if(!analyzeButton)return;const hasQuery=!!queryInput&&queryInput.value.trim()!=='';const hasFiles=!!input&&!!input.files&&input.files.length>0;analyzeButton.disabled=selectedSource==='query'?!hasQuery:selectedSource==='book'?!hasFiles:true}
+function selectSource(source){selectedSource=source;sourceChoice?.classList.add('d-none');querySource?.classList.toggle('d-none',source!=='query');bookSource?.classList.toggle('d-none',source!=='book');sourceActions?.classList.remove('d-none');if(queryInput)queryInput.disabled=source!=='query';if(input)input.disabled=source!=='book';updateAnalyzeButton();if(source==='query')queryInput?.focus()}
+document.querySelectorAll('[data-source]').forEach(btn=>btn.addEventListener('click',()=>selectSource(btn.dataset.source)));
+function renderFiles(){if(!input||!list)return;const files=[...input.files];list.innerHTML='';if(!files.length){updateAnalyzeButton();return;}files.forEach((file,index)=>{const item=document.createElement('div');item.className='upload-file';item.innerHTML='<span>🖼️</span><div class="flex-grow-1 min-w-0"><div class="upload-file-name">'+(index+1)+'. '+file.name.replace(/[<>&"]/g,'')+'</div><div class="small text-secondary">'+Math.round(file.size/1024)+' KB</div></div>';list.appendChild(item)});updateAnalyzeButton()}
 input?.addEventListener('change',renderFiles);
-document.getElementById('query')?.addEventListener('input',()=>{const q=document.getElementById('query').value.trim();if(analyzeButton)analyzeButton.disabled=!q && !(input?.files?.length);});dropzone?.addEventListener('dragover',e=>{e.preventDefault();dropzone.classList.add('dragover')});dropzone?.addEventListener('dragleave',()=>dropzone.classList.remove('dragover'));dropzone?.addEventListener('drop',e=>{e.preventDefault();dropzone.classList.remove('dragover');if(input&&e.dataTransfer.files.length){input.files=e.dataTransfer.files;renderFiles()}});
+queryInput?.addEventListener('input',updateAnalyzeButton);
+dropzone?.addEventListener('dragover',e=>{e.preventDefault();dropzone.classList.add('dragover')});
+dropzone?.addEventListener('dragleave',()=>dropzone.classList.remove('dragover'));
+dropzone?.addEventListener('drop',e=>{e.preventDefault();dropzone.classList.remove('dragover');if(input&&e.dataTransfer.files.length){input.files=e.dataTransfer.files;renderFiles()}});
+
 const savedSpecs=<?=json_encode($savedRequest['specs']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;const detectedVocabulary=<?= $detectedPracticeList?'true':'false' ?>;const specDefaults=savedSpecs.length?savedSpecs:[{type:'mixed',count:10}];
 function addSpecRow(container,row,index){const wrap=document.createElement('div');wrap.className='row g-2 align-items-end mb-2 spec-row';wrap.innerHTML='<div class="col-5 col-md-3"><label class="form-label small">Aantal</label><input class="form-control" type="number" name="specs['+index+'][count]" min="1" max="100" value="'+(row.count||10)+'" required></div><div class="col-5 col-md-4"><label class="form-label small">Type</label><select class="form-select" name="specs['+index+'][type]"><option value="mc" '+(row.type==='mc'?'selected':'')+'>Multiple choice</option><option value="open" '+(row.type==='open'?'selected':'')+'>Open vragen</option><option value="mixed" '+(row.type==='mixed'?'selected':'')+'>Combinatie</option></select></div><div class="col-2 col-md-2"><button type="button" class="btn btn-outline-danger w-100 remove-spec">×</button></div>';container.appendChild(wrap);wrap.querySelector('.remove-spec').addEventListener('click',()=>{wrap.remove();updateTotals(container)})}
 function fillSpecs(container,specs){container.innerHTML='';(specs.length?specs:[{type:'mixed',count:10}]).forEach((row,i)=>addSpecRow(container,row,i));updateTotals(container)}
