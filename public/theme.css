@@ -43,6 +43,19 @@ body:has(#quizForm) main > .alert-warning{
   display:none!important;
 }
 
+/* Shared page container — one horizontal rhythm across the entire website. */
+.leren-container{
+  width:calc(100% - 32px)!important;
+  max-width:960px!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+@media(max-width:576px){
+  .leren-container{
+    width:calc(100% - 32px)!important;
+  }
+}
+
 /* Shared page shell */
 .leren-page{color:var(--leren-text);padding-bottom:2rem}
 .leren-page h1{font-size:1.75rem;line-height:1.2;font-weight:700;margin-bottom:.5rem}
