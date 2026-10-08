@@ -41,7 +41,6 @@ if($action==='save'){
  }
  if($action==='delete'){ $id=filter_var($_POST['id']??null,FILTER_VALIDATE_INT);if($id)$pdo->prepare("DELETE FROM ai_test_rules WHERE id=?")->execute([$id]);redirect('ai_rules.php?saved=1');}
 }
-}
 $subjects=$pdo->query("SELECT id,name FROM subjects ORDER BY name")->fetchAll();
 $seedRules=[
  ['duits','vocabulary','Woordjes oefenen',1,0,0,0,1,'Herken woordenlijsten en woordparen, ook wanneer ze niet in twee kolommen staan. Herken meerdere blokken en secties. Neem expliciet vermelde meervouden en vrouwelijke vormen als afzonderlijke leeritems op.','Maak beide richtingen tussen de brontaal en Nederlands. Voeg alleen als de bron dit duidelijk aangeeft (mannelijk), (vrouwelijk) of (meervoud) toe. Verzin geen grammaticale vormen.',1],
