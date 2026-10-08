@@ -190,7 +190,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <form method="post" onsubmit="return confirm('Weet u zeker dat u dit vak wilt verwijderen? Het vak verdwijnt uit de website. De gegevens blijven in de database bewaard.');">
 <input type="hidden" name="action" value="delete">
 <input type="hidden" name="id" value="<?=$id?>">
-<button class="btn btn-outline-danger" type="submit">Vak verwijderen</button>
+<button class="btn btn-danger" type="submit">Vak verwijderen</button>
 </form>
 </div>
 </div>
