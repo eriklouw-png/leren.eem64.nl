@@ -228,8 +228,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         $label=trim((string)($pair['grammatical_label']??''));
                         $sourceAnswer=$translation;
                         $translationAnswer=$source;
-                        $sourceExplanation=$label!==''?'Vertaal het woord. '.$label.'.':'Vertaal het woord naar de andere taal.';
-                        $reverseExplanation='Vertaal het woord naar de andere taal.';
+                        $learningLanguage=trim((string)($saved['analysis']['vocabulary_language']??''));
+                        $sourceExplanation='Vertaal naar Nederlands.'.($label!==''?' '.$label.'.':'');
+                        $reverseExplanation='Vertaal naar '.($learningLanguage!==''?$learningLanguage:'de andere taal').'.';
                         $generatedQuestions[]=[
                             'type'=>'open','question'=>$source,'learning_term'=>$source,'correct_answer'=>$sourceAnswer,
                             'options'=>[],'correct_option'=>0,'accepted_answers'=>[$sourceAnswer],
