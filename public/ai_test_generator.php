@@ -164,7 +164,31 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $errors[]='Je kunt maximaal tien sub-testen tegelijk genereren.';
             }
             if(!$errors){
-                $useSummary=!$isPracticeList && $ruleSummaryAllowed && $query==='' && !empty($saved['images']);
+                $summaryAllowed=true;
+                $summaryDetectedTypes=[];
+                if(is_array($saved['analysis']['subtests']??null)){
+                    foreach($saved['analysis']['subtests'] as $summarySubtest){
+                        $summaryType=trim((string)($summarySubtest['recognized_type']??''));
+                        if($summaryType!=='')$summaryDetectedTypes[]=$summaryType;
+                    }
+                }
+                foreach($summaryDetectedTypes as $summaryType){
+                    $summaryRule=ai_test_rule_for_type($aiRules,$summaryType);
+                    if($summaryRule!==null && !(int)$summaryRule['allow_summary']){
+                        $summaryAllowed=false;
+                        break;
+                    }
+                }
+                if($aiRules&&!$summaryDetectedTypes){
+                    $summaryAllowed=false;
+                    foreach($aiRules as $summaryRule){
+                        if((int)$summaryRule['allow_summary']){
+                            $summaryAllowed=true;
+                            break;
+                        }
+                    }
+                }
+                $useSummary=!$isPracticeList && $summaryAllowed && $query==='' && !empty($saved['images']);
 
                 if($topicId){
                     $topicSummarySetting=$pdo->prepare("UPDATE topics SET use_summary=? WHERE id=?");
