@@ -463,7 +463,15 @@ foreach($questions as &$q){
 }
 unset($q);
 ?>
-<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($test['title'])?></title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><main class="container py-4"><a href="topic.php?id=<?=$test['topic_id']?>">&larr; Terug naar <?=e($test['topic_name'])?></a><h1 class="mt-3"><?=e($test['title'])?></h1><div class="mb-3"><?php $typeLabels=['vocabulary'=>'Woordjes oefenen','sentences'=>'Zinnen oefenen','multiple_choice'=>'Alleen multiple choice','mixed'=>'Combinatie'];?><span class="badge text-bg-secondary"><?=e($typeLabels[$test['test_type']??'mixed']??'Combinatie')?></span><?php if(in_array(($test['test_type']??'mixed'),['vocabulary','sentences'],true) && $vocabDirectionChoice):?> <span class="badge text-bg-primary"><?=e($test['vocab_left_label'])?> → <?=e($test['vocab_right_label'])?><?php if($vocabDirectionChoice==='right_to_left'):?> omgekeerd<?php endif;?></span><?php endif;?></div><div class="progress mb-4" style="height:8px"><div id="progressBar" class="progress-bar" style="width:<?=count($questions)?100/count($questions):0?>%"></div></div><form method="post" id="quizForm"><input type="hidden" name="action" value="finish"><?php foreach($questions as $n=>$q):?><section class="question-card <?=$n===0?'':'d-none'?>" data-index="<?=$n?>" data-question-id="<?=$q['id']?>"><div class="card shadow-sm mb-4"><div class="card-body"><div class="d-flex justify-content-between align-items-center gap-3 mb-3"><div class="text-secondary question-counter">Vraag <?=$n+1?> van <?=count($questions)?></div><button type="button" class="btn btn-primary next-btn quiz-next-top"><?=$viewMode ? ($n===count($questions)-1?'Klaar':'Volgende') : 'Check'?></button></div><h2 class="h5"><?=e($q['question_text'])?></h2><?php if(!empty($q['image_path']) && preg_match('/^[A-Za-z0-9._\\/-]+$/',(string)$q['image_path']) && !str_contains($q['image_path'],'..') && !str_starts_with($q['image_path'],'/')):?><div class="mb-3 text-center"><img src="uploads/questions/<?=e($q['image_path'])?>" alt="Afbeelding bij de vraag" class="img-fluid rounded" style="max-height:420px;object-fit:contain"></div><?php endif;?><?php if($q['question_type']==='open'):?><label class="form-label text-secondary mt-3">Typ je antwoord:</label><textarea class="form-control answer-input" data-question="<?=$q['id']?>" name="question_<?=$q['id']?>" rows="4" <?=$viewMode?'disabled':''?>><?=e($q['answer_text']??'')?></textarea><?php if(in_array(($test['test_type']??'mixed'),['vocabulary','sentences'],true) || $reviewMode):?><div class="special-chars mt-3" data-explanation="<?=e($q['explanation']??'')?>"><div class="text-secondary small mb-2">Speciale tekens</div><div class="special-char-grid"></div></div><?php endif;?><?php else:?><div class="answer-grid"><?php foreach($q['options'] as $opt):?><label class="answer-option <?=($viewMode && (int)($q['selected_option_id']??0)===(int)$opt['id']) ? ((int)($q['is_correct']??0)===1 ? 'answer-option-review-correct' : 'answer-option-review-incorrect') : ''?>">
+<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($test['title'])?></title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><main class="container py-4"><a href="topic.php?id=<?=$test['topic_id']?>">&larr; Terug naar <?=e($test['topic_name'])?></a><h1 class="mt-3"><?=e($test['title'])?></h1><div class="mb-3"><?php $typeLabels=['vocabulary'=>'Woordjes oefenen','sentences'=>'Zinnen oefenen','multiple_choice'=>'Alleen multiple choice','mixed'=>'Combinatie'];?><span class="badge text-bg-secondary"><?=e($typeLabels[$test['test_type']??'mixed']??'Combinatie')?></span><?php if(in_array(($test['test_type']??'mixed'),['vocabulary','sentences'],true) && $vocabDirectionChoice):?> <span class="badge text-bg-primary"><?=e($test['vocab_left_label'])?> → <?=e($test['vocab_right_label'])?><?php if($vocabDirectionChoice==='right_to_left'):?> omgekeerd<?php endif;?></span><?php endif;?></div><div class="progress mb-4" style="height:8px"><div id="progressBar" class="progress-bar" style="width:<?=count($questions)?100/count($questions):0?>%"></div></div><form method="post" id="quizForm"><input type="hidden" name="action" value="finish"><?php foreach($questions as $n=>$q):?><section class="question-card <?=$n===0?'':'d-none'?>" data-index="<?=$n?>" data-question-id="<?=$q['id']?>"><div class="card shadow-sm mb-4"><div class="card-body"><div class="d-flex justify-content-between align-items-center gap-3 mb-3"><div class="text-secondary question-counter">Vraag <?=$n+1?> van <?=count($questions)?></div><button type="button" class="btn btn-primary next-btn quiz-next-top"><?=$viewMode ? ($n===count($questions)-1?'Klaar':'Volgende') : 'Check'?></button></div><h2 class="h5"><?=e($q['question_text'])?></h2><?php if(!empty($q['image_path']) && preg_match('/^[A-Za-z0-9._\\/-]+$/',(string)$q['image_path']) && !str_contains($q['image_path'],'..') && !str_starts_with($q['image_path'],'/')):?><div class="mb-3 text-center"><img src="uploads/questions/<?=e($q['image_path'])?>" alt="Afbeelding bij de vraag" class="img-fluid rounded" style="max-height:420px;object-fit:contain"></div><?php endif;?><?php if($q['question_type']==='open'):?><label class="form-label text-secondary mt-3">Typ je antwoord:</label><textarea class="form-control answer-input" data-question="<?=$q['id']?>" name="question_<?=$q['id']?>" rows="4" <?=$viewMode?'disabled':''?>><?=e($q['answer_text']??'')?></textarea><?php
+$showSpecialChars=!empty($test['vocab_left_label'])&&!empty($test['vocab_right_label']);
+$targetLanguage='';
+if($showSpecialChars&&!$viewMode){
+    if(($test['vocab_direction']??'both')==='right_to_left')$targetLanguage=(string)$test['vocab_left_label'];
+    elseif(($test['vocab_direction']??'both')==='left_to_right')$targetLanguage=(string)$test['vocab_right_label'];
+    else $targetLanguage=($n%2===0)?(string)$test['vocab_right_label']:(string)$test['vocab_left_label'];
+}
+if($showSpecialChars):?><div class="special-chars mt-3" data-explanation="<?=e($q['explanation']??'')?>" data-language="<?=e($targetLanguage)?>"><div class="text-secondary small mb-2">Speciale tekens</div><div class="special-char-grid"></div></div><?php endif;?><?php else:?><div class="answer-grid"><?php foreach($q['options'] as $opt):?><label class="answer-option <?=($viewMode && (int)($q['selected_option_id']??0)===(int)$opt['id']) ? ((int)($q['is_correct']??0)===1 ? 'answer-option-review-correct' : 'answer-option-review-incorrect') : ''?>">
 <input class="form-check-input answer-input answer-radio-input" data-question="<?=$q['id']?>" type="radio" name="question_<?=$q['id']?>" value="<?=$opt['id']?>" <?=((int)($q['selected_option_id']??0)===(int)$opt['id'])?'checked':''?> <?=$viewMode?'disabled':''?>><span class="answer-text"><?=e($opt['option_text'])?></span></label><?php endforeach;?></div><?php endif;?><?php if($viewMode):?>
 <?php
 $viewAnswered=$q['answer_text']!==null && trim((string)$q['answer_text'])!=='';
@@ -498,22 +506,37 @@ if($q['question_type']==='multiple_choice'){
  function value(card){const el=card.querySelector('input[type=radio]:checked,textarea');return el?el.value.trim():'';}
  function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
  const specialChars={
-   nederlands:['ë','ï','é'],dutch:['ë','ï','é'],
-   duits:['ä','ö','ü','ß'],deutsch:['ä','ö','ü','ß'],german:['ä','ö','ü','ß'],
-   spaans:['á','é','í','ó','ú','ü','ñ','¿','¡'],spanish:['á','é','í','ó','ú','ü','ñ','¿','¡'],
-   frans:['à','â','æ','ç','é','è','ê','ë','î','ï','ô','œ','ù','û','ü','ÿ'],french:['à','â','æ','ç','é','è','ê','ë','î','ï','ô','œ','ù','û','ü','ÿ'],
-   engels:['’'],english:['’']
+   nederlands:['ë','ï','é','è','ê','ö','ü','á','à','â'],
+   dutch:['ë','ï','é','è','ê','ö','ü','á','à','â'],
+   duits:['ä','ö','ü','ß','Ä','Ö','Ü'],deutsch:['ä','ö','ü','ß','Ä','Ö','Ü'],german:['ä','ö','ü','ß','Ä','Ö','Ü'],
+   spaans:['á','é','í','ó','ú','ü','ñ','¿','¡','Á','É','Í','Ó','Ú','Ü','Ñ'],
+   spanish:['á','é','í','ó','ú','ü','ñ','¿','¡','Á','É','Í','Ó','Ú','Ü','Ñ'],
+   frans:['à','â','æ','ç','é','è','ê','ë','î','ï','ô','œ','ù','û','ü','ÿ','À','Â','Æ','Ç','É','È','Ê','Ë','Î','Ï','Ô','Œ','Ù','Û','Ü','Ÿ'],
+   french:['à','â','æ','ç','é','è','ê','ë','î','ï','ô','œ','ù','û','ü','ÿ','À','Â','Æ','Ç','É','È','Ê','Ë','Î','Ï','Ô','Œ','Ù','Û','Ü','Ÿ'],
+   engels:['’','á','é','í','ó','ú','ä','ö','ü','ñ'],english:['’','á','é','í','ó','ú','ä','ö','ü','ñ'],
+   italiaans:['à','è','é','ì','ò','ù','À','È','É','Ì','Ò','Ù'],italian:['à','è','é','ì','ò','ù','À','È','É','Ì','Ò','Ù'],
+   portugees:['á','à','â','ã','ç','é','ê','í','ó','ô','õ','ú','ü'],portuguese:['á','à','â','ã','ç','é','ê','í','ó','ô','õ','ú','ü'],
+   zweeds:['å','ä','ö','Å','Ä','Ö'],swedish:['å','ä','ö','Å','Ä','Ö'],
+   deens:['æ','ø','å','Æ','Ø','Å'],danish:['æ','ø','å','Æ','Ø','Å'],
+   noors:['æ','ø','å','Æ','Ø','Å'],norwegian:['æ','ø','å','Æ','Ø','Å'],
+   fins:['ä','ö','å','Ä','Ö','Å'],finnish:['ä','ö','å','Ä','Ö','Å'],
+   pools:['ą','ć','ę','ł','ń','ó','ś','ź','ż','Ą','Ć','Ę','Ł','Ń','Ó','Ś','Ź','Ż'],polish:['ą','ć','ę','ł','ń','ó','ś','ź','ż','Ą','Ć','Ę','Ł','Ń','Ó','Ś','Ź','Ż'],
+   tsjechisch:['á','č','ď','é','ě','í','ň','ó','ř','š','ť','ú','ů','ý','ž'],czech:['á','č','ď','é','ě','í','ň','ó','ř','š','ť','ú','ů','ý','ž'],
+   slowaaks:['á','ä','č','ď','é','í','ĺ','ľ','ň','ó','ô','ŕ','š','ť','ú','ý','ž'],slovak:['á','ä','č','ď','é','í','ĺ','ľ','ň','ó','ô','ŕ','š','ť','ú','ý','ž'],
+   hongaars:['á','é','í','ó','ö','ő','ú','ü','ű'],hungarian:['á','é','í','ó','ö','ő','ú','ü','ű'],
+   roemeens:['ă','â','î','ș','ț'],romanian:['ă','â','î','ș','ț'],
+   turks:['ç','ğ','ı','İ','ö','ş','ü','Ç','Ğ','Ö','Ş','Ü'],turkish:['ç','ğ','ı','İ','ö','ş','ü','Ç','Ğ','Ö','Ş','Ü'],
+   iJslands:['á','ð','é','í','ó','ú','ý','þ','æ','ö'],icelandic:['á','ð','é','í','ó','ú','ý','þ','æ','ö']
  };
  function languageKey(label){return String(label||'').trim().toLowerCase().replace(/\s+/g,' ').replace(/^de /,'');}
- function charsForExplanation(explanation){
-   const m=String(explanation||'').match(/^Vertaal naar\s+(.+?)\.?$/i);
-   const label=m?m[1].trim():explanation;
-   return specialChars[languageKey(label)]||[];
+ function charsForLanguage(label){
+   const key=languageKey(label);
+   return specialChars[key]||[];
  }
  function setupSpecialChars(card){
    const box=card.querySelector('.special-chars');if(!box)return;
    const grid=box.querySelector('.special-char-grid');
-   const chars=charsForExplanation(box.dataset.explanation);
+   const chars=charsForLanguage(box.dataset.language);
    if(!chars.length){box.classList.add('d-none');return;}
    chars.forEach(ch=>{
      const btn=document.createElement('button');btn.type='button';
