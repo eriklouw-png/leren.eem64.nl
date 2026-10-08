@@ -1952,3 +1952,117 @@ body.leren-admin .ai-source-error,
   white-space:nowrap;
   text-transform:lowercase;
 }
+
+
+/* Homepage subject cards — compact visual grid inspired by the new reference layout. */
+.subjects-grid{
+  --bs-gutter-x:.9rem;
+  --bs-gutter-y:1rem;
+}
+.subject-col{
+  width:50%;
+}
+.subject-home-tile{
+  aspect-ratio:1.32 / 1;
+  border-radius:1.25rem;
+  border:0;
+  box-shadow:0 .25rem .8rem rgba(0,0,0,.10);
+}
+.subject-home-tile:hover{
+  transform:translateY(-2px);
+  box-shadow:0 .55rem 1.2rem rgba(0,0,0,.16);
+}
+.subject-home-tile .subject-card-image{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  min-height:0;
+  background-size:cover;
+  background-position:center;
+}
+.subject-home-tile .subject-card-overlay{
+  background:linear-gradient(180deg,rgba(0,0,0,.04) 0%,rgba(0,0,0,.12) 42%,rgba(0,0,0,.76) 100%);
+}
+.subject-home-content{
+  position:absolute;
+  inset:0;
+  z-index:2;
+  display:flex;
+  align-items:flex-end;
+  gap:.8rem;
+  padding:1.05rem 1rem;
+}
+.subject-home-icon{
+  flex:0 0 3.7rem;
+  width:3.7rem;
+  height:3.7rem;
+  margin-bottom:.05rem;
+  border-radius:.85rem;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#fff;
+  font-size:1.95rem;
+  box-shadow:0 .2rem .5rem rgba(0,0,0,.18);
+}
+.subject-icon-green{background:#20bf6b}
+.subject-icon-orange{background:#ff8c00}
+.subject-icon-purple{background:#7b3fe4}
+.subject-icon-red{background:#ef5350}
+.subject-icon-blue{background:#2f80ed}
+.subject-home-text{
+  min-width:0;
+  flex:1 1 auto;
+  align-self:flex-end;
+}
+.subject-home-tile .subject-card-title{
+  margin:0 0 .12rem!important;
+  color:#fff!important;
+  font-size:clamp(1.15rem,2.3vw,1.65rem);
+  line-height:1.05;
+  font-weight:750;
+  text-shadow:0 2px 5px rgba(0,0,0,.8);
+  overflow-wrap:anywhere;
+}
+.subject-card-count{
+  color:rgba(255,255,255,.92);
+  font-size:1rem;
+  line-height:1.15;
+  font-weight:500;
+  text-shadow:0 1px 4px rgba(0,0,0,.8);
+}
+.subject-home-chevron{
+  flex:0 0 3.5rem;
+  width:3.5rem;
+  height:3.5rem;
+  margin-bottom:.1rem;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(45,45,45,.72);
+  color:#fff;
+  font-size:1.7rem;
+  box-shadow:0 .2rem .5rem rgba(0,0,0,.18);
+}
+.subject-home-chevron i{line-height:1}
+@media(max-width:767.98px){
+  .subjects-grid{--bs-gutter-x:.6rem;--bs-gutter-y:.6rem}
+  .subject-home-tile{aspect-ratio:1.12 / 1;border-radius:1rem}
+  .subject-home-content{gap:.55rem;padding:.7rem}
+  .subject-home-icon{
+    flex-basis:2.8rem;width:2.8rem;height:2.8rem;
+    border-radius:.7rem;font-size:1.45rem;
+  }
+  .subject-home-tile .subject-card-title{font-size:1.05rem}
+  .subject-card-count{font-size:.76rem}
+  .subject-home-chevron{flex-basis:2.6rem;width:2.6rem;height:2.6rem;font-size:1.25rem}
+}
+@media(max-width:390px){
+  .subject-home-content{gap:.4rem;padding:.6rem}
+  .subject-home-icon{flex-basis:2.45rem;width:2.45rem;height:2.45rem;font-size:1.25rem}
+  .subject-home-tile .subject-card-title{font-size:.95rem}
+  .subject-card-count{font-size:.7rem}
+  .subject-home-chevron{flex-basis:2.3rem;width:2.3rem;height:2.3rem;font-size:1.1rem}
+}
