@@ -126,6 +126,9 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
 
 <h2 class="h4 mt-5 mb-3">Studenten</h2>
 <?php
+$studentScopeSql=is_admin()
+    ? '1=1'
+    : 'EXISTS (SELECT 1 FROM manager_students ms WHERE ms.manager_id='.(int)($_SESSION['user']['id']??0).' AND ms.student_id=u.id)';
 $students=$pdo->query("
     SELECT
         u.id,u.name,u.email,u.image_mime,
@@ -146,7 +149,7 @@ $students=$pdo->query("
         WHERE status='finished' AND mode='normal'
         GROUP BY student_id
     ) a ON a.student_id=u.id
-    WHERE u.role='student'
+    WHERE u.role='student' AND ($studentScopeSql)
     ORDER BY u.name
 ")->fetchAll();
 ?>
