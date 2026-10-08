@@ -1,6 +1,6 @@
 <?php
 require __DIR__.'/../app/bootstrap.php';
-require_admin();
+require_manager();
 
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT)?:0;
 $subject=null;
