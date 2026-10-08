@@ -37,8 +37,18 @@ $mode=$reviewMode?'mistakes':($_GET['mode']??'normal');
 if(!in_array($mode,['normal','mistakes'],true))$mode='normal';
 $sourceAttemptId=filter_input(INPUT_GET,'source',FILTER_VALIDATE_INT)?:null;
 $newAttempt=isset($_GET['new'])&&$_GET['new']==='1';
+$viewMode=isset($_GET['view'])&&$_GET['view']==='1';
 $resumeAttemptId=filter_input(INPUT_GET,'attempt',FILTER_VALIDATE_INT)?:0;
-if(!$newAttempt && $reviewMode && $resumeAttemptId){
+if($viewMode && !$reviewMode && $resumeAttemptId){
+    $view=$pdo->prepare("SELECT id FROM attempts WHERE id=? AND test_id=? AND student_id=? AND status='finished' AND mode='normal' LIMIT 1");
+    $view->execute([$resumeAttemptId,$testId,$studentId]);
+    if($view->fetch()){
+        $attempt=['id'=>$resumeAttemptId];
+    }else{
+        redirect('topic.php?id='.(int)$test['topic_id']);
+    }
+}
+if(!$viewMode && !$newAttempt && $reviewMode && $resumeAttemptId){
     $resume=$pdo->prepare("SELECT id FROM attempts WHERE id=? AND test_id=? AND student_id=? AND status='in_progress' AND mode='mistakes' LIMIT 1");
     $resume->execute([$resumeAttemptId,$testId,$studentId]);
     if($resume->fetch()){
@@ -47,13 +57,13 @@ if(!$newAttempt && $reviewMode && $resumeAttemptId){
         $resumeAttemptId=0;
     }
 }
-if(!$newAttempt && $mode==='normal'){
+if(!$viewMode && !$newAttempt && $mode==='normal'){
     $resume=$pdo->prepare("SELECT id FROM attempts WHERE test_id=? AND student_id=? AND status='in_progress' AND mode='normal' ORDER BY started_at DESC LIMIT 1");
     $resume->execute([$testId,$studentId]);
     if(!$resume->fetch())$newAttempt=true;
 }
 $vocabDirectionChoice=$_POST['vocab_direction']??($_GET['direction']??null);
-if(in_array(($test['test_type']??'mixed'),['vocabulary','sentences'],true) && $newAttempt && $_SERVER['REQUEST_METHOD']==='GET' && !$vocabDirectionChoice){
+if(in_array(($test['test_type']??'mixed'),['vocabulary','sentences'],true) && $newAttempt && !$viewMode && $_SERVER['REQUEST_METHOD']==='GET' && !$vocabDirectionChoice){
     $allowed=$test['vocab_direction']??'both';
     ?>
     <!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($test['title'])?></title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head>
@@ -83,7 +93,7 @@ if(in_array(($test['test_type']??'mixed'),['vocabulary','sentences'],true) && $n
     }
 }
 
-if($_SERVER['REQUEST_METHOD']==='POST' && in_array(($_POST['action']??''),['save_answer','save_draft'],true)){
+if(!$viewMode && $_SERVER['REQUEST_METHOD']==='POST' && in_array(($_POST['action']??''),['save_answer','save_draft'],true)){
     header('Content-Type: application/json; charset=utf-8');
     $attemptId=filter_var($_POST['attempt_id']??null,FILTER_VALIDATE_INT);
     $questionId=filter_var($_POST['question_id']??null,FILTER_VALIDATE_INT);
@@ -177,7 +187,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && in_array(($_POST['action']??''),['save
 }
 
 $attempt=$attempt??null;
-if(!$attempt && (($mode==='normal' && !$newAttempt) || $reviewMode)){
+if(!$attempt && !$viewMode && (($mode==='normal' && !$newAttempt) || $reviewMode)){
     $resumeMode=$reviewMode?'mistakes':'normal';
     if($reviewMode){
         $x=$pdo->prepare("SELECT a.*, (SELECT COUNT(*) FROM attempt_answers aa WHERE aa.attempt_id=a.id AND ((aa.answer_text IS NOT NULL AND TRIM(aa.answer_text)<>'') OR aa.selected_option_id IS NOT NULL)) AS answered_count FROM attempts a WHERE a.test_id=? AND a.student_id=? AND a.status='in_progress' AND a.mode=? AND (SELECT COUNT(*) FROM attempt_answers aa0 WHERE aa0.attempt_id=a.id AND ((aa0.answer_text IS NOT NULL AND TRIM(aa0.answer_text)<>'') OR aa0.selected_option_id IS NOT NULL)) > 0 ORDER BY answered_count DESC, a.id DESC LIMIT 1");
@@ -198,7 +208,7 @@ if(!$attempt && (($mode==='normal' && !$newAttempt) || $reviewMode)){
     $x->execute([$testId,$studentId,$resumeMode]);$attempt=$x->fetch();
 }
 
-if(!$attempt){
+if(!$attempt && !$viewMode){
     $mistakes=[];
     if($mode==='mistakes'){
         if($reviewMode){
@@ -338,7 +348,7 @@ if(!$attempt){
 }
 $attemptId=(int)$attempt['id'];
 
-if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='finish'){
+if(!$viewMode && $_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='finish'){
     $x=$pdo->prepare("SELECT COUNT(*) total,
         SUM(CASE WHEN aa.id IS NOT NULL
               AND ((aa.answer_text IS NOT NULL AND TRIM(aa.answer_text)<>'') OR aa.selected_option_id IS NOT NULL)
@@ -415,12 +425,15 @@ $x=$pdo->prepare("SELECT q.id,q.question_text,q.image_path,q.question_type,q.exp
 
 $x->execute([$attemptId]);$questions=$x->fetchAll();
 $resumeIndex=0;
+if(!$viewMode){
 foreach($questions as $questionIndex=>$resumeQuestion){
     $hasAnswer=($resumeQuestion['selected_option_id']!==null && $resumeQuestion['selected_option_id']!=='')
         || ($resumeQuestion['answer_text']!==null && trim((string)$resumeQuestion['answer_text'])!=='');
     if(!$hasAnswer){$resumeIndex=$questionIndex;break;}
     $resumeIndex=$questionIndex+1;
 }
+}
+if($viewMode)$resumeIndex=0;
 if($resumeIndex>=count($questions) && count($questions)>0)$resumeIndex=count($questions)-1;
 $o=$pdo->prepare("SELECT id,option_text FROM question_options WHERE question_id=? ORDER BY sort_order,id");
 foreach($questions as &$q){
@@ -433,7 +446,28 @@ foreach($questions as &$q){
 }
 unset($q);
 ?>
-<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($test['title'])?></title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><main class="container py-4"><a href="topic.php?id=<?=$test['topic_id']?>">&larr; Terug naar <?=e($test['topic_name'])?></a><h1 class="mt-3"><?=e($test['title'])?></h1><div class="mb-3"><?php $typeLabels=['vocabulary'=>'Woordjes oefenen','sentences'=>'Zinnen oefenen','multiple_choice'=>'Alleen multiple choice','mixed'=>'Combinatie'];?><span class="badge text-bg-secondary"><?=e($typeLabels[$test['test_type']??'mixed']??'Combinatie')?></span><?php if(in_array(($test['test_type']??'mixed'),['vocabulary','sentences'],true) && $vocabDirectionChoice):?> <span class="badge text-bg-primary"><?=e($test['vocab_left_label'])?> → <?=e($test['vocab_right_label'])?><?php if($vocabDirectionChoice==='right_to_left'):?> omgekeerd<?php endif;?></span><?php endif;?></div><div class="progress mb-4" style="height:8px"><div id="progressBar" class="progress-bar" style="width:<?=count($questions)?100/count($questions):0?>%"></div></div><form method="post" id="quizForm"><input type="hidden" name="action" value="finish"><?php foreach($questions as $n=>$q):?><section class="question-card <?=$n===0?'':'d-none'?>" data-index="<?=$n?>" data-question-id="<?=$q['id']?>"><div class="card shadow-sm mb-4"><div class="card-body"><div class="d-flex justify-content-between align-items-center gap-3 mb-3"><div class="text-secondary question-counter">Vraag <?=$n+1?> van <?=count($questions)?></div><button type="button" class="btn btn-primary next-btn quiz-next-top">Check</button></div><h2 class="h5"><?=e($q['question_text'])?></h2><?php if(!empty($q['image_path']) && preg_match('/^[A-Za-z0-9._\\/-]+$/',(string)$q['image_path']) && !str_contains($q['image_path'],'..') && !str_starts_with($q['image_path'],'/')):?><div class="mb-3 text-center"><img src="uploads/questions/<?=e($q['image_path'])?>" alt="Afbeelding bij de vraag" class="img-fluid rounded" style="max-height:420px;object-fit:contain"></div><?php endif;?><?php if($q['question_type']==='open'):?><label class="form-label text-secondary mt-3">Typ je antwoord:</label><textarea class="form-control answer-input" data-question="<?=$q['id']?>" name="question_<?=$q['id']?>" rows="4"><?=e($q['answer_text']??'')?></textarea><?php if(in_array(($test['test_type']??'mixed'),['vocabulary','sentences'],true) || $reviewMode):?><div class="special-chars mt-3" data-explanation="<?=e($q['explanation']??'')?>"><div class="text-secondary small mb-2">Speciale tekens</div><div class="special-char-grid"></div></div><?php endif;?><?php else:?><div class="answer-grid"><?php foreach($q['options'] as $opt):?><label class="answer-option"><input class="form-check-input answer-input" data-question="<?=$q['id']?>" type="radio" name="question_<?=$q['id']?>" value="<?=$opt['id']?>" <?=((int)($q['selected_option_id']??0)===(int)$opt['id'])?'checked':''?>><span class="answer-text"><?=e($opt['option_text'])?></span></label><?php endforeach;?></div><?php endif;?><div class="feedback mt-4 d-none"></div></div></div></section><?php endforeach;?></form></main><script>
+<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($test['title'])?></title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><main class="container py-4"><a href="topic.php?id=<?=$test['topic_id']?>">&larr; Terug naar <?=e($test['topic_name'])?></a><h1 class="mt-3"><?=e($test['title'])?></h1><div class="mb-3"><?php $typeLabels=['vocabulary'=>'Woordjes oefenen','sentences'=>'Zinnen oefenen','multiple_choice'=>'Alleen multiple choice','mixed'=>'Combinatie'];?><span class="badge text-bg-secondary"><?=e($typeLabels[$test['test_type']??'mixed']??'Combinatie')?></span><?php if(in_array(($test['test_type']??'mixed'),['vocabulary','sentences'],true) && $vocabDirectionChoice):?> <span class="badge text-bg-primary"><?=e($test['vocab_left_label'])?> → <?=e($test['vocab_right_label'])?><?php if($vocabDirectionChoice==='right_to_left'):?> omgekeerd<?php endif;?></span><?php endif;?></div><div class="progress mb-4" style="height:8px"><div id="progressBar" class="progress-bar" style="width:<?=count($questions)?100/count($questions):0?>%"></div></div><form method="post" id="quizForm"><input type="hidden" name="action" value="finish"><?php foreach($questions as $n=>$q):?><section class="question-card <?=$n===0?'':'d-none'?>" data-index="<?=$n?>" data-question-id="<?=$q['id']?>"><div class="card shadow-sm mb-4"><div class="card-body"><div class="d-flex justify-content-between align-items-center gap-3 mb-3"><div class="text-secondary question-counter">Vraag <?=$n+1?> van <?=count($questions)?></div><button type="button" class="btn btn-primary next-btn quiz-next-top"><?=$viewMode ? ($n===count($questions)-1?'Klaar':'Volgende') : 'Check'?></button></div><h2 class="h5"><?=e($q['question_text'])?></h2><?php if(!empty($q['image_path']) && preg_match('/^[A-Za-z0-9._\\/-]+$/',(string)$q['image_path']) && !str_contains($q['image_path'],'..') && !str_starts_with($q['image_path'],'/')):?><div class="mb-3 text-center"><img src="uploads/questions/<?=e($q['image_path'])?>" alt="Afbeelding bij de vraag" class="img-fluid rounded" style="max-height:420px;object-fit:contain"></div><?php endif;?><?php if($q['question_type']==='open'):?><label class="form-label text-secondary mt-3">Typ je antwoord:</label><textarea class="form-control answer-input" data-question="<?=$q['id']?>" name="question_<?=$q['id']?>" rows="4" <?=$viewMode?'disabled':''?>><?=e($q['answer_text']??'')?></textarea><?php if(in_array(($test['test_type']??'mixed'),['vocabulary','sentences'],true) || $reviewMode):?><div class="special-chars mt-3" data-explanation="<?=e($q['explanation']??'')?>"><div class="text-secondary small mb-2">Speciale tekens</div><div class="special-char-grid"></div></div><?php endif;?><?php else:?><div class="answer-grid"><?php foreach($q['options'] as $opt):?><label class="answer-option"><input class="form-check-input answer-input" data-question="<?=$q['id']?>" type="radio" name="question_<?=$q['id']?>" value="<?=$opt['id']?>" <?=((int)($q['selected_option_id']??0)===(int)$opt['id'])?'checked':''?> <?=$viewMode?'disabled':''?>><span class="answer-text"><?=e($opt['option_text'])?></span></label><?php endforeach;?></div><?php endif;?><?php if($viewMode):?>
+<?php
+$viewAnswered=$q['answer_text']!==null && trim((string)$q['answer_text'])!=='';
+$viewAnswered=$viewAnswered || $q['selected_option_id']!==null;
+$viewCorrect=(int)($q['is_correct']??0)===1;
+$viewCorrectAnswers=[];
+if($q['question_type']==='multiple_choice'){
+    $viewCorrectStmt=$pdo->prepare("SELECT option_text FROM question_options WHERE question_id=? AND is_correct=1 ORDER BY sort_order,id");
+    $viewCorrectStmt->execute([(int)$q['id']]);
+    $viewCorrectAnswers=$viewCorrectStmt->fetchAll(PDO::FETCH_COLUMN);
+}else{
+    $viewCorrectStmt=$pdo->prepare("SELECT answer_text FROM open_question_answers WHERE question_id=? ORDER BY sort_order,id");
+    $viewCorrectStmt->execute([(int)$q['id']]);
+    $viewCorrectAnswers=$viewCorrectStmt->fetchAll(PDO::FETCH_COLUMN);
+}
+?>
+<div class="feedback mt-4 alert <?=$viewCorrect?'alert-success':'alert-danger'?>">
+<strong><?=$viewCorrect?'Goed!':'Helaas, fout.'?></strong>
+<?php if(!$viewAnswered):?> <span>Niet ingevuld.</span><?php endif;?>
+<?php if(!$viewCorrect && $viewCorrectAnswers):?><div class="mt-2"><strong>Juiste antwoord:</strong> <?=e(implode(' / ',$viewCorrectAnswers))?></div><?php endif;?>
+</div>
+<?php else:?><div class="feedback mt-4 d-none"></div><?php endif;?></div></div></section><?php endforeach;?></form></main><script>
 (function(){
  const attemptId='<?= (int)$attemptId ?>',testId='<?= (int)$testId ?>';
  const cards=[...document.querySelectorAll('.question-card')],bar=document.getElementById('progressBar'),form=document.getElementById('quizForm');
@@ -497,6 +531,10 @@ unset($q);
  }
  function show(i){cards.forEach((c,n)=>c.classList.toggle('d-none',n!==i));current=i;bar.style.width=((i+1)/cards.length*100)+'%';window.scrollTo({top:0,behavior:'smooth'});}
  async function check(card,i,btn){
+   if(<?= $viewMode ? 'true' : 'false' ?>){
+     if(i===cards.length-1){window.location.href='topic.php?id='+<?= (int)$test['topic_id'] ?>;return;}
+     show(i+1);return;
+   }
    if(btn.dataset.checked==='1'){
      if(i===cards.length-1){finish();return;}
      show(i+1);
@@ -542,6 +580,7 @@ unset($q);
  }
  cards.forEach((card,i)=>{
    card.querySelector('.next-btn').addEventListener('click',()=>check(card,i,card.querySelector('.next-btn')));
+   if(<?= $viewMode ? 'true' : 'false' ?>) return;
    card.querySelectorAll('.answer-input').forEach(el=>{
      if(el.type==='radio')el.addEventListener('change',()=>{
        updateSelected(card);
@@ -552,7 +591,7 @@ unset($q);
    updateSelected(card);
  });
  show(current);
- activity({action:'start',test_id:testId,attempt_id:attemptId});
+ if(!<?= $viewMode ? 'true' : 'false' ?>)activity({action:'start',test_id:testId,attempt_id:attemptId});
  let activeUntil=Date.now()+60000;const touch=()=>{activeUntil=Date.now()+60000;};
  ['mousemove','mousedown','keydown','touchstart','scroll'].forEach(e=>window.addEventListener(e,touch,{passive:true}));
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')touch();});
