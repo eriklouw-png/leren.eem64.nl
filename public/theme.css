@@ -860,3 +860,10 @@ body.leren-admin .system-update-step.error{background:rgba(220,53,69,.16);border
 /* Bevestiging voor 'Start opnieuw' */
 .leren-confirm-start{background-color:#fd7e14!important;border-color:#fd7e14!important;color:#fff!important}
 .leren-confirm-start:hover,.leren-confirm-start:focus{background-color:#e86f0b!important;border-color:#e86f0b!important;color:#fff!important}
+
+
+/* Sub-test menu actions */
+.leren-modal-action.leren-menu-continue{border:1px solid #198754!important;color:#198754!important;background:transparent!important}
+.leren-modal-action.leren-menu-continue:hover,.leren-modal-action.leren-menu-continue:focus{background:rgba(25,135,84,.10)!important;color:#198754!important}
+.leren-modal-action.leren-menu-restart{border:1px solid #fd7e14!important;color:#fd7e14!important;background:transparent!important}
+.leren-modal-action.leren-menu-restart:hover,.leren-modal-action.leren-menu-restart:focus{background:rgba(253,126,20,.10)!important;color:#fd7e14!important}
