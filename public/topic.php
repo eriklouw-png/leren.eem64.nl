@@ -250,17 +250,17 @@ if($t['in_progress_attempt_id']){
     $primaryLabel='Start';
 }
 ?>
-<div class="leren-list-item subtest-item<?=$isComplete?' subtest-complete':''?>">
-<a class="subtest-item-main" href="<?=e($primaryUrl)?>">
-<div class="subtest-item-content">
-<div class="subtest-item-heading">
-<?php if($isComplete):?><span class="subtest-check" aria-label="100 procent behaald">✓</span><?php endif;?>
-<strong class="subtest-title"><?=e($t['title'])?></strong>
+<div class="leren-list-item<?=$isComplete?' subtest-complete':''?>">
+<a class="leren-list-item-main" href="<?=e($primaryUrl)?>">
+<div class="leren-list-item-content">
+<div class="leren-list-item-heading">
+<?php if($isComplete):?><span class="leren-list-item-check" aria-label="100 procent behaald">✓</span><?php endif;?>
+<strong class="leren-list-item-title"><?=e($t['title'])?></strong>
 </div>
-<div class="subtest-item-meta"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=((in_array(($t['test_type']??'mixed'),['vocabulary','sentences'],true) && ($t['vocab_direction']??'both')==='both') ? (int)ceil(((int)$t['question_count'])/2) : (int)$t['question_count'])?> <?=($t['test_type']??'mixed')==='vocabulary'?'woorden':(($t['test_type']??'mixed')==='sentences'?'zinnen':'vragen')?> · Aangemaakt <?=e(date('d-m-Y H:i',strtotime((string)$t['created_at'])))?></div>
-<?php if($t['description']):?><div class="subtest-item-description"><?=e($t['description'])?></div><?php endif;?>
+<div class="leren-list-item-subtitle"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=((in_array(($t['test_type']??'mixed'),['vocabulary','sentences'],true) && ($t['vocab_direction']??'both')==='both') ? (int)ceil(((int)$t['question_count'])/2) : (int)$t['question_count'])?> <?=($t['test_type']??'mixed')==='vocabulary'?'woorden':(($t['test_type']??'mixed')==='sentences'?'zinnen':'vragen')?> · Aangemaakt <?=e(date('d-m-Y H:i',strtotime((string)$t['created_at'])))?></div>
+<?php if($t['description']):?><div class="leren-list-item-description"><?=e($t['description'])?></div><?php endif;?>
 </div>
-<div class="subtest-item-progress">
+<div class="leren-list-item-progress">
 <?php
 if($t['in_progress_attempt_id']){
     $subProgressTotal=max(1,(int)$t['in_progress_total_count']);
@@ -280,7 +280,7 @@ if($t['in_progress_attempt_id']){
 <?php if($subProgressLabel):?><div class="small text-secondary mt-1"><?=$subProgressLabel?></div><?php endif;?>
 </div>
 </a>
-<button type="button" class="subtest-menu-button" aria-label="Opties voor <?=e($t['title'])?>" data-subtest-menu
+<button type="button" class="leren-list-item-menu" aria-label="Opties voor <?=e($t['title'])?>" data-subtest-menu
  data-title="<?=e($t['title'])?>"
  data-primary-url="<?=e($primaryUrl)?>"
  data-primary-label="<?=e($primaryLabel)?>"
