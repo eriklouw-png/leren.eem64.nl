@@ -51,7 +51,7 @@ ob_start(static function(string $html): string{
     $adminPages=[
         'admin.php','subject_manage.php','subject_edit.php','topic_manage.php','topic_new.php','topic_edit.php',
         'test_new.php','ai_test_generator.php','test_edit.php','import.php','vocabulary_import.php',
-        'questions.php','question_edit.php','summary_edit.php','user_edit.php',
+        'questions.php','question_edit.php','summary_edit.php','user_edit.php','user_permissions.php',
         'system_update.php','debug_question.php','ai_usage.php','ai_rules.php'
     ];
     $isAdminPage=in_array($script,$adminPages,true);
@@ -270,7 +270,7 @@ function leren_manager_pages():array{
 }
 function leren_admin_only_pages():array{
     return [
-        'system_update.php','debug_question.php','ai_usage.php','ai_rules.php','ai_warmup.php','ai_generate_image.php','activity.php',
+        'system_update.php','debug_question.php','ai_usage.php','ai_rules.php','ai_warmup.php','ai_generate_image.php','activity.php','user_permissions.php',
     ];
 }
 function leren_apply_access_control():void{
