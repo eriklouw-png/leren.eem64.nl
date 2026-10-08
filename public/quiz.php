@@ -481,6 +481,7 @@ if($q['question_type']==='multiple_choice'){
 }
 ?>
 <div class="feedback mt-4 alert <?=$viewCorrect?'alert-success':'alert-danger'?>">
+<button type="button" class="feedback-close" aria-label="Melding sluiten">&times;</button>
 <strong><?=$viewCorrect?'Goed!':'Helaas, fout.'?></strong>
 <?php if(!$viewAnswered):?> <span>Niet ingevuld.</span><?php endif;?>
 <?php if(!$viewCorrect && $viewCorrectAnswers):?><div class="mt-2"><strong>Juiste antwoord:</strong> <?=e(implode(' / ',$viewCorrectAnswers))?></div><?php endif;?>
@@ -534,10 +535,19 @@ if($q['question_type']==='multiple_choice'){
      label.classList.toggle('selected',!!radio?.checked);
    });
  }
+ function closeFeedback(box){if(box)box.classList.add('d-none');}
+ document.addEventListener('click',e=>{
+   const close=e.target.closest('.feedback-close');
+   if(close)closeFeedback(close.closest('.feedback'));
+ });
+ function warningFeedback(box,message){
+   box.className='feedback mt-4 alert alert-warning';
+   box.innerHTML='<button type="button" class="feedback-close" aria-label="Melding sluiten">&times;</button>'+esc(message);
+ }
  function feedback(card,data){
    const box=card.querySelector('.feedback');
    box.className='feedback mt-4 alert '+(data.is_correct?'alert-success':'alert-danger');
-   box.innerHTML='<strong>'+(data.is_correct?'Goed!':'Helaas, fout.')+'</strong>';
+   box.innerHTML='<button type="button" class="feedback-close" aria-label="Melding sluiten">&times;</button><strong>'+(data.is_correct?'Goed!':'Helaas, fout.')+'</strong>';
    if(!data.is_correct && data.feedback && data.feedback.correct_answers && data.feedback.correct_answers.length) box.innerHTML+='<div class="mt-2"><strong>Juiste antwoord:</strong> '+data.feedback.correct_answers.map(esc).join(' / ')+'</div>';
    if(data.feedback && data.feedback.explanation) box.innerHTML+='<div class="mt-2">'+esc(data.feedback.explanation)+'</div>';
    if(data.feedback && data.feedback.ai_reason) box.innerHTML+='<div class="mt-2 small text-secondary"><strong>AI-melding:</strong> '+esc(data.feedback.ai_reason)+'</div>';
@@ -559,7 +569,7 @@ if($q['question_type']==='multiple_choice'){
      return;
    }
    const v=value(card);
-   if(!v){const b=card.querySelector('.feedback');b.className='feedback mt-4 alert alert-warning';b.textContent='Geef eerst een antwoord voordat je verdergaat.';return;}
+   if(!v){warningFeedback(card.querySelector('.feedback'),'Geef eerst een antwoord voordat je verdergaat.');return;}
    if(checking)return;checking=true;btn.disabled=true;
    try{
      const data=await save(card.dataset.questionId,v);
@@ -571,7 +581,7 @@ if($q['question_type']==='multiple_choice'){
      btn.disabled=false;
    }catch(e){
      btn.disabled=false;
-     const b=card.querySelector('.feedback');b.className='feedback mt-4 alert alert-warning';b.textContent='Het antwoord kon niet worden opgeslagen. '+(e&&e.message?'Fout: '+e.message:'Probeer het opnieuw.');
+     warningFeedback(card.querySelector('.feedback'),'Het antwoord kon niet worden opgeslagen. '+(e&&e.message?'Fout: '+e.message:'Probeer het opnieuw.'));
    }finally{checking=false;}
  }
  async function finish(){
@@ -590,7 +600,7 @@ if($q['question_type']==='multiple_choice'){
      const card=cards[cards.length-1];
      const b=card.querySelector('.feedback');
      b.className='feedback mt-4 alert alert-warning';
-     b.textContent='De toets kon niet worden afgerond. Probeer het opnieuw.';
+     b.innerHTML='<button type="button" class="feedback-close" aria-label="Melding sluiten">&times;</button>De toets kon niet worden afgerond. Probeer het opnieuw.';
      const btn=card.querySelector('.next-btn');btn.disabled=false;btn.textContent='Afronden';
    }
  }
