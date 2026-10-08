@@ -53,7 +53,7 @@ if($studentId && $topics){
     $testCountStmt=$pdo->prepare("SELECT topic_id,COUNT(*) FROM tests WHERE topic_id IN ($placeholders) AND is_active=1 GROUP BY topic_id");
     $testCountStmt->execute($topicIds);
     $testCounts=[];
-    foreach($testCountStmt->fetchAll() as $row)$testCounts[(int)$row['topic_id']]=(int)$row['COUNT(*)'];
+    foreach($testCountStmt->fetchAll() as $row)$testCounts[(int)$row['topic_id']]=(int)$row['COUNT(*)];
 
     foreach($topics as &$topic){
         $topicId=(int)$topic['id'];
@@ -78,9 +78,10 @@ if($studentId && $topics){
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?=e($subject['name'])?> - Leren</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
-<main>
+<body class="bg-light">
+<main class="container py-4">
 <a href="index.php">&larr; Alle vakken</a>
 
 <div class="subject-header mt-3">
@@ -143,7 +144,6 @@ Overhoring
 </div>
 <?php endif;?>
 </div>
-<div class="leren-list-item-menu-indicator" aria-hidden="true"></div>
 </a>
 <button type="button" class="leren-list-item-menu" data-list-menu data-list-modal="topicOptionsModal"
  data-menu-title="<?=e($topic['name'])?>"
