@@ -322,7 +322,7 @@ if($t['in_progress_attempt_id']){
     $subProgressPercent=(int)round($subProgressDone/$subProgressTotal*100);
     $subProgressLabel=$subProgressDone.' van '.$subProgressTotal.' vragen';
 }elseif($latestScore!==null){
-    $subProgressPercent=(int)round($latestScore);
+    $subProgressPercent=100;
     $subProgressLabel='';
 }else{
     $subProgressPercent=0;
@@ -334,6 +334,12 @@ if($t['in_progress_attempt_id']){
 <?php if($subProgressLabel):?><div class="small text-secondary mt-1"><?=$subProgressLabel?></div><?php endif;?>
 </div>
 </a>
+<?php if($latestScore!==null):?>
+<div class="leren-list-item-result" aria-label="Resultaat <?=e((string)(int)round($latestScore))?> procent">
+<span>Resultaat</span>
+<strong><?=e((string)(int)round($latestScore))?>%</strong>
+</div>
+<?php endif;?>
 <button type="button" class="leren-list-item-menu" data-list-menu data-list-modal="subtestOptionsModal"
  data-menu-title="<?=e($t['title'])?>"
  data-list-actions="<?=e(json_encode($menuActions, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES))?>"
