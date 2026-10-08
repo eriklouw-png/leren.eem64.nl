@@ -5,10 +5,10 @@ $subjects=$pdo->query("SELECT s.id,s.name,s.description,s.image_mime,COUNT(DISTI
 
 function subject_visual(string $name):array{
     $n=mb_strtolower(trim($name),'UTF-8');
-    if(str_contains($n,'biolog')) return ['bi-leaf-fill','green'];
+    if(str_contains($n,'biolog')) return ['leaf','green'];
     if(str_contains($n,'duits') || str_contains($n,'duitse')) return ['bi-book','orange'];
     if(str_contains($n,'geschiedenis')) return ['bi-bank','purple'];
-    if(str_contains($n,'spaans') || str_contains($n,'spaanse')) return ['bi-globe-europe-africa','red'];
+    if(str_contains($n,'spaans') || str_contains($n,'spaanse')) return ['bull','red'];
     if(str_contains($n,'test')) return ['bi-file-earmark-text','blue'];
     if(str_contains($n,'nederlands')) return ['bi-chat-square-text','blue'];
     if(str_contains($n,'engels')) return ['bi-translate','blue'];
@@ -35,8 +35,6 @@ $subjects=$subjects->fetchAll();
 </nav>
 
 <main class="container pb-5">
-<h1>Kies een vak</h1>
-
 <div class="row g-3 subjects-grid">
 <?php foreach($subjects as $s):
     [$icon,$iconColor]=subject_visual((string)$s['name']);
@@ -46,7 +44,15 @@ $subjects=$subjects->fetchAll();
 <div class="subject-card-image" style="background-image:<?=($s['image_mime']?'url(\'subject_image.php?id='.(int)$s['id'].'\')':'none')?>;">
 <div class="subject-card-overlay"></div>
 <div class="subject-home-content">
-<div class="subject-home-icon subject-icon-<?=$iconColor?>" aria-hidden="true"><i class="bi <?=$icon?>"></i></div>
+<div class="subject-home-icon subject-icon-<?=$iconColor?>" aria-hidden="true">
+<?php if($icon==='leaf'): ?>
+<svg class="subject-custom-icon" viewBox="0 0 64 64" aria-hidden="true"><path d="M56 8C35 10 18 18 11 31c-5 10-1 20 8 24 9 4 19 0 25-8 8-10 11-24 12-39Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/><path d="M10 56c11-16 23-25 38-34" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg>
+<?php elseif($icon==='bull'): ?>
+<svg class="subject-custom-icon" viewBox="0 0 64 64" aria-hidden="true"><path d="M17 24C9 22 5 17 5 10c7 1 13 4 17 9 3-3 6-4 10-4s7 1 10 4c4-5 10-8 17-9 0 7-4 12-12 14 2 5 1 11-2 16-3 5-8 9-13 12-5-3-10-7-13-12-3-5-4-11-2-16Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M24 34h4m8 0h4M28 44c3 2 5 2 8 0" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
+<?php else: ?>
+<i class="bi <?=$icon?>"></i>
+<?php endif; ?>
+</div>
 <div class="subject-home-text">
 <h2 class="subject-card-title"><?=e($s['name'])?></h2>
 <div class="subject-card-count"><?=$s['test_count']?> <?=((int)$s['test_count']===1?'sub-test':'sub-testen')?></div>
