@@ -313,7 +313,7 @@ if($t['in_progress_attempt_id']){
   function addAction(label,url,primary){
     if(!url)return;
     const a=document.createElement('a');
-    a.className='btn '+(primary?'btn-primary':'btn-outline-secondary');
+    a.className='leren-modal-action '+(primary?'primary':'');
     a.href=url;
     a.textContent=label;
     actions.appendChild(a);
