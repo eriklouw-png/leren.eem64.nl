@@ -47,28 +47,7 @@ unset($topicSummaryList);
 $labels=['vocabulary'=>'Woordjes oefenen','sentences'=>'Zinnen oefenen','multiple_choice'=>'Multiple choice','open'=>'Open vragen','mixed'=>'Combinatie'];
 ?>
 <!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($subject['name'])?> - Beheer</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<style>
-.topic-header{background:#cfe2ff!important}
-.topic-header-inner{display:flex;align-items:center;width:100%;min-height:52px}
-.topic-header-title{flex:1;min-width:0}
-.topic-collapse-button{border:0;background:transparent;width:100%;text-align:left;padding:.75rem 1rem;color:inherit;font-size:1rem;font-weight:400}
-.topic-header-actions{display:flex;align-items:center;gap:.5rem;padding-right:.5rem;flex-shrink:0}
-.topic-chevron{border:0;background:transparent;width:38px;height:38px;display:flex;align-items:center;justify-content:center;padding:0}
-.topic-chevron span{width:11px;height:11px;border-right:2px solid #0d3b66;border-bottom:2px solid #0d3b66;transform:rotate(45deg);transition:transform .15s ease}
-.topic-chevron.collapsed span{transform:rotate(225deg)}
-
-@media(max-width:576px){
-.topic-header-inner{flex-direction:column;align-items:stretch;min-height:0}
-.topic-header-title{width:100%}
-.topic-collapse-button{padding:.9rem 1rem .55rem;line-height:1.25}
-.topic-collapse-button strong{display:block;font-size:1.15rem;line-height:1.25;padding-right:.25rem}
-.topic-header-title .small{display:block;margin-left:0!important;margin-top:.3rem;font-size:.82rem;line-height:1.3}
-.topic-header-actions{width:100%;padding:0 .75rem .75rem;gap:.5rem}
-.topic-header-actions .btn{flex:1;min-width:0;white-space:normal;line-height:1.2;padding:.5rem .6rem}
-.topic-header-actions .topic-chevron{flex:0 0 42px;width:42px;height:42px}
-.topic-header{border-bottom:0!important}
-}
-</style></head>
+</head>
 <body class="bg-light"><main class="container py-4">
 <a href="admin.php">&larr; Beheer</a>
 <div class="card shadow-sm mt-3 overflow-hidden">
