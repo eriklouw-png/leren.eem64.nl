@@ -20,18 +20,14 @@ if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='reactivate_t
     redirect('subject.php?id='.$subjectId);
 }
 
-$x=$pdo->prepare("SELECT id,name,test_date FROM topics WHERE subject_id=? AND is_active=1 ORDER BY
-    test_date DESC,
-    created_at DESC,
-    name");
+$x=$pdo->prepare("SELECT id,name,test_date FROM topics WHERE subject_id=? AND is_active=1 ORDER BY test_date DESC,created_at DESC,name");
 $x->execute([$subjectId]);
 $topics=$x->fetchAll();
 
-/* Een volledige overhoring is klaar zodra alle actieve sub-testen
- * minimaal één keer zijn afgerond en hun laatste resultaat 100% is. */
 if($studentId && $topics){
     $topicIds=array_map(fn($row)=>(int)$row['id'],$topics);
     $placeholders=implode(',',array_fill(0,count($topicIds),'?'));
+
     $scoreStmt=$pdo->prepare("
         SELECT t.topic_id,t.id test_id,a.score
         FROM tests t
@@ -53,20 +49,19 @@ if($studentId && $topics){
     $testCountStmt=$pdo->prepare("SELECT topic_id,COUNT(*) FROM tests WHERE topic_id IN ($placeholders) AND is_active=1 GROUP BY topic_id");
     $testCountStmt->execute($topicIds);
     $testCounts=[];
-    foreach($testCountStmt->fetchAll() as $row)$testCounts[(int)$row['topic_id']]=(int)$row['COUNT(*)];
+    foreach($testCountStmt->fetchAll() as $row){
+        $testCounts[(int)$row['topic_id']]=(int)$row['COUNT(*)'];
+    }
 
     foreach($topics as &$topic){
-        $topicId=(int)$topic['id'];
+        $topicId=(int)($topic['id']);
         $scores=$scoresByTopic[$topicId]??[];
         $topic['is_complete']=isset($testCounts[$topicId]) && count($scores)===$testCounts[$topicId]
             && $testCounts[$topicId]>0
             && !array_filter($scores,fn($score)=>$score<100);
         $topic['progress_total']=$testCounts[$topicId]??0;
         $topic['progress_done']=count($scores);
-        /* De voortgang toont het gemiddelde van de laatste scores per sub-test.
-         * Zo blijft een overhoring met alle sub-testen gemaakt maar bijvoorbeeld
-         * één score van 80% zichtbaar als 95% wanneer de andere drie 100% zijn. */
-        $topic['progress_percent']=($topic['progress_done']>0)
+        $topic['progress_percent']=$topic['progress_done']>0
             ? (int)round(array_sum($scores)/$topic['progress_done'])
             : 0;
     }
@@ -94,17 +89,16 @@ if($studentId && $topics){
 </div>
 
 <section class="leren-section">
-<div class="leren-section-title">
-<h2>Overhoringen</h2>
-</div>
+<div class="leren-section-title"><h2>Overhoringen</h2></div>
 
 <?php if(!$topics):?>
 <div class="leren-empty">Er zijn nog geen overhoringen voor dit vak.</div>
 <?php else:?>
 <div class="leren-list">
 <?php foreach($topics as $topic):
+    $topicId=(int)($topic['id']);
     $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d');
-    $topicUrl='topic.php?id='.(int)$topic['id'];
+    $topicUrl='topic.php?id='.$topicId;
     $menuActions=[
         ['label'=>'Bekijken','href'=>$topicUrl,'primary'=>true],
     ];
@@ -112,15 +106,15 @@ if($studentId && $topics){
         $menuActions[]=[
             'type'=>'form',
             'label'=>'Heractiveren',
-            'action'=>'subject.php?id='.(int)$subjectId,
+            'action'=>'subject.php?id='.$subjectId,
             'fields'=>[
                 'action'=>'reactivate_topic',
-                'topic_id'=>(int)$topic['id'],
+                'topic_id'=>$topicId,
             ],
         ];
     }
 ?>
-<div class="leren-list-item<?=$archived?' topic-archived':''?><?=$topic['is_complete']??false?' subtest-complete':''?>">
+<div class="leren-list-item<?=$archived?' topic-archived':''?><?=!empty($topic['is_complete'])?' subtest-complete':''?>">
 <a class="leren-list-item-main" href="<?=e($topicUrl)?>">
 <div class="leren-list-item-content">
 <div class="leren-list-item-heading">
