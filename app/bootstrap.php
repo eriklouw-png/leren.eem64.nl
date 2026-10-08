@@ -3,6 +3,16 @@ declare(strict_types=1);
 
 session_start();
 
+// Tijdens de ontwikkeling voorkomen we dat browser/CDN-caches oude HTML en CSS blijven tonen.
+// De cache-busting query op theme.css zorgt daarnaast dat een gewijzigde stylesheet direct wordt opgehaald.
+if(!headers_sent()){
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    header('CDN-Cache-Control: no-store');
+    header('Cloudflare-CDN-Cache-Control: no-store');
+}
+
 // Inject the global website theme into all HTML pages. JSON/API responses are left untouched.
 function leren_navbar_html(string $area): string{
     if(!isset($_SESSION['user']) || !is_array($_SESSION['user']))return '';
@@ -35,7 +45,9 @@ ob_start(static function(string $html): string{
     $isAdminPage=in_array($script,$adminPages,true);
 
     if(stripos($html,'</head>')!==false){
-        $theme='<link rel="stylesheet" href="/theme.css"><link rel="icon" type="image/svg+xml" href="/assets/leren-logo.svg"><link rel="apple-touch-icon" href="/assets/leren-logo.svg">';
+        $themeFile=__DIR__.'/../public/theme.css';
+        $themeVersion=is_file($themeFile)?(string)filemtime($themeFile):(string)time();
+        $theme='<link rel="stylesheet" href="/theme.css?v='.rawurlencode($themeVersion).'"><link rel="icon" type="image/svg+xml" href="/assets/leren-logo.svg"><link rel="apple-touch-icon" href="/assets/leren-logo.svg">';
         $html=preg_replace('~</head>~i',$theme.'</head>',$html,1)??$html;
     }
 
