@@ -231,14 +231,14 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         $sourceExplanation=$label!==''?'Vertaal het woord. '.$label.'.':'Vertaal het woord naar de andere taal.';
                         $reverseExplanation='Vertaal het woord naar de andere taal.';
                         $generatedQuestions[]=[
-                            'type'=>'open','question'=>$source,'correct_answer'=>$sourceAnswer,
+                            'type'=>'open','question'=>$source,'learning_term'=>$source,'correct_answer'=>$sourceAnswer,
                             'options'=>[],'correct_option'=>0,'accepted_answers'=>[$sourceAnswer],
                             'explanation'=>$sourceExplanation,'source_page'=>1,'use_image'=>false,
                             'image_prompt'=>'','image_search_query'=>'','svg_code'=>'',
                             'image_method'=>'none','image_reason'=>'','grammar_label'=>$label
                         ];
                         $generatedQuestions[]=[
-                            'type'=>'open','question'=>$translation,'correct_answer'=>$translationAnswer,
+                            'type'=>'open','question'=>$translation,'learning_term'=>$source,'correct_answer'=>$translationAnswer,
                             'options'=>[],'correct_option'=>0,'accepted_answers'=>[$translationAnswer],
                             'explanation'=>$reverseExplanation,'source_page'=>1,'use_image'=>false,
                             'image_prompt'=>'','image_search_query'=>'','svg_code'=>'',
@@ -724,7 +724,7 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 <?php foreach(($generatedSub['questions']??[]) as $qi=>$q):?>
 <div class="generated-question ai-question-list-item">
 <div class="ai-question-list-main">
-<div class="question-text"><span class="question-number"><?=($qi+1)?>:</span> <?=e($q['question'])?></div>
+<div class="question-text"><span class="question-number"><?=($qi+1)?>:</span> <?=e($isPracticeList ? ($q['learning_term']??$q['question']) : $q['question'])?></div>
 <?php
 $grammarLabel=mb_strtolower(trim((string)($q['grammar_label']??'')));
 $grammarParts=[];
