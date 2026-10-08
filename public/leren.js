@@ -164,7 +164,7 @@ function initConfirmModal(){
 
     if(ok){
         ok.addEventListener('click',function(){
-            if(!pendingForm)return;
+            if(!pendingForm && !pendingLinkHref)return;
             const form=pendingForm;
             const submitter=pendingSubmitter;
             const linkHref=pendingLinkHref;
