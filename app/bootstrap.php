@@ -77,7 +77,7 @@ ob_start(static function(string $html): string{
     }
 
     if(isset($_SESSION['user']) && is_array($_SESSION['user']) && stripos($html,'<body')!==false){
-        $area=$isAdminPage?'admin':'website';
+        $area=($isAdminPage && !($script==='user_edit.php' && leren_user_role()==='student'))?'admin':'website';
         $navbar=leren_navbar_html($area);
 
         if($navbar!==''){
@@ -191,7 +191,7 @@ function leren_manager_pages():array{
 }
 function leren_admin_only_pages():array{
     return [
-        'system_update.php','debug_question.php','ai_usage.php','ai_rules.php','ai_warmup.php',
+        'system_update.php','debug_question.php','ai_usage.php','ai_rules.php','ai_warmup.php','ai_generate_image.php','activity.php',
     ];
 }
 function leren_apply_access_control():void{
