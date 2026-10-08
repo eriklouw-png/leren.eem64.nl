@@ -249,6 +249,16 @@ if($t['in_progress_attempt_id']){
     $primaryUrl='quiz.php?id='.(int)$t['id'];
     $primaryLabel='Start';
 }
+$menuActions=[
+    ['label'=>$primaryLabel,'href'=>$primaryUrl,'primary'=>true],
+];
+if($t['in_progress_attempt_id']){
+    $menuActions[]=['label'=>'Ga verder','href'=>$primaryUrl];
+}
+$menuActions[]=['label'=>'Start opnieuw','href'=>'quiz.php?id='.(int)$t['id'].'&new=1'];
+if(($mistakeCountByTest[(int)$t['id']]??0)>0){
+    $menuActions[]=['label'=>'Alleen fouten ('.(int)$mistakeCountByTest[(int)$t['id']].')','href'=>'quiz.php?id='.(int)$t['id'].'&mode=mistakes'];
+}
 ?>
 <div class="leren-list-item<?=$isComplete?' subtest-complete':''?>">
 <a class="leren-list-item-main" href="<?=e($primaryUrl)?>">
@@ -280,72 +290,24 @@ if($t['in_progress_attempt_id']){
 <?php if($subProgressLabel):?><div class="small text-secondary mt-1"><?=$subProgressLabel?></div><?php endif;?>
 </div>
 </a>
-<button type="button" class="leren-list-item-menu" aria-label="Opties voor <?=e($t['title'])?>" data-subtest-menu
- data-title="<?=e($t['title'])?>"
- data-primary-url="<?=e($primaryUrl)?>"
- data-primary-label="<?=e($primaryLabel)?>"
- data-resume-url="<?=e($t['in_progress_attempt_id']?'quiz.php?id='.(int)$t['id']:'')?>"
- data-restart-url="<?=e('quiz.php?id='.(int)$t['id'].'&new=1')?>"
- data-mistakes-url="<?=e(($mistakeCountByTest[(int)$t['id']]??0)>0?'quiz.php?id='.(int)$t['id'].'&mode=mistakes':'')?>"
- data-mistakes-count="<?= (int)($mistakeCountByTest[(int)$t['id']]??0)?>">
+<button type="button" class="leren-list-item-menu" data-list-menu data-list-modal="subtestOptionsModal"
+ data-menu-title="<?=e($t['title'])?>"
+ data-list-actions="<?=e(json_encode($menuActions, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES))?>"
+ aria-label="Opties voor <?=e($t['title'])?>">
 <span></span><span></span><span></span>
 </button>
 </div>
 <?php endforeach;?>
 </div>
 <?php endif;?>
-<div class="leren-modal" id="subtestOptionsModal" hidden aria-hidden="true">
-<div class="leren-modal-backdrop" data-modal-close></div>
+<div class="leren-modal" id="subtestOptionsModal" data-list-modal hidden aria-hidden="true">
+<div class="leren-modal-backdrop" data-list-modal-close></div>
 <div class="leren-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="subtestOptionsTitle">
-<button type="button" class="leren-modal-close" data-modal-close aria-label="Sluiten">×</button>
-<h2 id="subtestOptionsTitle">Sub-test</h2>
-<div class="leren-modal-actions" id="subtestOptionsActions"></div>
+<button type="button" class="leren-modal-close" data-list-modal-close aria-label="Sluiten">&times;</button>
+<h2 id="subtestOptionsTitle" data-list-modal-title>Sub-test</h2>
+<div class="leren-modal-actions" data-list-modal-actions></div>
 </div>
 </div>
-
-<script>
-(function(){
-  const modal=document.getElementById('subtestOptionsModal');
-  const title=document.getElementById('subtestOptionsTitle');
-  const actions=document.getElementById('subtestOptionsActions');
-  if(!modal||!title||!actions)return;
-  let lastFocus=null;
-  function addAction(label,url,primary){
-    if(!url)return;
-    const a=document.createElement('a');
-    a.className='leren-modal-action '+(primary?'primary':'');
-    a.href=url;
-    a.textContent=label;
-    actions.appendChild(a);
-  }
-  function openModal(button){
-    lastFocus=button;
-    title.textContent=button.dataset.title||'Sub-test';
-    actions.innerHTML='';
-    addAction(button.dataset.primaryLabel||'Start',button.dataset.primaryUrl,true);
-    if(button.dataset.resumeUrl) addAction('Ga verder',button.dataset.resumeUrl,false);
-    addAction('Start opnieuw',button.dataset.restartUrl,false);
-    if(button.dataset.mistakesUrl){
-      addAction('Alleen fouten ('+(button.dataset.mistakesCount||'0')+')',button.dataset.mistakesUrl,false);
-    }
-    modal.hidden=false;
-    modal.setAttribute('aria-hidden','false');
-    document.body.classList.add('leren-modal-open');
-    modal.querySelector('[data-modal-close]').focus();
-  }
-  function closeModal(){
-    modal.hidden=true;
-    modal.setAttribute('aria-hidden','true');
-    document.body.classList.remove('leren-modal-open');
-    if(lastFocus)lastFocus.focus();
-  }
-  document.querySelectorAll('[data-subtest-menu]').forEach(button=>{
-    button.addEventListener('click',()=>openModal(button));
-  });
-  modal.querySelectorAll('[data-modal-close]').forEach(el=>el.addEventListener('click',closeModal));
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!modal.hidden)closeModal();});
-})();
-</script>
 </main>
 </body>
 </html>
