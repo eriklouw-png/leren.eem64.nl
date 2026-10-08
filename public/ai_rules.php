@@ -5,6 +5,7 @@ require_admin();
 $pdo->exec("CREATE TABLE IF NOT EXISTS ai_general_instructions (
  id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
  source_validation_instructions TEXT NULL,
+ analysis_instructions TEXT NULL,
  language_instructions TEXT NULL,
  question_generation_instructions TEXT NULL,
  summary_instructions TEXT NULL,
@@ -14,7 +15,8 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS ai_general_instructions (
  updated_at DATETIME NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 foreach([
- 'language_instructions'=>'ALTER TABLE ai_general_instructions ADD COLUMN language_instructions TEXT NULL AFTER source_validation_instructions',
+ 'analysis_instructions'=>'ALTER TABLE ai_general_instructions ADD COLUMN analysis_instructions TEXT NULL AFTER source_validation_instructions',
+ 'language_instructions'=>'ALTER TABLE ai_general_instructions ADD COLUMN language_instructions TEXT NULL AFTER analysis_instructions',
  'question_generation_instructions'=>'ALTER TABLE ai_general_instructions ADD COLUMN question_generation_instructions TEXT NULL AFTER language_instructions',
  'summary_instructions'=>'ALTER TABLE ai_general_instructions ADD COLUMN summary_instructions TEXT NULL AFTER question_generation_instructions',
  'image_generation_instructions'=>'ALTER TABLE ai_general_instructions ADD COLUMN image_generation_instructions TEXT NULL AFTER summary_instructions',
@@ -25,8 +27,8 @@ foreach([
 $defaults=ai_general_instruction_defaults();
 $generalRow=$pdo->query("SELECT * FROM ai_general_instructions WHERE id=1")->fetch();
 if(!$generalRow){
- $stmt=$pdo->prepare("INSERT INTO ai_general_instructions(id,source_validation_instructions,language_instructions,question_generation_instructions,summary_instructions,image_generation_instructions,image_validation_instructions,rule_generation_instructions,updated_at) VALUES(1,?,?,?,?,?,?,?,NOW())");
- $stmt->execute([$defaults['source_validation_instructions'],$defaults['language_instructions'],$defaults['question_generation_instructions'],$defaults['summary_instructions'],$defaults['image_generation_instructions'],$defaults['image_validation_instructions'],$defaults['rule_generation_instructions']]);
+ $stmt=$pdo->prepare("INSERT INTO ai_general_instructions(id,source_validation_instructions,analysis_instructions,language_instructions,question_generation_instructions,summary_instructions,image_generation_instructions,image_validation_instructions,rule_generation_instructions,updated_at) VALUES(1,?,?,?,?,?,?,?,?,NOW())");
+ $stmt->execute([$defaults['source_validation_instructions'],$defaults['analysis_instructions'],$defaults['language_instructions'],$defaults['question_generation_instructions'],$defaults['summary_instructions'],$defaults['image_generation_instructions'],$defaults['image_validation_instructions'],$defaults['rule_generation_instructions']]);
  $generalRow=$pdo->query("SELECT * FROM ai_general_instructions WHERE id=1")->fetch();
 }else{
  $updates=[];$params=[];
@@ -108,6 +110,7 @@ $bySubject=[];foreach($rules as $r)$bySubject[(int)$r['subject_id']][]=$r;
 <input type="hidden" name="action" value="save_general">
 <div class="rule-grid">
 <div><label class="form-label fw-semibold">Broncontrole van geüploade foto’s</label><textarea class="form-control" name="source_validation_instructions" rows="7"><?=e((string)($generalInstructions['source_validation_instructions']??''))?></textarea><div class="form-text">Voor alle vakken: bepaalt of een geüploade foto geschikt lesmateriaal is.</div></div>
+<div><label class="form-label fw-semibold">Bronanalyse</label><textarea class="form-control" name="analysis_instructions" rows="7"><?=e((string)($generalInstructions['analysis_instructions']??''))?></textarea><div class="form-text">Algemene analyse van opdrachten en boekpagina’s.</div></div>
 <div><label class="form-label fw-semibold">Taal- en woordenlijsten</label><textarea class="form-control" name="language_instructions" rows="7"><?=e((string)($generalInstructions['language_instructions']??''))?></textarea><div class="form-text">Voor alle talen, inclusief toekomstige talen.</div></div>
 <div><label class="form-label fw-semibold">Algemene vraaggeneratie</label><textarea class="form-control" name="question_generation_instructions" rows="7"><?=e((string)($generalInstructions['question_generation_instructions']??''))?></textarea><div class="form-text">Basisregels die gelden bij het genereren van vragen.</div></div>
 <div><label class="form-label fw-semibold">Samenvattingen</label><textarea class="form-control" name="summary_instructions" rows="7"><?=e((string)($generalInstructions['summary_instructions']??''))?></textarea><div class="form-text">Algemene regels voor AI-samenvattingen.</div></div>
