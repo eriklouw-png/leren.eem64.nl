@@ -486,8 +486,10 @@ unset($q);
 $showSpecialChars=!empty($test['vocab_left_label'])&&!empty($test['vocab_right_label']);
 $targetLanguage='';
 if($showSpecialChars&&!$viewMode){
-    if(($test['vocab_direction']??'both')==='right_to_left')$targetLanguage=(string)$test['vocab_left_label'];
-    elseif(($test['vocab_direction']??'both')==='left_to_right')$targetLanguage=(string)$test['vocab_right_label'];
+    // Gebruik de daadwerkelijk gekozen oefenrichting, niet de vaste richting
+    // waarmee de woordenlijst oorspronkelijk is opgeslagen.
+    if($vocabDirectionChoice==='right_to_left')$targetLanguage=(string)$test['vocab_left_label'];
+    elseif($vocabDirectionChoice==='left_to_right')$targetLanguage=(string)$test['vocab_right_label'];
     else $targetLanguage=($n%2===0)?(string)$test['vocab_right_label']:(string)$test['vocab_left_label'];
 }
 if($showSpecialChars):?><div class="special-chars mt-3" data-explanation="<?=e($q['explanation']??'')?>" data-language="<?=e($targetLanguage)?>"><div class="text-secondary small mb-2">Speciale tekens</div><div class="special-char-grid"></div></div><?php endif;?><?php else:?><div class="answer-grid"><?php foreach($q['options'] as $opt):?><label class="answer-option <?=($viewMode && (int)($q['selected_option_id']??0)===(int)$opt['id']) ? ((int)($q['is_correct']??0)===1 ? 'answer-option-review-correct' : 'answer-option-review-incorrect') : ''?>">
@@ -527,7 +529,7 @@ if($q['question_type']==='multiple_choice'){
  const specialChars={
    nederlands:['ë','ï','é','è','ê','ö','ü','á','à','â'],
    dutch:['ë','ï','é','è','ê','ö','ü','á','à','â'],
-   duits:['ä','ö','ü','ß','Ä','Ö','Ü'],deutsch:['ä','ö','ü','ß','Ä','Ö','Ü'],german:['ä','ö','ü','ß','Ä','Ö','Ü'],
+   duits:['ä','ö','ü','ß','ẞ','Ä','Ö','Ü'],deutsch:['ä','ö','ü','ß','ẞ','Ä','Ö','Ü'],german:['ä','ö','ü','ß','ẞ','Ä','Ö','Ü'],
    spaans:['á','é','í','ó','ú','ü','ñ','¿','¡','Á','É','Í','Ó','Ú','Ü','Ñ'],
    spanish:['á','é','í','ó','ú','ü','ñ','¿','¡','Á','É','Í','Ó','Ú','Ü','Ñ'],
    frans:['à','â','æ','ç','é','è','ê','ë','î','ï','ô','œ','ù','û','ü','ÿ','À','Â','Æ','Ç','É','È','Ê','Ë','Î','Ï','Ô','Œ','Ù','Û','Ü','Ÿ'],
