@@ -7,10 +7,7 @@ if(!is_array($currentUser) || empty($currentUser['id'])){redirect('login.php');}
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT)?:0;
 if(!$id)$id=(int)$currentUser['id'];
 
-if(!is_manager() && $id!==(int)$currentUser['id']){
-    http_response_code(403);
-    exit('Geen toegang.');
-}
+require_manage_student($id);
 $student=null;
 if($id){
     $x=$pdo->prepare("SELECT id,name,email,image_mime FROM users WHERE id=? AND role='student'");
@@ -24,6 +21,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $action=$_POST['action']??'save';
     $postId=filter_var($_POST['id']??null,FILTER_VALIDATE_INT)?:0;
     if(!$postId){http_response_code(400);exit('Ongeldig ID.');}
+
+    require_manage_student($postId);
 
     if($action==='delete'){
         if(!is_admin()){http_response_code(403);exit('Alleen een admin kan een student verwijderen.');}
