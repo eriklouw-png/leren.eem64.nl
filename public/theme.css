@@ -757,15 +757,15 @@ body.leren-admin .leren-modal-action.primary{background:#2f7d4a;border-color:#2f
 .leren-list-item-thumbnail{
   flex:0 0 88px;
   width:88px;
-  height:88px;
-  align-self:center;
-  object-fit:cover;
+  height:auto;
+  align-self:stretch;
+  overflow:hidden;
   background:var(--leren-surface-muted);
 }
 .leren-list-item-thumbnail img{
   display:block;
   width:88px;
-  height:88px;
+  height:100%;
   object-fit:cover;
 }
 .leren-list-item-content{min-width:0}
@@ -814,8 +814,8 @@ body.leren-admin .leren-list-item-menu:hover{background:#3b4c41;color:#fff}
   .leren-list-item-main{padding:.85rem .9rem}
   .leren-list-item-menu{flex-basis:44px}
   .leren-list-item-progress{width:100%}
-  .leren-list-item-thumbnail{flex-basis:72px;width:72px;height:72px}
-  .leren-list-item-thumbnail img{width:72px;height:72px}
+  .leren-list-item-thumbnail{flex-basis:72px;width:72px;height:auto;align-self:stretch}
+  .leren-list-item-thumbnail img{width:72px;height:100%;object-fit:cover}
 }
 
 
