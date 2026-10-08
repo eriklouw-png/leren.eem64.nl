@@ -293,16 +293,25 @@ if(!$attempt && !$viewMode){
         }
     }
     if($mode==='normal'){
-        if(in_array(($test['test_type']??'mixed'),['vocabulary','sentences'],true)){
-            if($vocabDirectionChoice==='left_to_right'){
-                $emptyCheck=$pdo->prepare("SELECT COUNT(*) FROM questions WHERE test_id=? AND explanation=?");
-                $emptyCheck->execute([$testId,'Vertaal naar '.$test['vocab_right_label'].'.']);
-            }elseif($vocabDirectionChoice==='right_to_left'){
-                $emptyCheck=$pdo->prepare("SELECT COUNT(*) FROM questions WHERE test_id=? AND explanation=?");
-                $emptyCheck->execute([$testId,'Vertaal naar '.$test['vocab_left_label'].'.']);
-            }else{
-                $emptyCheck=$pdo->prepare("SELECT COUNT(*) FROM questions WHERE test_id=?");
-                $emptyCheck->execute([$testId]);
+        if(in_array(($test['test_type']??'mixed'),['vocabulary','sentences'],true) && $vocabDirectionChoice!=='both'){
+            $directionTo=$vocabDirectionChoice==='left_to_right'
+                ? (string)$test['vocab_right_label']
+                : (string)$test['vocab_left_label'];
+            $directionExplanation='Vertaal naar '.$directionTo.'.';
+            $emptyCheck=$pdo->prepare("SELECT COUNT(*) FROM questions WHERE test_id=? AND explanation=?");
+            $emptyCheck->execute([$testId,$directionExplanation]);
+            $directionCount=(int)$emptyCheck->fetchColumn();
+
+            /*
+             * Oudere door de AI aangemaakte woordenlijsten hadden nog een algemene
+             * uitleg ("Vertaal het woord naar de andere taal.") zonder richting.
+             * Bij die toetsen zijn de twee richtingen per woordpaar opgeslagen:
+             * oneven sort_order = eerste richting, even = omgekeerde richting.
+             */
+            if($directionCount===0){
+                $parity= $vocabDirectionChoice==='left_to_right' ? 1 : 0;
+                $emptyCheck=$pdo->prepare("SELECT COUNT(*) FROM questions WHERE test_id=? AND MOD(sort_order,2)=?");
+                $emptyCheck->execute([$testId,$parity]);
             }
         }else{
             $emptyCheck=$pdo->prepare("SELECT COUNT(*) FROM questions WHERE test_id=?");
@@ -323,17 +332,27 @@ if(!$attempt && !$viewMode){
             foreach($mistakes as $i=>$q)$y->execute([$attemptId,$q['id'],$i+1]);
         }else{
             if(in_array(($test['test_type']??'mixed'),['vocabulary','sentences'],true)){
-                if($vocabDirectionChoice==='left_to_right'){
+                if($vocabDirectionChoice==='left_to_right' || $vocabDirectionChoice==='right_to_left'){
+                    $directionTo=$vocabDirectionChoice==='left_to_right'
+                        ? (string)$test['vocab_right_label']
+                        : (string)$test['vocab_left_label'];
+                    $directionExplanation='Vertaal naar '.$directionTo.'.';
                     $y=$pdo->prepare("SELECT id FROM questions WHERE test_id=? AND explanation=? ORDER BY RAND()");
-                    $y->execute([$testId,'Vertaal naar '.$test['vocab_right_label'].'.']);
-                }elseif($vocabDirectionChoice==='right_to_left'){
-                    $y=$pdo->prepare("SELECT id FROM questions WHERE test_id=? AND explanation=? ORDER BY RAND()");
-                    $y->execute([$testId,'Vertaal naar '.$test['vocab_left_label'].'.']);
+                    $y->execute([$testId,$directionExplanation]);
+                    $questionIds=$y->fetchAll(PDO::FETCH_COLUMN);
+
+                    // Compatibiliteit met oudere AI-woordenlijsten zonder richtingsuitleg.
+                    if(!$questionIds){
+                        $parity=$vocabDirectionChoice==='left_to_right' ? 1 : 0;
+                        $y=$pdo->prepare("SELECT id FROM questions WHERE test_id=? AND MOD(sort_order,2)=? ORDER BY RAND()");
+                        $y->execute([$testId,$parity]);
+                        $questionIds=$y->fetchAll(PDO::FETCH_COLUMN);
+                    }
                 }else{
                     $y=$pdo->prepare("SELECT id FROM questions WHERE test_id=? ORDER BY RAND()");
                     $y->execute([$testId]);
+                    $questionIds=$y->fetchAll(PDO::FETCH_COLUMN);
                 }
-                $questionIds=$y->fetchAll(PDO::FETCH_COLUMN);
                 $ins=$pdo->prepare("INSERT INTO attempt_questions(attempt_id,question_id,sort_order) VALUES(?,?,?)");
                 foreach($questionIds as $i=>$questionId)$ins->execute([$attemptId,(int)$questionId,$i+1]);
             }else{
