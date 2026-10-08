@@ -110,7 +110,7 @@ function render(s){
      document.getElementById('stepPull').classList.add('active');
    }
  }
- if(state==='success')document.querySelectorAll('.step').forEach(x=>x.classList.add('done'));
+ if(state==='success')document.querySelectorAll('.system-update-step').forEach(x=>x.classList.add('done'));
  if(state==='error'){
    document.getElementById('stepRequest').classList.add('done');
    document.getElementById('stepDone').classList.add('error');
