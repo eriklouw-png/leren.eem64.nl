@@ -92,6 +92,32 @@ ob_start(static function(string $html): string{
         }
     }
 
+    // Shared confirmation modal for destructive actions in the beheeromgeving.
+    if($isAdminPage && stripos($html,'</body>')!==false && !str_contains($html,'id="lerenConfirmModal"')){
+        $confirmModal=''
+            .'<div class="leren-modal" id="lerenConfirmModal" hidden aria-hidden="true">'
+            .'<div class="leren-modal-backdrop" data-confirm-close></div>'
+            .'<div class="leren-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="lerenConfirmTitle">'
+            .'<button type="button" class="leren-modal-close" data-confirm-close aria-label="Sluiten">&times;</button>'
+            .'<h2 id="lerenConfirmTitle">Verwijderen</h2>'
+            .'<p id="lerenConfirmMessage" class="mb-3"></p>'
+            .'<div class="leren-modal-actions">'
+            .'<button type="button" class="leren-modal-action" data-confirm-cancel>Annuleren</button>'
+            .'<button type="button" class="leren-modal-action danger" data-confirm-ok>Verwijderen</button>'
+            .'</div></div></div>'
+            .'<script>(function(){'
+            .'const m=document.getElementById("lerenConfirmModal");if(!m)return;'
+            .'const msg=document.getElementById("lerenConfirmMessage");const ok=m.querySelector("[data-confirm-ok]");let pending=null;let pendingSubmitter=null;'
+            .'function close(){m.hidden=true;m.setAttribute("aria-hidden","true");document.body.classList.remove("leren-modal-open");pending=null;pendingSubmitter=null;}'
+            .'function open(form,submitter){pending=form;pendingSubmitter=submitter||null;msg.textContent=form.dataset.confirm||"Weet u zeker dat u dit wilt verwijderen?";m.hidden=false;m.setAttribute("aria-hidden","false");document.body.classList.add("leren-modal-open");ok.focus();}'
+            .'document.addEventListener("submit",function(e){const form=e.target;if(!(form instanceof HTMLFormElement)||!form.dataset.confirm||form.dataset.confirmed==="1")return;e.preventDefault();open(form,e.submitter);},true);'
+            .'ok.addEventListener("click",function(){if(!pending)return;const form=pending;const submitter=pendingSubmitter;form.dataset.confirmed="1";close();if(submitter&&typeof form.requestSubmit==="function")form.requestSubmit(submitter);else form.submit();});'
+            .'m.querySelectorAll("[data-confirm-close],[data-confirm-cancel]").forEach(function(el){el.addEventListener("click",close);});'
+            .'document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!m.hidden)close();});'
+            .'})();</script>';
+        $html=preg_replace('~</body>~i',$confirmModal.'</body>',$html,1)??$html;
+    }
+
     return $html;
 });
 
