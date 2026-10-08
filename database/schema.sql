@@ -96,6 +96,7 @@ CREATE TABLE questions (
  image_path VARCHAR(500) NULL,
  question_type ENUM('multiple_choice','open') NOT NULL DEFAULT 'multiple_choice',
  explanation TEXT NULL,
+ grammar_label VARCHAR(255) NULL,
  sort_order INT UNSIGNED NOT NULL DEFAULT 0,
  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
  KEY idx_questions_test_order(test_id,sort_order),
