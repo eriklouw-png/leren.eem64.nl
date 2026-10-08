@@ -145,7 +145,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <nav class="navbar navbar-dark bg-dark">
 <div class="container"><a class="navbar-brand" href="admin.php">Leren beheer</a></div>
 </nav>
-<main class="container py-4" style="max-width:800px">
+<main class="container py-4">
 <a href="admin.php">&larr; Terug naar beheer</a>
 <h1 class="mt-3"><?= $id?'Vak bewerken':'Nieuw vak' ?></h1>
 
