@@ -14,7 +14,7 @@ function is_logged_in(): bool{
 
 function auth_login(int $userId): bool{
     global $pdo;
-    $stmt=$pdo->prepare("SELECT id,name,email,role FROM users WHERE id=? AND role IN ('admin','student')");
+    $stmt=$pdo->prepare("SELECT id,name,email,role FROM users WHERE id=? AND role IN ('admin','beheerder','student')");
     $stmt->execute([$userId]);
     $user=$stmt->fetch();
     if(!$user)return false;
