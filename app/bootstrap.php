@@ -118,7 +118,7 @@ ob_start(static function(string $html): string{
             .'<p id="lerenConfirmMessage" class="mb-3"></p>'
             .'<div class="leren-modal-actions">'
             .'<button type="button" class="leren-modal-action" data-confirm-cancel>Annuleren</button>'
-            .'<button type="button" class="leren-modal-action leren-confirm-start" data-confirm-ok>Start opnieuw</button>'
+            .'<button type="button" class="leren-modal-action leren-confirm-delete" data-confirm-ok>Verwijderen</button>'
             .'</div></div></div>';
         $html=preg_replace('~</body>~i',$confirmModal.'</body>',$html,1)??$html;
     }
