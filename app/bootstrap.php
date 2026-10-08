@@ -47,7 +47,9 @@ ob_start(static function(string $html): string{
     if(stripos($html,'</head>')!==false){
         $themeFile=__DIR__.'/../public/theme.css';
         $themeVersion=is_file($themeFile)?(string)filemtime($themeFile):(string)time();
-        $theme='<link rel="stylesheet" href="/theme.css?v='.rawurlencode($themeVersion).'"><link rel="icon" type="image/svg+xml" href="/assets/leren-logo.svg"><link rel="apple-touch-icon" href="/assets/leren-logo.svg">';
+        $jsFile=__DIR__.'/../public/leren.js';
+        $jsVersion=is_file($jsFile)?(string)filemtime($jsFile):(string)time();
+        $theme='<link rel="stylesheet" href="/theme.css?v='.rawurlencode($themeVersion).'"><link rel="icon" type="image/svg+xml" href="/assets/leren-logo.svg"><link rel="apple-touch-icon" href="/assets/leren-logo.svg"><script src="/leren.js?v='.rawurlencode($jsVersion).'" defer></script>';
         $html=preg_replace('~</head>~i',$theme.'</head>',$html,1)??$html;
     }
 
@@ -92,7 +94,7 @@ ob_start(static function(string $html): string{
         }
     }
 
-    // Shared confirmation modal for destructive actions in the beheeromgeving.
+    // Shared confirmation modal for destructive actions in de beheeromgeving.
     if($isAdminPage && stripos($html,'</body>')!==false && !str_contains($html,'id="lerenConfirmModal"')){
         $confirmModal=''
             .'<div class="leren-modal" id="lerenConfirmModal" hidden aria-hidden="true">'
@@ -104,17 +106,7 @@ ob_start(static function(string $html): string{
             .'<div class="leren-modal-actions">'
             .'<button type="button" class="leren-modal-action" data-confirm-cancel>Annuleren</button>'
             .'<button type="button" class="leren-modal-action danger" data-confirm-ok>Verwijderen</button>'
-            .'</div></div></div>'
-            .'<script>(function(){'
-            .'const m=document.getElementById("lerenConfirmModal");if(!m)return;'
-            .'const msg=document.getElementById("lerenConfirmMessage");const ok=m.querySelector("[data-confirm-ok]");let pending=null;let pendingSubmitter=null;'
-            .'function close(){m.hidden=true;m.setAttribute("aria-hidden","true");document.body.classList.remove("leren-modal-open");pending=null;pendingSubmitter=null;}'
-            .'function open(form,submitter){pending=form;pendingSubmitter=submitter||null;msg.textContent=form.dataset.confirm||"Weet u zeker dat u dit wilt verwijderen?";m.hidden=false;m.setAttribute("aria-hidden","false");document.body.classList.add("leren-modal-open");ok.focus();}'
-            .'document.addEventListener("submit",function(e){const form=e.target;if(!(form instanceof HTMLFormElement)||!form.dataset.confirm||form.dataset.confirmed==="1")return;e.preventDefault();open(form,e.submitter);},true);'
-            .'ok.addEventListener("click",function(){if(!pending)return;const form=pending;const submitter=pendingSubmitter;form.dataset.confirmed="1";close();if(submitter&&typeof form.requestSubmit==="function")form.requestSubmit(submitter);else form.submit();});'
-            .'m.querySelectorAll("[data-confirm-close],[data-confirm-cancel]").forEach(function(el){el.addEventListener("click",close);});'
-            .'document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!m.hidden)close();});'
-            .'})();</script>';
+            .'</div></div></div>';
         $html=preg_replace('~</body>~i',$confirmModal.'</body>',$html,1)??$html;
     }
 
