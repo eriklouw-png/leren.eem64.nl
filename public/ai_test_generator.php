@@ -721,11 +721,13 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 <input class="form-control" name="tests[<?=$si?>][description]" value="<?=e($generatedSub['description']??'')?>" placeholder="Beschrijving (optioneel)">
 </div>
 <div class="generated-question-list">
+<?php $visibleQuestionNumber=0; ?>
 <?php foreach(($generatedSub['questions']??[]) as $qi=>$q):?>
 <?php if($isPracticeList && ($qi % 2)!==0) continue; ?>
+<?php $visibleQuestionNumber++; ?>
 <div class="generated-question ai-question-list-item">
 <div class="ai-question-list-main">
-<div class="question-text"><span class="question-number"><?=($qi+1)?>:</span> <?=e($isPracticeList ? ($q['learning_term']??$q['question']) : $q['question'])?></div>
+<div class="question-text"><span class="question-number"><?=($isPracticeList?$visibleQuestionNumber:($qi+1))?>:</span> <?=e($isPracticeList ? ($q['learning_term']??$q['question']) : $q['question'])?></div>
 <?php
 $grammarLabel=mb_strtolower(trim((string)($q['grammar_label']??'')));
 $grammarParts=[];
