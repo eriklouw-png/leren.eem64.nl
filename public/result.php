@@ -39,7 +39,30 @@ $s->execute([$id]);$questions=$s->fetchAll();
 $total=count($questions);
 $correct=0;
 foreach($questions as $q)if((int)$q['is_correct']===1)$correct++;
-$score=$total?round($correct/$total*100,2):0;
+
+$displayTotal=$total;
+$displayCorrect=$correct;
+
+/* Bij Alleen fouten is het resultaat een verbetering van de oorspronkelijke
+ * toets. Daarom rekenen we met het volledige aantal vragen van de bronpoging. */
+if(($r['mode']??'normal')==='mistakes' && !empty($r['source_attempt_id'])){
+    $sourceStats=$pdo->prepare("
+        SELECT COUNT(DISTINCT aq.question_id) total,
+               SUM(CASE WHEN aa.is_correct=1 THEN 1 ELSE 0 END) correct
+        FROM attempt_questions aq
+        LEFT JOIN attempt_answers aa
+          ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id
+        WHERE aq.attempt_id=?
+    ");
+    $sourceStats->execute([(int)$r['source_attempt_id']]);
+    $source=$sourceStats->fetch();
+    if($source && (int)$source['total']>0){
+        $displayTotal=(int)$source['total'];
+        $displayCorrect=(int)$source['correct'];
+    }
+}
+
+$score=$displayTotal?round($displayCorrect/$displayTotal*100,2):0;
 
 $update=$pdo->prepare("UPDATE attempts SET score=? WHERE id=? AND status='finished'");
 $update->execute([$score,$id]);
@@ -65,7 +88,7 @@ foreach($questions as &$q){
 }
 unset($q);
 
-$doneMistakes=$correct<$total;
+$doneMistakes=$displayCorrect<$displayTotal;
 ?>
 <!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Resultaat</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><style>
 .confetti-overlay{
@@ -148,7 +171,7 @@ $doneMistakes=$correct<$total;
     <h1>Resultaat</h1>
     <p class="text-secondary mb-1"><?=e($r['title'])?></p>
     <div class="display-3 fw-bold"><?=e((string)$score)?>%</div>
-    <p class="mt-2 mb-0"><?=e((string)$correct)?> van <?=e((string)$total)?> vragen goed.</p>
+    <p class="mt-2 mb-0"><?=e((string)$displayCorrect)?> van <?=e((string)$displayTotal)?> vragen goed.</p>
   </div>
 </div>
 
