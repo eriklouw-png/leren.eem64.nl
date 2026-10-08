@@ -105,7 +105,7 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
 <?php endif;?>
 <?php if(is_admin()):?>
 <section class="leren-section mb-4">
-<h2 class="leren-section-title">Administrator</h2>
+<h1 class="mb-2">Administrator</h1>
 <div class="leren-actions">
 <a class="btn btn-outline-primary" href="user_permissions.php">Gebruikers &amp; rechten</a>
 <a class="btn btn-outline-primary" href="ai_usage.php">AI-verbruik &amp; kosten</a>
@@ -136,7 +136,6 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
 <?php endforeach;?>
 </div>
 
-<h2 class="h4 mt-5 mb-3">Studenten</h2>
 <?php
 $studentScopeSql=is_admin()
     ? '1=1'
@@ -165,28 +164,38 @@ $students=$pdo->query("
     ORDER BY u.name
 ")->fetchAll();
 ?>
-<?php if(!$students):?>
-<div class="alert alert-secondary">Er zijn nog geen studenten.</div>
-<?php else:?>
-<div class="row g-3 student-grid">
+<?php if($students):?>
+<section class="leren-section mt-4">
+<h1 class="mb-2">Studenten</h1>
+<div class="leren-list">
 <?php foreach($students as $student):?>
-<div class="col-6 col-md-6 col-lg-4 student-col">
-<a href="student.php?id=<?=(int)$student['id']?>" class="leren-tile text-decoration-none">
-<div class="subject-card-image" style="background-image:<?=($student['image_mime']?'url(\'student_image.php?id='.(int)$student['id'].'\')':'none')?>;">
-<div class="subject-card-overlay"></div>
-<div class="card-body position-relative d-flex flex-column justify-content-end subject-card-body">
-<h2 class="h4 text-white mb-1 subject-card-title"><?=e($student['name'])?></h2>
-<div class="row g-1 mt-1 small student-stats">
-<div class="col-4"><div class="bg-light bg-opacity-75 rounded p-2 text-center"><strong><?=e((string)$student['completed_tests'])?></strong><div class="text-secondary">toetsen</div></div></div>
-<div class="col-4"><div class="bg-light bg-opacity-75 rounded p-2 text-center"><strong><?=e(rtrim(rtrim(number_format((float)$student['average_score'],0,',','.'),'0'),','))?>%</strong><div class="text-secondary">gem.</div></div></div>
-<div class="col-4"><div class="bg-light bg-opacity-75 rounded p-2 text-center"><strong><?=e((string)intdiv((int)$student['active_seconds'],60))?></strong><div class="text-secondary">min.</div></div></div>
+<a href="student.php?id=<?=(int)$student['id']?>" class="leren-list-item text-decoration-none">
+<?php if($student['image_mime']):?>
+<div class="leren-list-item-thumbnail">
+<img src="student_image.php?id=<?=(int)$student['id']?>" alt="" loading="lazy">
+</div>
+<?php else:?>
+<div class="leren-list-item-thumbnail" aria-hidden="true"></div>
+<?php endif;?>
+<div class="leren-list-item-main">
+<div class="leren-list-item-content">
+<div class="leren-list-item-heading">
+<div class="leren-list-item-title"><?=e($student['name'])?></div>
+</div>
+<div class="leren-list-item-subtitle"><?=e($student['email'])?></div>
+<div class="leren-list-item-description">
+<?=e((string)$student['completed_tests'])?> toetsen
+&middot;
+<?=e(rtrim(rtrim(number_format((float)$student['average_score'],0,',','.'),'0'),','))?>% gemiddeld
+&middot;
+<?=e((string)intdiv((int)$student['active_seconds'],60))?> min. actief
 </div>
 </div>
 </div>
 </a>
-</div>
 <?php endforeach;?>
 </div>
+</section>
 <?php endif;?>
 
 
