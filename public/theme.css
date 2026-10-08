@@ -732,6 +732,13 @@ body.leren-admin .leren-modal-action.primary{background:#2f7d4a;border-color:#2f
   object-fit:cover;
   background:var(--leren-surface-muted);
 }
+.leren-list-item-thumbnail img{
+  display:block;
+  width:100%;
+  height:100%;
+  min-height:88px;
+  object-fit:cover;
+}
 .leren-list-item-content{min-width:0}
 .leren-list-item-heading{display:flex;align-items:center;gap:.5rem;min-width:0}
 .leren-list-item-title{
