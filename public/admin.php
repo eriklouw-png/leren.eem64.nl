@@ -103,6 +103,18 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
 <?=($_GET['ai_rules']==='created'?'De eerste AI-instructies voor dit vak zijn automatisch aangemaakt. Je kunt ze aanpassen via ‘AI-instructies per vak’.':'Het vak is aangemaakt, maar de AI-instructies konden niet automatisch worden aangemaakt. Je kunt ze handmatig toevoegen via ‘AI-instructies per vak’.')?>
 </div>
 <?php endif;?>
+<?php if(is_admin()):?>
+<section class="leren-section mb-4">
+<h2 class="leren-section-title">Administrator</h2>
+<div class="leren-actions">
+<a class="btn btn-outline-primary" href="user_permissions.php">Gebruikers &amp; rechten</a>
+<a class="btn btn-outline-primary" href="ai_usage.php">AI-verbruik &amp; kosten</a>
+<a class="btn btn-outline-primary" href="ai_rules.php">AI-instructies per vak</a>
+<a class="btn btn-outline-primary" href="system_update.php">Website bijwerken</a>
+</div>
+</section>
+<?php endif;?>
+
 <div class="d-flex justify-content-between align-items-center mb-3">
 <h1 class="mb-0">Vakken</h1>
 <div><a class="btn btn-outline-primary" href="subject_edit.php">Nieuw vak</a></div>
@@ -177,5 +189,5 @@ $students=$pdo->query("
 </div>
 <?php endif;?>
 
-<div class="mt-5 pt-3 border-top d-flex flex-wrap gap-2"><a class="btn btn-outline-primary" href="user_permissions.php">Gebruikers &amp; rechten</a><a class="btn btn-outline-primary" href="ai_usage.php">AI-verbruik &amp; kosten</a><a class="btn btn-outline-primary" href="ai_rules.php">AI-instructies per vak</a><a class="btn btn-outline-primary" href="system_update.php">Website bijwerken</a></div>
+
 </main><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script></body></html>
