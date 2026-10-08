@@ -312,7 +312,7 @@ if(($mistakeCountByTest[(int)$t['id']]??0)>0){
 <strong class="leren-list-item-title"><?=e($t['title'])?></strong>
 </div>
 <div class="leren-list-item-subtitle"><?=e($labels[$t['test_type']??'mixed']??'Combinatie')?> · <?=((in_array(($t['test_type']??'mixed'),['vocabulary','sentences'],true) && ($t['vocab_direction']??'both')==='both') ? (int)ceil(((int)$t['question_count'])/2) : (int)$t['question_count'])?> <?=($t['test_type']??'mixed')==='vocabulary'?'woorden':(($t['test_type']??'mixed')==='sentences'?'zinnen':'vragen')?> · Aangemaakt <?=e(date('d-m-Y H:i',strtotime((string)$t['created_at'])))?></div>
-<?php if($t['in_progress_attempt_id']):?><div class="leren-list-item-progress-text">Voortgang: <?=((int)$t['in_progress_answered_count'])?> van <?=((int)$t['in_progress_total_count'])?> vragen gedaan.</div><?php endif;?>
+<?php if($t['in_progress_attempt_id'] && $latestScore===null):?><div class="leren-list-item-progress-text">Voortgang: <?=((int)$t['in_progress_answered_count'])?> van <?=((int)$t['in_progress_total_count'])?> vragen gedaan.</div><?php endif;?>
 <?php if($t['description']):?><div class="leren-list-item-description"><?=e($t['description'])?></div><?php endif;?>
 </div>
 <div class="leren-list-item-progress">
@@ -321,10 +321,8 @@ if($t['in_progress_attempt_id']){
     $subProgressTotal=max(1,(int)$t['in_progress_total_count']);
     $subProgressDone=min($subProgressTotal,(int)$t['in_progress_answered_count']);
     $subProgressPercent=(int)round($subProgressDone/$subProgressTotal*100);
-    $subProgressLabel=$subProgressDone.' van '.$subProgressTotal.' vragen';
 }elseif($latestScore!==null){
     $subProgressPercent=100;
-    $subProgressLabel='';
 }else{
     $subProgressPercent=0;
     $subProgressLabel='';
@@ -332,7 +330,6 @@ if($t['in_progress_attempt_id']){
 ?>
 <div class="d-flex justify-content-between small text-secondary mb-1"><span><?=$latestScore!==null?'Resultaat':'Voortgang'?></span><strong><?=$latestScore!==null?(int)round($latestScore):$subProgressPercent?>%</strong></div>
 <div class="progress" role="progressbar" aria-label="<?=$latestScore!==null?'Resultaat van sub-test':'Voortgang van sub-test'?>" aria-valuenow="<?=$latestScore!==null?(int)round($latestScore):$subProgressPercent?>" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar <?= $latestScore!==null ? 'leren-result-bar leren-result-bar-'.(((int)round($latestScore)<=24)?'red':(((int)round($latestScore)<=74)?'orange':'green')) : '' ?>" style="width:<?=$latestScore!==null?(int)round($latestScore):$subProgressPercent?>%"></div></div>
-<?php if($subProgressLabel):?><div class="small text-secondary mt-1"><?=$subProgressLabel?></div><?php endif;?>
 </div>
 </a>
 <button type="button" class="leren-list-item-menu" data-list-menu data-list-modal="subtestOptionsModal"
