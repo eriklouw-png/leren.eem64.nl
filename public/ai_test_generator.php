@@ -620,11 +620,7 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 </div>
 <form method="post" id="generateForm" data-ai-loading="generate">
 <input type="hidden" name="action" value="generate">
-<?php if(!$detectedPracticeList):?><div class="card mb-3"><div class="card-body">
-<label class="form-label fw-semibold">Prefix voor de sub-testnaam</label>
-<input class="form-control form-control-lg" name="prefix" value="<?=e((string)($savedRequest['prefix']??''))?>" placeholder="Bijvoorbeeld 1.1">
-<div class="form-text">De AI maakt de inhoudelijke titel. De prefix wordt ervoor gezet.</div>
-</div></div><?php endif;?>
+
 <?php if(!$detectedPracticeList):?><div class="card mb-3"><div class="card-body">
 <div class="form-check form-switch">
 <input class="form-check-input" type="checkbox" name="use_summary" value="1" id="useSummarySettings" <?=$useSummary?'checked':''?> <?=($query!==''||!$ruleSummaryAllowed?'disabled':'')?>>
