@@ -347,6 +347,9 @@ if(!$attempt && !$viewMode){
     }catch(Throwable $e){$pdo->rollBack();throw $e;}
 }
 $attemptId=(int)$attempt['id'];
+if($mode==='mistakes' && !$reviewMode){
+    $sourceAttemptId=(int)($attempt['source_attempt_id']??$sourceAttemptId??0);
+}
 
 if(!$viewMode && $_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='finish'){
     $x=$pdo->prepare("SELECT COUNT(*) total,
@@ -396,9 +399,16 @@ if(!$viewMode && $_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==
                 ORDER BY a.id DESC
                 LIMIT 1
             ");
-            if($mode==='mistakes' && !$reviewMode){
-                $originalTopicId=(int)$test['topic_id'];
-                $findOriginal->execute([(int)$questionId,$studentId,$originalTopicId]);
+            if($mode==='mistakes' && !$reviewMode && $sourceAttemptId){
+                $findOriginal=$pdo->prepare("
+                    SELECT a.id
+                    FROM attempts a
+                    JOIN attempt_questions aq ON aq.attempt_id=a.id AND aq.question_id=?
+                    JOIN attempt_answers aa ON aa.attempt_id=a.id AND aa.question_id=aq.question_id
+                    WHERE a.id=? AND a.student_id=? AND a.status='finished' AND a.mode='normal' AND aa.is_correct=0
+                    LIMIT 1
+                ");
+                $findOriginal->execute([(int)$questionId,$sourceAttemptId,$studentId]);
             }else{
                 $findOriginal->execute([(int)$questionId,$studentId,$topicId]);
             }
