@@ -71,7 +71,7 @@ $status=read_update_status($statusFile);
 <!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Website bijwerken</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light"><nav class="navbar navbar-dark bg-dark"><div class="container"><a class="navbar-brand" href="admin.php">Leren beheer</a><a class="btn btn-outline-light btn-sm" href="admin.php">Beheer</a></div></nav>
-<main class="container py-4 system-update-page">
+<main class="container py-4">
 <a href="admin.php">&larr; Beheer</a>
 <section class="leren-section system-update-card mt-3"><div class="system-update-card-body">
 <h1>Website bijwerken</h1>
