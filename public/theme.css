@@ -785,6 +785,8 @@ body.leren-manager a[href*="system_update.php"],
 body.leren-manager a[href*="debug_question.php"],
 body.leren-manager a[href*="ai_usage.php"],
 body.leren-manager a[href*="ai_rules.php"],
-body.leren-manager a[href*="ai_warmup.php"]{
+body.leren-manager a[href*="ai_warmup.php"],
+body.leren-manager a[href*="ai_generate_image.php"],
+body.leren-manager a[href*="activity.php"]{
   display:none!important;
 }
