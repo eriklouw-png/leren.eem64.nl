@@ -665,6 +665,19 @@ if($q['question_type']==='multiple_choice'){
    updateSelected(card);
  });
  show(current);
+
+ // Enter op het toetsenbord werkt hetzelfde als de Check/Volgende-knop.
+ // In een antwoordveld voorkomt dit ook dat Enter een nieuwe regel invoegt.
+ document.addEventListener('keydown',(event)=>{
+   if(event.key!=='Enter' || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey)return;
+   const card=cards[current];
+   if(!card || card.classList.contains('d-none'))return;
+   const btn=card.querySelector('.next-btn');
+   if(!btn || btn.disabled)return;
+   event.preventDefault();
+   btn.click();
+ });
+
  if(!<?= $viewMode ? 'true' : 'false' ?>)activity({action:'start',test_id:testId,attempt_id:attemptId});
  let activeUntil=Date.now()+60000;const touch=()=>{activeUntil=Date.now()+60000;};
  ['mousemove','mousedown','keydown','touchstart','scroll'].forEach(e=>window.addEventListener(e,touch,{passive:true}));
