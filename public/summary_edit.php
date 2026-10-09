@@ -78,6 +78,12 @@ if($id){
 <div class="card mt-3"><div class="card-body p-4">
 <h1 class="h3"><?= $id?'Samenvatting bewerken':'Nieuwe samenvatting' ?></h1>
 <p class="text-secondary"><?=e($summary['topic_name'])?></p>
+<?php if($id):?>
+<div class="d-flex flex-wrap gap-2 mb-3">
+<a class="btn btn-outline-secondary btn-sm" href="summary.php?source=archive&amp;id=<?=$id?>">Samenvatting bekijken</a>
+<a class="btn btn-outline-primary btn-sm" href="source_regions.php?id=<?=$id?>">Brongebieden herkennen</a>
+</div>
+<?php endif;?>
 <form method="post">
 <input type="hidden" name="id" value="<?=$id?>">
 <input type="hidden" name="topic_id" value="<?=(int)$summary['topic_id']?>">
