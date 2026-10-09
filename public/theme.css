@@ -2197,3 +2197,13 @@ body.leren-admin .ai-source-error,
 @media(max-width:390px){
   .subject-home-icon{width:2.4rem;height:2.4rem;bottom:3.5rem;font-size:1.15rem;}
 }
+
+/* Homepage responsive columns: 2 phones, 3 tablets, 4 desktops.
+   Override the legacy .subject-col width:50% rule. */
+.subjects-grid > .subject-col{width:50%;}
+@media (min-width:768px){
+  .subjects-grid > .subject-col{width:33.333333%;}
+}
+@media (min-width:1100px){
+  .subjects-grid > .subject-col{width:25%;}
+}
