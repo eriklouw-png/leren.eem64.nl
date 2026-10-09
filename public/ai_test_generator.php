@@ -1,5 +1,6 @@
 <?php
 require __DIR__.'/../app/bootstrap.php';
+require_once __DIR__.'/../app/ai_source_archive.php';
 require_admin();
 
 $topicId=filter_input(INPUT_GET,'topic_id',FILTER_VALIDATE_INT);
@@ -385,11 +386,27 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     $oaIns=$pdo->prepare("INSERT INTO open_question_answers(question_id,answer_text,sort_order) VALUES(?,?,?)");
                     $testIns=$pdo->prepare("INSERT INTO tests(topic_id,title,description,test_type,vocab_left_label,vocab_right_label,vocab_direction,is_active) VALUES(?,?,?,?,?,?,?,1)");
                     $savedCount=0;
+                    $sourceArchive=['collection_id'=>null,'pages'=>[]];
+                    if($sourceImages){
+                        $archiveTitle=trim((string)($saved['analysis']['topic']??$topicName));
+                        $archiveDescription=trim((string)($saved['analysis']['summary']??''));
+                        $sourceArchive=ai_source_archive_create($pdo,$saved,$subjectId,$topicId,$archiveTitle!==''?$archiveTitle:$topicName,$archiveDescription);
+                    }
+                    $sourceCollectionId=(int)($sourceArchive['collection_id']??0);
+                    $sourcePageIds=(array)($sourceArchive['pages']??[]);
+                    $sectionIds=[];
+                    if($sourceCollectionId){
+                        $sectionInsert=$pdo->prepare("INSERT INTO ai_source_sections(collection_id,title,description,sort_order) VALUES(?,?,?,?)");
+                        foreach($validTests as $index=>$plannedTest){
+                            $sectionInsert->execute([$sourceCollectionId,$plannedTest['title'],$plannedTest['description'],$index+1]);
+                            $sectionIds[$index]=(int)$pdo->lastInsertId();
+                        }
+                    }
                     $createdQuestionImages=[];
                     $pendingImageJobs=[];
                     $questionImageDir=__DIR__.'/uploads/questions';
                     if(!is_dir($questionImageDir)&&!@mkdir($questionImageDir,0755,true))throw new RuntimeException('De map uploads/questions kon niet worden aangemaakt.');
-                    foreach($validTests as $test){
+                    foreach($validTests as $testIndex=>$test){
                         $testType='multiple_choice';
                         $hasOpen=false;$hasMc=false;
                         foreach($test['questions'] as $q){$hasOpen=$hasOpen||$q['type']==='open';$hasMc=$hasMc||$q['type']==='mc';}
@@ -455,6 +472,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                             }
                             $qIns->execute([$testId,$q['question'],$imagePath,$q['type']==='mc'?'multiple_choice':'open',$q['vocab_direction']??null,$q['explanation'],$q['grammar_label']??null,$sort+1]);
                             $qid=(int)$pdo->lastInsertId();
+                            if($sourceCollectionId){
+                                $pageNo=(int)($q['source_page']??0);
+                                $pageId=$sourcePageIds[$pageNo]??null;
+                                ai_source_archive_link($pdo,$sourceCollectionId,$sectionIds[$testIndex]??null,$pageId,$qid,null,'question');
+                            }
                             if($q['use_image'] && $imagePath===null && (string)(!empty($q['use_image']))){
                                 $pendingImageJobs[]=[
                                     'question_id'=>$qid,
@@ -490,6 +512,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         $summaryIns=$pdo->prepare("INSERT INTO topic_summaries(topic_id,name,summary,is_active) VALUES(?,?,?,1)");
                         $summaryIns->execute([$topicId,$summaryName,(string)$saved['summary_text']]);
                         $summaryId=(int)$pdo->lastInsertId();
+                        if($sourceCollectionId){
+                            foreach($sourcePageIds as $pageId)ai_source_archive_link($pdo,$sourceCollectionId,null,$pageId,null,$summaryId,'summary');
+                        }
                         ai_archive_summary_images($topicId,$summaryId,$sourceImages);
                     }
                     $pdo->commit();
