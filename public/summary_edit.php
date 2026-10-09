@@ -82,6 +82,7 @@ if($id){
 <input type="hidden" name="id" value="<?=$id?>">
 <input type="hidden" name="topic_id" value="<?=(int)$summary['topic_id']?>">
 <div class="mb-3"><label class="form-label">Naam</label><input class="form-control" name="name" value="<?=e($summary['name'])?>" required></div>
+<div id="summaryParts">
 <?php foreach($sections as $section):?>
 <div class="border rounded p-3 mb-3">
 <input type="hidden" name="section_id[]" value="<?=(int)$section['id']?>">
@@ -89,8 +90,19 @@ if($id){
 <label class="form-label">Samenvatting</label><textarea class="form-control" name="section_summary[]" rows="12"><?=e($section['summary'])?></textarea>
 </div>
 <?php endforeach;?>
+</div>
+<button class="btn btn-outline-primary mb-3" type="button" id="addSection">Onderdeel toevoegen</button>
 <div class="d-flex justify-content-between gap-2">
 <?php if($id):?><button class="btn btn-danger" type="submit" name="action" value="delete" onclick="return confirm('Samenvatting verwijderen? De originele bronnen blijven bewaard.')">Verwijderen</button><?php endif;?>
 <div class="ms-auto"><a class="btn btn-outline-secondary" href="subject_manage.php?id=<?=(int)$summary['subject_id']?>">Annuleren</a> <button class="btn btn-primary" type="submit" name="action" value="save">Opslaan</button></div>
 </div>
-</form></div></div></main></body></html>
+</form></div></div></main>
+<script>
+document.getElementById('addSection').addEventListener('click',()=>{
+ const box=document.createElement('div');
+ box.className='border rounded p-3 mb-3';
+ box.innerHTML='<input type="hidden" name="section_id[]" value="0"><label class="form-label">Onderdeel</label><input class="form-control mb-2" name="section_title[]" required><label class="form-label">Samenvatting</label><textarea class="form-control" name="section_summary[]" rows="12" required></textarea>';
+ document.getElementById('summaryParts').appendChild(box);
+ box.querySelector('input[name="section_title[]"]').focus();
+});
+</script></body></html>
