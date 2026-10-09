@@ -1,85 +1,95 @@
 <?php
-require __DIR__.'/../app/bootstrap.php';require_admin();
-
+require __DIR__.'/../app/bootstrap.php';
+require_once __DIR__.'/../app/ai_source_archive.php';
+require_admin();
+ai_source_archive_tables($pdo);
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT)?:0;
 $topicId=filter_input(INPUT_GET,'topic_id',FILTER_VALIDATE_INT)?:0;
-$isNew=$id===0;
-if(!$isNew && !$topicId) $topicId=0;
-
 if($_SERVER['REQUEST_METHOD']==='POST'){
-    $action=$_POST['action']??'save';
-    $postId=filter_var($_POST['id']??null,FILTER_VALIDATE_INT)?:0;
-    $postTopicId=filter_var($_POST['topic_id']??null,FILTER_VALIDATE_INT)?:0;
-    if($action==='save'){
-        $name=trim((string)($_POST['name']??''));
-        $summary=trim((string)($_POST['summary']??''));
-        if($name===''){http_response_code(400);exit('Naam is verplicht.');}
-        if($summary===''){http_response_code(400);exit('De samenvatting mag niet leeg zijn.');}
-        if($postId){
-            $x=$pdo->prepare("UPDATE topic_summaries SET name=?,summary=?,updated_at=NOW() WHERE id=? AND is_active=1");
-            $x->execute([$name,$summary,$postId]);
-            $id=$postId;
-            $x=$pdo->prepare("SELECT topic_id FROM topic_summaries WHERE id=?");
-            $x->execute([$id]); $topicId=(int)$x->fetchColumn();
-        }else{
-            if(!$postTopicId){http_response_code(400);exit('Overhoring ontbreekt.');}
-            $x=$pdo->prepare("SELECT id FROM topics WHERE id=?");
-            $x->execute([$postTopicId]);
-            if(!$x->fetchColumn()){http_response_code(404);exit('Overhoring niet gevonden.');}
-            $x=$pdo->prepare("INSERT INTO topic_summaries(topic_id,name,summary,is_active,created_at,updated_at) VALUES(?,?,?,1,NOW(),NOW())");
-            $x->execute([$postTopicId,$name,$summary]);
-            $id=(int)$pdo->lastInsertId();
-            $topicId=$postTopicId;
-        }
-    }elseif($action==='delete' && $postId){
-        $x=$pdo->prepare("UPDATE topic_summaries SET is_active=0,deleted_at=NOW(),updated_at=NOW() WHERE id=?");
-        $x->execute([$postId]);
-        $x=$pdo->prepare("SELECT topic_id FROM topic_summaries WHERE id=?"); $x->execute([$postId]); $topicId=(int)$x->fetchColumn();
+    $id=filter_var($_POST['id']??0,FILTER_VALIDATE_INT)?:0;
+    $topicId=filter_var($_POST['topic_id']??0,FILTER_VALIDATE_INT)?:0;
+    $action=(string)($_POST['action']??'save');
+    if($id){
+        $stmt=$pdo->prepare("SELECT id,topic_id,subject_id FROM ai_source_collections WHERE id=?");
+        $stmt->execute([$id]);$collection=$stmt->fetch(PDO::FETCH_ASSOC);
+        if(!$collection){http_response_code(404);exit('Samenvatting niet gevonden.');}
+        $topicId=(int)$collection['topic_id'];$subjectId=(int)$collection['subject_id'];
+    }else{
+        $stmt=$pdo->prepare("SELECT subject_id FROM topics WHERE id=? AND is_active=1");
+        $stmt->execute([$topicId]);$subjectId=(int)$stmt->fetchColumn();
+        if(!$subjectId){http_response_code(404);exit('Overhoring niet gevonden.');}
     }
-    if(!$topicId)redirect('admin.php');
-    redirect('subject_manage.php?id='.(int)(filter_var($_POST['subject_id']??null,FILTER_VALIDATE_INT)?:0));
+    if($action==='delete' && $id){
+        $pdo->prepare("DELETE FROM ai_source_sections WHERE collection_id=?")->execute([$id]);
+        // Keep provenance, images and question links intact.
+    }elseif($action==='save'){
+        $name=trim((string)($_POST['name']??''));
+        if($name===''){http_response_code(400);exit('Naam is verplicht.');}
+        $sectionTitles=(array)($_POST['section_title']??[]);
+        $sectionBodies=(array)($_POST['section_summary']??[]);
+        $sectionIds=(array)($_POST['section_id']??[]);
+        $items=[];
+        foreach($sectionBodies as $i=>$body){
+            $body=trim((string)$body);
+            if($body==='')continue;
+            $items[]=['id'=>(int)($sectionIds[$i]??0),'title'=>trim((string)($sectionTitles[$i]??''))?:$name,'body'=>$body];
+        }
+        if(!$items){http_response_code(400);exit('Vul minimaal één onderdeel in.');}
+        $pdo->beginTransaction();
+        try{
+            if(!$id)$id=ai_source_manual_summary_create($pdo,$subjectId,$topicId,$name,$items[0]['body']);
+            $pdo->prepare("UPDATE ai_source_collections SET title=? WHERE id=?")->execute([$name,$id]);
+            $valid=$pdo->prepare("SELECT id FROM ai_source_sections WHERE id=? AND collection_id=?");
+            $update=$pdo->prepare("UPDATE ai_source_sections SET title=?,summary=?,sort_order=? WHERE id=? AND collection_id=?");
+            $insert=$pdo->prepare("INSERT INTO ai_source_sections(collection_id,title,summary,sort_order) VALUES(?,?,?,?)");
+            foreach($items as $i=>$item){
+                if($item['id']){
+                    $valid->execute([$item['id'],$id]);
+                    if(!$valid->fetchColumn())throw new RuntimeException('Ongeldig onderdeel.');
+                    $update->execute([$item['title'],$item['body'],$i+1,$item['id'],$id]);
+                }elseif($i===0 && count($items)===1 && !empty($_POST['id'])===false){
+                    $pdo->prepare("UPDATE ai_source_sections SET title=?,sort_order=1 WHERE collection_id=?")->execute([$item['title'],$id]);
+                }else{
+                    $insert->execute([$id,$item['title'],$item['body'],$i+1]);
+                }
+            }
+            $pdo->commit();
+        }catch(Throwable $e){$pdo->rollBack();throw $e;}
+    }
+    redirect('subject_manage.php?id='.$subjectId);
 }
-
-$x=$pdo->prepare("
-    SELECT ts.id,ts.topic_id,ts.name,ts.summary,ts.is_active,ts.created_at,ts.updated_at,ts.deleted_at,
-           tp.name topic_name,tp.subject_id,s.name subject_name
-    FROM topic_summaries ts
-    JOIN topics tp ON tp.id=ts.topic_id
-    JOIN subjects s ON s.id=tp.subject_id
-    WHERE ts.id=? AND ts.is_active=1
-");
-if(!$isNew){
-    $x->execute([$id]);$summary=$x->fetch();
+if($id){
+    $stmt=$pdo->prepare("SELECT c.id,c.topic_id,c.title name,c.subject_id,t.name topic_name,s.name subject_name FROM ai_source_collections c JOIN topics t ON t.id=c.topic_id JOIN subjects s ON s.id=c.subject_id WHERE c.id=?");
+    $stmt->execute([$id]);$summary=$stmt->fetch(PDO::FETCH_ASSOC);
     if(!$summary){http_response_code(404);exit('Samenvatting niet gevonden.');}
-    $topicId=(int)$summary['topic_id'];
+    $stmt=$pdo->prepare("SELECT id,title,summary FROM ai_source_sections WHERE collection_id=? AND NULLIF(TRIM(summary),'') IS NOT NULL ORDER BY sort_order,id");
+    $stmt->execute([$id]);$sections=$stmt->fetchAll(PDO::FETCH_ASSOC);
 }else{
-    $x->execute([0]);$summary=null;
-    $x=$pdo->prepare("SELECT tp.id topic_id,tp.name topic_name,tp.subject_id,s.name subject_name FROM topics tp JOIN subjects s ON s.id=tp.subject_id WHERE tp.id=?");
-    $x->execute([$topicId]);$topic=$x->fetch();
-    if(!$topic){http_response_code(404);exit('Overhoring niet gevonden.');}
-    $summary=['id'=>0,'topic_id'=>$topic['topic_id'],'name'=>'','summary'=>'','is_active'=>1,'subject_id'=>$topic['subject_id'],'topic_name'=>$topic['topic_name'],'subject_name'=>$topic['subject_name']];
+    $stmt=$pdo->prepare("SELECT t.id topic_id,t.name topic_name,t.subject_id,s.name subject_name FROM topics t JOIN subjects s ON s.id=t.subject_id WHERE t.id=? AND t.is_active=1");
+    $stmt->execute([$topicId]);$summary=$stmt->fetch(PDO::FETCH_ASSOC);
+    if(!$summary){http_response_code(404);exit('Overhoring niet gevonden.');}
+    $summary['id']=0;$summary['name']='';$sections=[['id'=>0,'title'=>'','summary'=>'']];
 }
 ?>
-<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?= $isNew?'Nieuwe samenvatting':'Samenvatting bewerken' ?></title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head>
+<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Samenvatting bewerken</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head>
 <body class="bg-light"><main class="container py-4" style="max-width:900px">
-<a href="subject_manage.php?id=<?=$summary['subject_id']?>">&larr; Terug naar <?=e($summary['subject_name'])?></a>
-<div class="card shadow-sm mt-3"><div class="card-body p-4">
-<div class="d-flex justify-content-between align-items-start gap-3 mb-4">
-<div><h1 class="h3 mb-1"><?= $isNew?'Nieuwe samenvatting':'Samenvatting bewerken' ?></h1><div class="text-secondary">Overhoring: <?=e($summary['topic_name'])?></div></div>
-
-</div>
+<a href="subject_manage.php?id=<?=(int)$summary['subject_id']?>">&larr; Terug naar <?=e($summary['subject_name'])?></a>
+<div class="card mt-3"><div class="card-body p-4">
+<h1 class="h3"><?= $id?'Samenvatting bewerken':'Nieuwe samenvatting' ?></h1>
+<p class="text-secondary"><?=e($summary['topic_name'])?></p>
 <form method="post">
-<input type="hidden" name="action" value="save">
-<input type="hidden" name="id" value="<?=$summary['id']?>">
-<input type="hidden" name="topic_id" value="<?=$summary['topic_id']?>">
-<input type="hidden" name="subject_id" value="<?=$summary['subject_id']?>">
+<input type="hidden" name="id" value="<?=$id?>">
+<input type="hidden" name="topic_id" value="<?=(int)$summary['topic_id']?>">
 <div class="mb-3"><label class="form-label">Naam</label><input class="form-control" name="name" value="<?=e($summary['name'])?>" required></div>
-<div class="mb-4"><label class="form-label">Samenvatting</label><textarea class="form-control" name="summary" rows="24" required><?=e($summary['summary'])?></textarea><div class="form-text">Je kunt de door AI gemaakte tekst hier volledig aanpassen.</div></div>
-<div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
-<div>
-<?php if(!$isNew):?><button class="btn btn-danger" type="submit" name="action" value="delete" data-confirm="Weet u zeker dat u deze samenvatting wilt verwijderen? De samenvatting verdwijnt uit de website, maar blijft in de database bewaard.">Verwijderen</button><?php endif;?>
+<?php foreach($sections as $section):?>
+<div class="border rounded p-3 mb-3">
+<input type="hidden" name="section_id[]" value="<?=(int)$section['id']?>">
+<label class="form-label">Onderdeel</label><input class="form-control mb-2" name="section_title[]" value="<?=e($section['title'])?>">
+<label class="form-label">Samenvatting</label><textarea class="form-control" name="section_summary[]" rows="12"><?=e($section['summary'])?></textarea>
 </div>
-<div class="d-flex gap-2"><a class="btn btn-outline-secondary" href="subject_manage.php?id=<?=$summary['subject_id']?>">Annuleren</a><button class="btn btn-primary" type="submit" name="action" value="save">Opslaan</button></div>
+<?php endforeach;?>
+<div class="d-flex justify-content-between gap-2">
+<?php if($id):?><button class="btn btn-danger" type="submit" name="action" value="delete" onclick="return confirm('Samenvatting verwijderen? De originele bronnen blijven bewaard.')">Verwijderen</button><?php endif;?>
+<div class="ms-auto"><a class="btn btn-outline-secondary" href="subject_manage.php?id=<?=(int)$summary['subject_id']?>">Annuleren</a> <button class="btn btn-primary" type="submit" name="action" value="save">Opslaan</button></div>
 </div>
-</form>
-</div></div></main></body></html>
+</form></div></div></main></body></html>
