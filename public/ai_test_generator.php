@@ -413,6 +413,19 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         foreach($validTests as $index=>$plannedTest){
                             $sectionInsert->execute([$sourceCollectionId,$plannedTest['title'],$plannedTest['description'],$sectionSummaries[$index]??null,$index+1]);
                             $sectionIds[$index]=(int)$pdo->lastInsertId();
+                            // Preserve explicit page provenance for the section even when
+                            // individual questions lack a page number.
+                            $referencedPages=[];
+                            foreach($plannedTest['questions'] as $sourceQuestion){
+                                $pageNo=(int)($sourceQuestion['source_page']??0);
+                                if(isset($sourcePageIds[$pageNo]))$referencedPages[$pageNo]=true;
+                            }
+                            if(!$referencedPages && count($sourcePageIds)===1){
+                                $referencedPages[array_key_first($sourcePageIds)]=true;
+                            }
+                            foreach(array_keys($referencedPages) as $pageNo){
+                                ai_source_archive_link($pdo,$sourceCollectionId,$sectionIds[$index],$sourcePageIds[$pageNo],null,null,'section_page');
+                            }
                         }
                     }
                     $createdQuestionImages=[];
