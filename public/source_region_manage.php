@@ -2,7 +2,7 @@
 require __DIR__.'/../app/bootstrap.php';
 require __DIR__.'/../app/auth.php';
 require_once __DIR__.'/../app/ai_source_archive.php';
-require_admin();
+require_manager();
 ai_source_archive_tables($pdo);
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT)?:filter_input(INPUT_POST,'id',FILTER_VALIDATE_INT);
 if(!$id){http_response_code(400);exit('Ongeldige samenvatting.');}
