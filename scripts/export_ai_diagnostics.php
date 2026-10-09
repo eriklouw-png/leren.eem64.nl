@@ -8,7 +8,8 @@ declare(strict_types=1);
 if(PHP_SAPI!=='cli'){http_response_code(404);exit;}
 require __DIR__.'/../app/bootstrap.php';
 $target=$argv[1]??'';
-if($target===''||!str_starts_with($target,'/')){fwrite(STDERR,"Usage: php scripts/export_ai_diagnostics.php /absolute/output.json\n");exit(2);}
+$stdout=($target==='-');
+if($target===''||(!$stdout&&!str_starts_with($target,'/'))){fwrite(STDERR,"Usage: php scripts/export_ai_diagnostics.php /absolute/output.json\n");exit(2);}
 $tables=['ai_source_collections','ai_source_pages','ai_source_regions','ai_source_sections','ai_source_links'];
 $present=$pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
 $available=array_values(array_intersect($tables,$present));
@@ -36,6 +37,7 @@ if(in_array('ai_source_collections',$available,true)){
  }
 }
 $json=json_encode($out,JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE|JSON_THROW_ON_ERROR)."\n";
+if($stdout){fwrite(STDOUT,$json);exit(0);}
 $dir=dirname($target);
 if(!is_dir($dir)){fwrite(STDERR,"Output directory does not exist\n");exit(2);}
 $tmp=tempnam($dir,'.ai-diag-');
