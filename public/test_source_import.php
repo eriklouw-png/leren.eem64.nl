@@ -60,8 +60,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
  }
 }
 ?>
-<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bronfoto’s toevoegen</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head>
-<body class="bg-light"><main class="container py-4" style="max-width:900px">
+<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bronfoto’s toevoegen</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><style>body.leren-admin{background:#29332c!important;color:#f2f5f2}body.leren-admin .card{background:#202922;color:#f2f5f2;border-color:#455149}body.leren-admin .text-secondary{color:#c2cbc4!important}body.leren-admin a{color:#d6e9dc}body.leren-admin .border-bottom{border-color:#455149!important}body.leren-admin .alert-info{background:#304238;color:#f2f5f2;border-color:#506354}</style></head>
+<body class="bg-light leren-admin"><main class="container py-4" style="max-width:900px">
 <a href="test_edit.php?id=<?=$id?>">&larr; Sub-test bewerken</a><h1 class="h3 mt-3">Bronfoto’s toevoegen <span class="badge text-bg-secondary">Tijdelijk</span></h1>
 <p><?=e($test['title'])?></p><p class="alert alert-info">Alle bestaande vragen, antwoorden, afbeeldingen en scores blijven ongewijzigd.</p>
 <?php if($error):?><p class="alert alert-danger"><?=e($error)?></p><?php endif;?>
