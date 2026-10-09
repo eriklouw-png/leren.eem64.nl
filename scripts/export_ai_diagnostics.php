@@ -6,7 +6,20 @@ declare(strict_types=1);
  * The output contains only AI provenance metadata, never users, tokens or full page text.
  */
 if(PHP_SAPI!=='cli'){http_response_code(404);exit;}
-require __DIR__.'/../app/bootstrap.php';
+// Standalone CLI connection: bootstrap.php is intended for web requests and
+// may terminate or alter output before the exporter can emit JSON.
+$configPath=__DIR__.'/../config/config.php';
+if(!is_file($configPath)){fwrite(STDERR,"Database config not found\n");exit(1);}
+$config=require $configPath;
+$db=$config['db']??[];
+try{
+ $pdo=new PDO(
+  "mysql:host={$db['host']};port={$db['port']};dbname={$db['name']};charset={$db['charset']}",
+  $db['user'],$db['password'],
+  [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,PDO::ATTR_EMULATE_PREPARES=>false]
+ );
+}catch(Throwable $e){fwrite(STDERR,"Database connection failed: ".$e->getMessage()."\n");exit(1);}
+
 $target=$argv[1]??'';
 $stdout=($target==='-');
 if($target===''||(!$stdout&&!str_starts_with($target,'/'))){fwrite(STDERR,"Usage: php scripts/export_ai_diagnostics.php /absolute/output.json\n");exit(2);}
