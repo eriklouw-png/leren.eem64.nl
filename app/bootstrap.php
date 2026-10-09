@@ -813,7 +813,7 @@ function openai_generate_with_images(string $input,array $imagePaths,string $man
 
     $payload=[
         'model'=>openai_model(),
-        'instructions'=>ai_general_instruction('analysis_instructions')."\n\n".ai_general_instruction('language_instructions')."\n\n".ai_general_instruction('source_validation_instructions')."\n\n".$managedInstructions,
+        'instructions'=>ai_general_instruction('analysis_instructions')."\n\nDOEL: toets alle expliciete kennis op de aangeleverde boekpagina's. Inventariseer alle afzonderlijke leerdoelen, ook begrippen, jaartallen, regels, voorbeelden en verbanden. Stel per inhoudscluster de beste toetsvorm en het benodigde aantal vragen voor; niet een vooraf vast aantal. Combineer waar nuttig multiple choice en open vragen en accepteer bewuste herhaling. Maak geen leerdoelen op basis van onleesbare of niet aanwezige informatie. Voor pure woorden- of zinnenlijsten blijft de aparte oefenroute bestaan. Geef in subtests meerdere passende voorstellen en aantallen; aanbevolen vraagtypen mc/open.\n\n".ai_general_instruction('language_instructions')."\n\n".ai_general_instruction('source_validation_instructions')."\n\n".$managedInstructions,
         'input'=>[['role'=>'user','content'=>$content]],
         'max_output_tokens'=>10000,
         'store'=>false,
