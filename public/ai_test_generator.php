@@ -39,7 +39,7 @@ function ai_requested_specs(mixed $input):array{
         $count=(int)($row['count']??0);
         if($count<1)continue;
         $result[]=['type'=>$type,'count'=>min(100,$count)];
-        if(count($result)>=10)break;
+        if(count($result)>=20)break;
     }
     return $result;
 }
@@ -50,6 +50,23 @@ function ai_type_label(string $type):string{
     return ['mc'=>'Multiple choice','open'=>'Open vragen','mixed'=>'Combinatie'][$type]??'Combinatie';
 }
 $requestedSpecs=ai_requested_specs($requestedSpecs);
+$dualPracticeSubject=(bool)preg_match('/^(geschiedenis|aardrijkskunde|biologie|natuurkunde|scheikunde|nask|maatschappijleer)$/iu',trim($subjectName));
+function ai_dual_practice_specs(array $specs):array{
+    $out=[];
+    foreach($specs as $spec){
+        $type=(string)($spec['type']??'open');
+        $count=(int)($spec['count']??0);
+        if($count<1)continue;
+        if($type==='mixed'){
+            $out[]=['type'=>'open','count'=>$count];
+            $out[]=['type'=>'mc','count'=>$count];
+        }else{
+            $out[]=['type'=>$type,'count'=>$count];
+        }
+    }
+    return array_slice($out,0,20);
+}
+
 
 function ai_query_subject_label(string $query):string{
     $label=trim((string)(preg_replace('/\\s+/u',' ',$query)??$query));
@@ -149,6 +166,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $isVocabularyList=!empty($saved['analysis']['is_vocabulary_list'])&&count($vocabularyPairs)>0;
         $isSentenceList=!empty($saved['analysis']['is_sentence_list'])&&count($vocabularyPairs)>0;
         $isPracticeList=$isVocabularyList||$isSentenceList;
+        if($dualPracticeSubject&&!$isPracticeList)$requestedSpecs=ai_dual_practice_specs($requestedSpecs);
         if($isPracticeList){
             $requestedSpecs=[['type'=>'open','count'=>count($vocabularyPairs)*2]];
             $prefix='';
@@ -875,10 +893,12 @@ dropzone?.addEventListener('dragleave',()=>dropzone.classList.remove('dragover')
 dropzone?.addEventListener('drop',e=>{e.preventDefault();dropzone.classList.remove('dragover');addPhotos(e.dataTransfer.files)});
 
 document.getElementById('addMorePhotos')?.addEventListener('click',()=>input?.click());
-const savedSpecs=<?=json_encode($savedRequest['specs']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;const proposedSpecs=<?=json_encode(array_values(array_filter(array_map(static function($st){$types=(array)($st['recommended_types']??[]);return ['type'=>count($types)>1?'mixed':(in_array('mc',$types,true)?'mc':'open'),'count'=>max(1,min(100,(int)($st['question_count']??10)))];},(array)($analysis['subtests']??[])),static fn($x)=>$x['count']>0)),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;const specDefaults=savedSpecs.length?savedSpecs:(proposedSpecs.length?proposedSpecs:[{type:'mixed',count:10}]);
-function fillSpecs(container,rows){container.innerHTML='';rows.slice(0,10).forEach((row,i)=>{const wrap=document.createElement('div');wrap.className='row g-2 align-items-end spec-row mb-2';wrap.innerHTML='<div class="col-6 col-md-4"><label class="form-label small">Aantal vragen</label><input class="form-control" type="number" name="specs['+i+'][count]" min="1" max="100" value="'+Math.max(1,Math.min(100,Number(row.count)||10))+'" required></div><div class="col-6 col-md-5"><label class="form-label small">Type</label><select class="form-select" name="specs['+i+'][type]"><option value="mc" '+(row.type==='mc'?'selected':'')+'>Multiple choice</option><option value="open" '+(row.type==='open'?'selected':'')+'>Open vragen</option><option value="mixed" '+(row.type==='mixed'?'selected':'')+'>Combinatie</option></select></div><div class="col-3"><button type="button" class="btn btn-outline-danger remove-spec" aria-label="Verwijder toetsvorm">×</button></div>';wrap.querySelector('.remove-spec').addEventListener('click',()=>{wrap.remove();renumberSpecs()});container.appendChild(wrap)})}
+const savedSpecs=<?=json_encode($savedRequest['specs']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;const proposedSpecs=<?=json_encode(array_values(array_filter(array_map(static function($st){$types=(array)($st['recommended_types']??[]);return ['type'=>count($types)>1?'mixed':(in_array('mc',$types,true)?'mc':'open'),'count'=>max(1,min(100,(int)($st['question_count']??10)))];},(array)($analysis['subtests']??[])),static fn($x)=>$x['count']>0)),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;const dualPracticeSubject=<?=json_encode($dualPracticeSubject)?>;
+const expandDualSpecs=rows=>dualPracticeSubject?rows.flatMap(row=>row.type==='mixed'?[{type:'open',count:row.count},{type:'mc',count:row.count}]:[row]):rows;
+const specDefaults=savedSpecs.length?expandDualSpecs(savedSpecs):expandDualSpecs(proposedSpecs.length?proposedSpecs:[{type:'mixed',count:10}]);
+function fillSpecs(container,rows){container.innerHTML='';rows.slice(0,20).forEach((row,i)=>{const wrap=document.createElement('div');wrap.className='row g-2 align-items-end spec-row mb-2';wrap.innerHTML='<div class="col-6 col-md-4"><label class="form-label small">Aantal vragen</label><input class="form-control" type="number" name="specs['+i+'][count]" min="1" max="100" value="'+Math.max(1,Math.min(100,Number(row.count)||10))+'" required></div><div class="col-6 col-md-5"><label class="form-label small">Type</label><select class="form-select" name="specs['+i+'][type]"><option value="mc" '+(row.type==='mc'?'selected':'')+'>Multiple choice</option><option value="open" '+(row.type==='open'?'selected':'')+'>Open vragen</option>'+(dualPracticeSubject?'':'<option value="mixed" '+(row.type==='mixed'?'selected':'')+'>Combinatie</option>')+'</select></div><div class="col-3"><button type="button" class="btn btn-outline-danger remove-spec" aria-label="Verwijder toetsvorm">×</button></div>';wrap.querySelector('.remove-spec').addEventListener('click',()=>{wrap.remove();renumberSpecs()});container.appendChild(wrap)})}
 function renumberSpecs(){document.querySelectorAll('#specRowsAfter .spec-row').forEach((row,i)=>row.querySelectorAll('[name]').forEach(el=>el.name=el.name.replace(/specs\\[\\d+\\]/,'specs['+i+']')))}
-const afterContainer=document.getElementById('specRowsAfter');if(afterContainer){fillSpecs(afterContainer,specDefaults);const add=document.createElement('button');add.type='button';add.className='btn btn-outline-secondary mt-2';add.textContent='+ Toetsvorm toevoegen';add.addEventListener('click',()=>{if(afterContainer.querySelectorAll('.spec-row').length>=10)return;const rows=[...afterContainer.querySelectorAll('.spec-row')].map(row=>({count:row.querySelector('[type=number]').value,type:row.querySelector('select').value}));rows.push({type:'mixed',count:10});fillSpecs(afterContainer,rows)});afterContainer.after(add)}
+const afterContainer=document.getElementById('specRowsAfter');if(afterContainer){fillSpecs(afterContainer,specDefaults);const add=document.createElement('button');add.type='button';add.className='btn btn-outline-secondary mt-2';add.textContent='+ Toetsvorm toevoegen';add.addEventListener('click',()=>{if(afterContainer.querySelectorAll('.spec-row').length>=20)return;const rows=[...afterContainer.querySelectorAll('.spec-row')].map(row=>({count:row.querySelector('[type=number]').value,type:row.querySelector('select').value}));rows.push({type:dualPracticeSubject?'open':'mixed',count:10});fillSpecs(afterContainer,rows)});afterContainer.after(add)}
 const aiLoading=document.getElementById('aiLoading'),aiLoadingTitle=document.getElementById('aiLoadingTitle'),aiLoadingText=document.getElementById('aiLoadingText');let aiLoadingTimer=null;function showAiLoading(kind){if(!aiLoading)return;clearInterval(aiLoadingTimer);if(kind==='analyze'){const queryField=document.getElementById('query');const hasQuery=!!queryField&&queryField.value.trim()!=='';const hasPages=!!input&&!!input.files&&input.files.length>0;if(hasQuery&&!hasPages){aiLoadingTitle.textContent='Opdracht analyseren...';aiLoadingText.textContent='De AI werkt je onderwerp of opdracht uit. Dit kan even duren.'}else if(hasQuery&&hasPages){aiLoadingTitle.textContent='Toetsbron analyseren...';aiLoadingText.textContent='De AI verwerkt je opdracht en de boekpagina’s. Dit kan even duren.'}else{aiLoadingTitle.textContent='Boekpagina’s analyseren...';aiLoadingText.textContent='De AI leest de boekpagina’s. Dit kan even duren.'}}else if(kind==='generate'){aiLoadingTitle.textContent='Toets maken...';aiLoadingText.textContent='GPT maakt de vragen en eventuele samenvatting.'}else{aiLoadingTitle.textContent='Toets opslaan...';const messages=['Leren verwerkt de gegenereerde vragen...','Leren controleert de gegenereerde SVG technisch...','Daarna worden de afbeeldingen veilig opgeslagen...','De afbeeldingen worden opgeslagen bij de vragen...','Bijna klaar — Leren rondt de toets af...'];let i=0;aiLoadingText.textContent=messages[0];aiLoadingTimer=setInterval(()=>{i=(i+1)%messages.length;aiLoadingText.textContent=messages[i]},2800)}aiLoading.classList.remove('d-none');document.body.style.overflow='hidden'}
 document.getElementById('analyzeForm')?.addEventListener('submit',()=>showAiLoading('analyze'));document.getElementById('generateForm')?.addEventListener('submit',()=>showAiLoading('generate'));document.getElementById('saveForm')?.addEventListener('submit',e=>{const submit=e.submitter;if(submit&&submit.name==='action'&&submit.value==='clear')return;showAiLoading('save');if(submit){submit.disabled=true;submit.dataset.originalText=submit.textContent;submit.textContent='Opslaan...'}});
 </script>
