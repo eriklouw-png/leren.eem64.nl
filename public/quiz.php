@@ -440,6 +440,35 @@ if(!$viewMode && $_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==
 $x=$pdo->prepare("SELECT q.id,q.question_text,q.image_path,q.question_type,q.explanation,q.grammar_label,aq.sort_order,aa.selected_option_id,aa.answer_text,aa.is_correct FROM attempt_questions aq JOIN questions q ON q.id=aq.question_id LEFT JOIN attempt_answers aa ON aa.attempt_id=aq.attempt_id AND aa.question_id=aq.question_id WHERE aq.attempt_id=? ORDER BY aq.sort_order,q.id");
 
 $x->execute([$attemptId]);$questions=$x->fetchAll();
+/* Prefer the relevant source illustration when a question explicitly refers
+   to the left or right illustration on its archived source page. */
+$sourceRegionImages=[];
+$regionSql="SELECT l.question_id,l.collection_id,r.id region_id,r.x,r.y,r.width,r.height,p.page_number
+ FROM ai_source_links l
+ JOIN ai_source_pages p ON p.id=l.page_id AND p.collection_id=l.collection_id
+ JOIN ai_source_regions r ON r.page_id=p.id AND r.region_type IN ('image','diagram','table')
+ WHERE l.link_type='question' AND l.question_id IN (".implode(',',array_fill(0,count($questions),'?')).")
+ ORDER BY l.question_id,p.page_number,r.x";
+if($questions){
+    try{
+        $regionStmt=$pdo->prepare($regionSql);
+        $regionStmt->execute(array_column($questions,'id'));
+        $regionRows=[];
+        foreach($regionStmt->fetchAll(PDO::FETCH_ASSOC) as $rr)$regionRows[(int)$rr['question_id']][(int)$rr['page_number']][]=$rr;
+        foreach($questions as $question){
+            $questionText=mb_strtolower((string)$question['question_text'],'UTF-8');
+            if(!preg_match('/\\b(links|linker|rechts|rechter)\\b/u',$questionText,$side))continue;
+            $pageGroups=$regionRows[(int)$question['id']]??[];
+            if(count($pageGroups)!==1)continue;
+            $candidates=array_values(reset($pageGroups));
+            if(count($candidates)<2)continue;
+            usort($candidates,static fn($a,$b)=>(float)$a['x']<=>(float)$b['x']);
+            $selected=in_array($side[1],['links','linker'],true)?$candidates[0]:$candidates[count($candidates)-1];
+            $sourceRegionImages[(int)$question['id']]='source_region_image.php?collection='.(int)$selected['collection_id'].'&id='.(int)$selected['region_id'];
+        }
+    }catch(Throwable $e){error_log('Quiz source image selection: '.$e->getMessage());}
+}
+
 $resumeIndex=0;
 if(!$viewMode){
 foreach($questions as $questionIndex=>$resumeQuestion){
@@ -491,7 +520,7 @@ if(str_contains($grammarLabel,'vrouwelijk'))$grammarParts[]='v';
 if(str_contains($grammarLabel,'meervoud'))$grammarParts[]='mv';
 if(str_contains($grammarLabel,'enkelvoud'))$grammarParts[]='ev';
 $grammarShort=implode(' · ',$grammarParts);
-?><?php if($grammarShort!==''):?> <span class="quiz-grammar-badge" title="<?=e($grammarLabel)?>"><?=$grammarShort?></span><?php endif;?></h2><?php if(!empty($q['image_path']) && preg_match('/^[A-Za-z0-9._\\/-]+$/',(string)$q['image_path']) && !str_contains($q['image_path'],'..') && !str_starts_with($q['image_path'],'/')):?><div class="mb-3 text-center"><img src="uploads/questions/<?=e($q['image_path'])?>" alt="Afbeelding bij de vraag" class="img-fluid rounded" style="max-height:420px;object-fit:contain"></div><?php endif;?><?php if($q['question_type']==='open'):?><label class="form-label text-secondary mt-3">Typ je antwoord:</label><div class="quiz-answer-row"><textarea class="form-control answer-input" data-question="<?=$q['id']?>" name="question_<?=$q['id']?>" rows="4" <?=$viewMode?'disabled':''?>><?=e($q['answer_text']??'')?></textarea><button type="button" class="btn quiz-check-btn next-btn quiz-answer-action" aria-label="<?=$viewMode ? ($n===count($questions)-1?'Klaar':'Volgende') : 'Check'?>"><span class="quiz-action-label"><?=$viewMode ? ($n===count($questions)-1?'Afronden':'Volgende') : 'Check'?></span><span class="quiz-action-icon" aria-hidden="true"><?=$viewMode ? '→' : '✓'?></span></button></div><?php
+?><?php if($grammarShort!==''):?> <span class="quiz-grammar-badge" title="<?=e($grammarLabel)?>"><?=$grammarShort?></span><?php endif;?></h2><?php if(!empty($sourceRegionImages[(int)$q['id']])):?><div class="mb-3 text-center"><img src="<?=e($sourceRegionImages[(int)$q['id']])?>" alt="Uitsnede uit de bron bij de vraag" class="img-fluid rounded" style="max-height:420px;object-fit:contain"></div><?php elseif(!empty($q['image_path']) && preg_match('/^[A-Za-z0-9._\\/-]+$/',(string)$q['image_path']) && !str_contains($q['image_path'],'..') && !str_starts_with($q['image_path'],'/')):?><div class="mb-3 text-center"><img src="uploads/questions/<?=e($q['image_path'])?>" alt="Afbeelding bij de vraag" class="img-fluid rounded" style="max-height:420px;object-fit:contain"></div><?php endif;?><?php if($q['question_type']==='open'):?><label class="form-label text-secondary mt-3">Typ je antwoord:</label><div class="quiz-answer-row"><textarea class="form-control answer-input" data-question="<?=$q['id']?>" name="question_<?=$q['id']?>" rows="4" <?=$viewMode?'disabled':''?>><?=e($q['answer_text']??'')?></textarea><button type="button" class="btn quiz-check-btn next-btn quiz-answer-action" aria-label="<?=$viewMode ? ($n===count($questions)-1?'Klaar':'Volgende') : 'Check'?>"><span class="quiz-action-label"><?=$viewMode ? ($n===count($questions)-1?'Afronden':'Volgende') : 'Check'?></span><span class="quiz-action-icon" aria-hidden="true"><?=$viewMode ? '→' : '✓'?></span></button></div><?php
 $showSpecialChars=!empty($test['vocab_left_label'])&&!empty($test['vocab_right_label']);
 $targetLanguage='';
 if($showSpecialChars&&!$viewMode){
