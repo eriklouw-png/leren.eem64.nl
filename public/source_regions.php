@@ -2,6 +2,7 @@
 require __DIR__.'/../app/bootstrap.php';
 require __DIR__.'/../app/auth.php';
 require_once __DIR__.'/../app/ai_source_archive.php';
+require_once __DIR__.'/../app/ai_source_vision.php';
 require_admin();
 ai_source_archive_tables($pdo);
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT)?:filter_input(INPUT_POST,'id',FILTER_VALIDATE_INT);
@@ -17,19 +18,21 @@ $message='';
 if($_SERVER['REQUEST_METHOD']==='POST'){
     if(!hash_equals((string)($_SESSION['source_regions_token']??''),(string)($_POST['token']??''))){http_response_code(403);exit('Ongeldige sessie.');}
     $detected=[];
+    $diagnostics=[];
     foreach($pages as $page){
         $relative=(string)$page['image_path'];
         $base=realpath(__DIR__.'/uploads/ai_sources');
         $path=realpath(__DIR__.'/'.$relative);
         if(!$base||!$path||!str_starts_with($path,$base.DIRECTORY_SEPARATOR))continue;
         $titles=array_column($sections,'title');
-        $prompt='Bekijk de foto in de juiste leesrichting. Identificeer uitsluitend zelfstandige VISUELE illustraties, foto\'s, tabellen of diagrammen die een leerstofonderdeel verduidelijken; geen tekstblokken, leerdoelen of paginatitels. Retourneer uitsluitend een JSON-object met regions. Elk gebied bevat title, type (image/diagram/table), x, y, width, height als fracties 0..1 van de originele ongedraaide foto en section_indices als 0-gebaseerde indices. Neem alleen grote, duidelijke rechthoeken met breedte en hoogte van minimaal 0.12 op. Bij twijfel geen gebied. Leerstofonderdelen: '.json_encode($titles,JSON_UNESCAPED_UNICODE);
-        $response=openai_generate_topic_summary($prompt,[$path]);
-        $data=is_array($response)&&!isset($response['_leren_error'])?openai_output_json($response):null;
-        $raw=trim((string)($data['summary']??''));
-        if(str_starts_with($raw,'```'))$raw=preg_replace('/^\x60{3}(?:json)?\s*|\s*\x60{3}$/u','',$raw);
-        $parsed=json_decode($raw,true);
-        foreach(array_slice((array)($parsed['regions']??[]),0,12) as $region){
+        $analysis=ai_source_vision_analyze($path,$titles);
+        if($analysis['error']!==null){
+            $diagnostics[]='Pagina '.(int)$page['page_number'].': '.$analysis['error'];
+            continue;
+        }
+        $candidates=(array)$analysis['regions'];
+        $before=count($detected);
+        foreach($candidates as $region){
             if(!is_array($region)||!in_array(($region['type']??''),['image','diagram','table'],true))continue;
             $x=(float)($region['x']??-1);$y=(float)($region['y']??-1);$w=(float)($region['width']??-1);$h=(float)($region['height']??-1);
             if(!is_finite($x)||!is_finite($y)||!is_finite($w)||!is_finite($h)||$x<0||$y<0||$w<0.12||$h<0.12||$x+$w>1||$y+$h>1)continue;
@@ -38,6 +41,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             if(!$linked)continue;
             $detected[]=['page_id'=>(int)$page['id'],'title'=>mb_substr(trim((string)($region['title']??'Gebied')),0,255),'type'=>$region['type'],'x'=>$x,'y'=>$y,'w'=>$w,'h'=>$h,'sections'=>$linked];
         }
+        if($candidates && count($detected)===$before)$diagnostics[]='Pagina '.(int)$page['page_number'].': '.count($candidates).' voorgestelde gebieden afgekeurd.';
     }
     if($detected){
         $pdo->beginTransaction();
@@ -50,7 +54,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             }
             $pdo->commit();$message=count($detected).' brongebieden opgeslagen.';
         }catch(Throwable $e){$pdo->rollBack();$message='Opslaan mislukt: '.$e->getMessage();}
-    }else{$message='Geen bruikbare brongebieden herkend. Bestaande gegevens zijn behouden.';}
+    }else{$message='Geen bruikbare brongebieden herkend. Bestaande gegevens zijn behouden. '.implode(' ',array_slice($diagnostics,0,5));}
 }
 $_SESSION['source_regions_token']=$_SESSION['source_regions_token']??bin2hex(random_bytes(16));
 ?>
