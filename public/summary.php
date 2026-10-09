@@ -74,7 +74,6 @@ if($currentTitle!==null || $currentLines){
 if(!$sections)$sections=[['title'=>null,'content'=>trim($rawSummary)]];
 }
 ?>
-<?php if($isArchive):?><div class="mb-3"><a class="btn btn-outline-secondary btn-sm" href="source_regions.php?id=<?=$id?>">Brongebieden herkennen (beheer)</a></div><?php endif;?>
 <div id="summarySections">
 <?php foreach($sections as $i=>$section):?>
 <section class="summary-section <?=$i===0?'':'d-none'?>" data-index="<?=$i?>">
