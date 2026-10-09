@@ -882,6 +882,7 @@ $grammarShort=implode(' · ',$grammarParts);
 </div>
 <?php endforeach;?>
 </div>
+</div><!-- /.generated-test-card -->
 <?php endforeach;?>
 <div class="ai-save-actions">
 <button class="btn btn-success btn-lg" type="submit">Opslaan als sub-test<?=count($_SESSION['ai_test_analysis']['generated']['subtests'])===1?'':'s'?></button>
