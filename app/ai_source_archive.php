@@ -40,6 +40,8 @@ function ai_source_archive_tables(PDO $pdo):void{
     if(!in_array('source_type',$columns,true))$pdo->exec("ALTER TABLE ai_source_collections ADD COLUMN source_type VARCHAR(16) NOT NULL DEFAULT 'ai'");
     $columns=$pdo->query("SHOW COLUMNS FROM ai_source_sections")->fetchAll(PDO::FETCH_COLUMN);
     if(!in_array('source_text',$columns,true))$pdo->exec("ALTER TABLE ai_source_sections ADD COLUMN source_text LONGTEXT NULL");
+    $regionColumns=$pdo->query("SHOW COLUMNS FROM ai_source_regions")->fetchAll(PDO::FETCH_COLUMN);
+    if(!in_array('rotation_degrees',$regionColumns,true))$pdo->exec("ALTER TABLE ai_source_regions ADD COLUMN rotation_degrees SMALLINT NOT NULL DEFAULT 0");
     $pdo->exec("CREATE TABLE IF NOT EXISTS ai_source_links (
       id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
       collection_id BIGINT UNSIGNED NOT NULL, section_id BIGINT UNSIGNED NULL,
