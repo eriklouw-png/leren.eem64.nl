@@ -399,10 +399,16 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                                 // op pagina 3 alsnog "Afbeelding gebruiken" kiest, maak dan
                                 // automatisch een GPT-afbeelding op basis van de vraag.
                                 if($imageMethod==='none'){
-                                    $imageMethod='generate';
-                                    $imagePrompt=$question;
+                                    // Bronillustraties hebben voorrang op opnieuw gegenereerde beelden.
+                                    $sourcePage=(int)($q['source_page']??0);
+                                    if($sourcePage>=1 && isset($sourceImages[$sourcePage-1]) && is_file($sourceImages[$sourcePage-1])){
+                                        $imageMethod='source';
+                                    }else{
+                                        $imageMethod='generate';
+                                        $imagePrompt=$question;
+                                    }
                                 }
-                                if(!in_array($imageMethod,['web','svg','generate'],true)){
+                                if(!in_array($imageMethod,['web','svg','generate','source'],true)){
                                     throw new RuntimeException('Ongeldige afbeeldingsmethode bij een gegenereerde vraag.');
                                 }
                                 if($imageMethod==='generate'&&$imagePrompt==='')$imagePrompt=$question;
@@ -412,9 +418,22 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                                 $q['image_method']=$imageMethod;
                                 $q['image_prompt']=$imagePrompt;
                             }
+                            if($q['use_image'] && ($q['image_method']??'')==='source'){
+                                $sourcePage=(int)($q['source_page']??0);
+                                $sourceFile=$sourceImages[$sourcePage-1]??null;
+                                if(!is_string($sourceFile)||!is_file($sourceFile))throw new RuntimeException('De bronpagina voor deze vraag ontbreekt.');
+                                $questionImageDir=__DIR__.'/uploads/questions';
+                                if(!is_dir($questionImageDir)&&!@mkdir($questionImageDir,0755,true))throw new RuntimeException('Afbeeldingsmap niet beschikbaar.');
+                                $mime=(string)(@mime_content_type($sourceFile)?:'');
+                                $ext=['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'][$mime]??null;
+                                if($ext===null)throw new RuntimeException('Ongeldig bronafbeeldingstype.');
+                                $imagePath='source_'.bin2hex(random_bytes(12)).'.'.$ext;
+                                if(!@copy($sourceFile,$questionImageDir.'/'.$imagePath))throw new RuntimeException('Bronafbeelding kopiëren mislukt.');
+                                $createdQuestionImages[]=$questionImageDir.'/'.$imagePath;
+                            }
                             $qIns->execute([$testId,$q['question'],$imagePath,$q['type']==='mc'?'multiple_choice':'open',$q['vocab_direction']??null,$q['explanation'],$q['grammar_label']??null,$sort+1]);
                             $qid=(int)$pdo->lastInsertId();
-                            if($q['use_image'] && $imagePath===null && (string)($q['image_method']??'none')!=='none'){
+                            if($q['use_image'] && $imagePath===null && (string)(!empty($q['use_image']))){
                                 $pendingImageJobs[]=[
                                     'question_id'=>$qid,
                                     'question'=>(string)$q['question'],
@@ -761,9 +780,9 @@ $grammarShort=implode(' · ',$grammarParts);
 <div class="ai-question-side">
 <?php if($grammarShort!==''):?><span class="ai-question-meta" title="<?=e($grammarLabel)?>"><?=$grammarShort?></span><?php endif;?>
 <label class="ai-image-check" title="Afbeelding gebruiken">
-<input type="checkbox" name="tests[<?=$si?>][questions][<?=$qi?>][use_image]" value="1" <?=(!empty($q['use_image'])&&($q['image_method']??'none')!=='none')?'checked':''?>>
+<input type="checkbox" name="tests[<?=$si?>][questions][<?=$qi?>][use_image]" value="1" <?=(!empty($q['use_image'])&&(!empty($q['use_image'])))?'checked':''?>>
 <span aria-hidden="true">✓</span>
-<span class="visually-hidden">Afbeelding <?=(!empty($q['use_image'])&&($q['image_method']??'none')!=='none')?'gebruiken':'niet gebruiken'?></span>
+<span class="visually-hidden">Afbeelding <?=(!empty($q['use_image'])&&(!empty($q['use_image'])))?'gebruiken':'niet gebruiken'?></span>
 </label>
 </div>
 </div>
