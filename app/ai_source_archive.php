@@ -140,6 +140,11 @@ function ai_source_region_link_section(PDO $pdo,int $collectionId,int $sectionId
     $stmt=$pdo->prepare("INSERT INTO ai_source_links(collection_id,section_id,page_id,region_id,link_type) VALUES(?,?,?,?,'section_region')");
     $stmt->execute([$collectionId,$sectionId,$pageId,$regionId]);
 }
+function ai_source_section_regions(PDO $pdo,int $collectionId,int $sectionId):array{
+    $stmt=$pdo->prepare("SELECT DISTINCT r.id,r.title,r.region_type,r.x,r.y,r.width,r.height,p.page_number FROM ai_source_links l JOIN ai_source_regions r ON r.id=l.region_id JOIN ai_source_pages p ON p.id=r.page_id WHERE l.collection_id=? AND l.section_id=? AND l.link_type='section_region' ORDER BY p.page_number,r.id");
+    $stmt->execute([$collectionId,$sectionId]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 /** Render a summary from its ordered source sections; no duplicate full-text field. */
 function ai_source_summary_compose(PDO $pdo,int $collectionId):string{
     $stmt=$pdo->prepare("SELECT title,summary FROM ai_source_sections WHERE collection_id=? ORDER BY sort_order,id");
