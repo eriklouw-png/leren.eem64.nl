@@ -46,7 +46,7 @@ if(!$summary){http_response_code(404);exit('Samenvatting niet gevonden.');}
 <div class="small text-secondary mb-2"><?=e($summary['subject_name'])?> · <?=e($summary['topic_name'])?></div>
 <h1 class="h2 mb-1"><?=e($summary['name'])?></h1>
 <?php if(!empty($summary['updated_at']) || !empty($summary['created_at'])):?>
-<div class="small text-secondary mb-4">Bijgewerkt <?=e(date('d-m-Y',strtotime((string)($summary['updated_at']?:$summary['created_at']))))?></div>
+<div class="small text-secondary mb-4"><?=!empty($summary['updated_at'])?'Bijgewerkt':'Aangemaakt'?> <?=e(date('d-m-Y',strtotime((string)(($summary['updated_at']??null)?:$summary['created_at']))))?></div>
 <?php endif;?>
 <?php
 $rawSummary=(string)$summary['summary'];
