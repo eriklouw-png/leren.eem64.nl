@@ -37,7 +37,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         if(!$items){http_response_code(400);exit('Vul minimaal één onderdeel in.');}
         $pdo->beginTransaction();
         try{
-            if(!$id)$id=ai_source_manual_summary_create($pdo,$subjectId,$topicId,$name,$items[0]['body']);
+            $isNew=$id===0;
+            if($isNew)$id=ai_source_manual_summary_create($pdo,$subjectId,$topicId,$name,$items[0]['body']);
             $pdo->prepare("UPDATE ai_source_collections SET title=? WHERE id=?")->execute([$name,$id]);
             $valid=$pdo->prepare("SELECT id FROM ai_source_sections WHERE id=? AND collection_id=?");
             $update=$pdo->prepare("UPDATE ai_source_sections SET title=?,summary=?,sort_order=? WHERE id=? AND collection_id=?");
@@ -47,7 +48,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     $valid->execute([$item['id'],$id]);
                     if(!$valid->fetchColumn())throw new RuntimeException('Ongeldig onderdeel.');
                     $update->execute([$item['title'],$item['body'],$i+1,$item['id'],$id]);
-                }elseif($i===0 && count($items)===1 && !empty($_POST['id'])===false){
+                }elseif($i===0 && $isNew){
                     $pdo->prepare("UPDATE ai_source_sections SET title=?,sort_order=1 WHERE collection_id=?")->execute([$item['title'],$id]);
                 }else{
                     $insert->execute([$id,$item['title'],$item['body'],$i+1]);
