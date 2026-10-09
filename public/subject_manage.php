@@ -20,7 +20,9 @@ $tx->execute([$id]);$topics=$tx->fetchAll();
 $x=$pdo->prepare("SELECT t.id,t.topic_id,COUNT(q.id) question_count FROM tests t JOIN topics tp ON tp.id=t.topic_id LEFT JOIN questions q ON q.test_id=t.id WHERE tp.subject_id=? AND t.is_active=1 GROUP BY t.id");
 $x->execute([$id]);$tests=$x->fetchAll();
 
-$x=$pdo->prepare("SELECT ts.id,ts.topic_id FROM topic_summaries ts JOIN topics tp ON tp.id=ts.topic_id WHERE tp.subject_id=? AND ts.is_active=1");
+require_once __DIR__.'/../app/ai_source_archive.php';
+ai_source_archive_tables($pdo);
+$x=$pdo->prepare("SELECT c.id,c.topic_id FROM ai_source_collections c JOIN topics tp ON tp.id=c.topic_id WHERE tp.subject_id=? AND EXISTS(SELECT 1 FROM ai_source_sections sec WHERE sec.collection_id=c.id AND NULLIF(TRIM(sec.summary),'') IS NOT NULL)");
 $x->execute([$id]);$summaries=$x->fetchAll();
 
 $countsByTopic=[];
