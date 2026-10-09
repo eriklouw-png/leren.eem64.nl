@@ -45,6 +45,15 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     foreach($mapping as $qid=>$page)ai_source_archive_link($pdo,(int)$archive['collection_id'],null,(int)$archive['pages'][$page],$qid,null,'question');
     $pdo->commit();
    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
+   try{
+    require_once __DIR__.'/../app/ai_source_auto_regions.php';
+    $addSection=$pdo->prepare("INSERT INTO ai_source_sections(collection_id,title,sort_order) VALUES(?,?,?)");
+    $addSection->execute([(int)$archive['collection_id'],(string)$test['title'],1]);
+    $detected=ai_source_auto_detect($pdo,(int)$archive['collection_id']);
+    if(!empty($detected['errors']))error_log('Source import detection warnings: '.implode('; ',(array)$detected['errors']));
+   }catch(Throwable $recognitionError){
+    error_log('Source import recognition failed: '.$recognitionError->getMessage());
+   }
    foreach($stage['paths'] as $path)@unlink($path);unset($_SESSION[$sessionKey]);$stage=null;
    $notice='Bronfoto’s en '.count($mapping).' koppelingen opgeslagen. Vragen en antwoorden zijn ongewijzigd.';
   }catch(Throwable $e){$error=$e->getMessage();}
