@@ -82,6 +82,7 @@ if($id){
 <div class="d-flex flex-wrap gap-2 mb-3">
 <a class="btn btn-outline-secondary btn-sm" href="summary.php?source=archive&amp;id=<?=$id?>">Samenvatting bekijken</a>
 <a class="btn btn-outline-primary btn-sm" href="source_regions.php?id=<?=$id?>">Brongebieden herkennen</a>
+<a class="btn btn-outline-primary btn-sm" href="source_region_manage.php?id=<?=$id?>">Bronafbeeldingen beheren</a>
 </div>
 <?php endif;?>
 <form method="post">
