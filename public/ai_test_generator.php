@@ -50,23 +50,27 @@ function ai_type_label(string $type):string{
     return ['mc'=>'Multiple choice','open'=>'Open vragen','mixed'=>'Combinatie'][$type]??'Combinatie';
 }
 $requestedSpecs=ai_requested_specs($requestedSpecs);
-$dualPracticeSubject=(bool)preg_match('/^(geschiedenis|aardrijkskunde|biologie|natuurkunde|scheikunde|nask|maatschappijleer)$/iu',trim($subjectName));
-function ai_dual_practice_specs(array $specs):array{
-    $out=[];
+$learningSubject=ai_subject_group_for_subject($subjectId)==='maatschappij';
+$dualPracticeSubject=$learningSubject||(bool)preg_match('/^(natuurkunde|scheikunde|nask)$/iu',trim($subjectName));
+function ai_dual_practice_specs(array $specs,bool $bundleMc=false):array{
+    $out=[];$mcTotal=0;
     foreach($specs as $spec){
         $type=(string)($spec['type']??'open');
         $count=(int)($spec['count']??0);
         if($count<1)continue;
         if($type==='mixed'){
             $out[]=['type'=>'open','count'=>$count];
-            $out[]=['type'=>'mc','count'=>$count];
+            if($bundleMc)$mcTotal+=$count;
+            else $out[]=['type'=>'mc','count'=>$count];
+        }elseif($type==='mc'&&$bundleMc){
+            $mcTotal+=$count;
         }else{
             $out[]=['type'=>$type,'count'=>$count];
         }
     }
+    if($bundleMc&&$mcTotal>0)$out[]=['type'=>'mc','count'=>min(100,$mcTotal)];
     return array_slice($out,0,20);
 }
-
 
 function ai_query_subject_label(string $query):string{
     $label=trim((string)(preg_replace('/\\s+/u',' ',$query)??$query));
@@ -166,7 +170,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $isVocabularyList=!empty($saved['analysis']['is_vocabulary_list'])&&count($vocabularyPairs)>0;
         $isSentenceList=!empty($saved['analysis']['is_sentence_list'])&&count($vocabularyPairs)>0;
         $isPracticeList=$isVocabularyList||$isSentenceList;
-        if($dualPracticeSubject&&!$isPracticeList)$requestedSpecs=ai_dual_practice_specs($requestedSpecs);
+        if($dualPracticeSubject&&!$isPracticeList)$requestedSpecs=ai_dual_practice_specs($requestedSpecs,$learningSubject);
         if($isPracticeList){
             $requestedSpecs=[['type'=>'open','count'=>count($vocabularyPairs)*2]];
             $prefix='';
@@ -277,7 +281,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     ];
                 }else{
                     $learningPoints=array_values(array_filter(array_map('trim',(array)($saved['analysis']['learning_points']??[]))));
-                    $prompt='KENNISDEKKING IS HET HOOFDDOEL. Controleer eerst alle leerdoelen uit de bronanalyse en verdeel de vragen zo dat ieder leerdoel minstens eenmaal inhoudelijk getoetst wordt. Bewuste herhaling van belangrijke kennis in meerdere vraagvormen is toegestaan. Als de gekozen aantallen onvoldoende zijn, geef prioriteit aan alle afzonderlijke leerdoelen en vermijd oppervlakkige vragen. Leerdoelen: '.json_encode($learningPoints,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'. Maak concrete oefentoetsvragen voor precies de gevraagde sub-tests. Gebruik uitsluitend de bron wanneer er boekpagina’s zijn aangeleverd; gebruik bij een query de gebruikersopdracht en algemene kennis. Pas de beheerde vak- en sub-testconfiguratie toe. Maak exact het gevraagde aantal sub-tests en vragen. Bij mc zijn er exact vier opties en één correct antwoord. Bij open zijn er inhoudelijk geldige accepted_answers. Bij combinatie een evenwichtige mix. Verzin geen informatie die niet uit de bron of opdracht volgt.'.$aiRulesPrompt.' De gewenste opdrachten zijn: '.json_encode($requested,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'.';
+                    $prompt='KENNISDEKKING IS HET HOOFDDOEL. Controleer eerst alle leerdoelen uit de bronanalyse en verdeel de vragen zo dat ieder leerdoel minstens eenmaal inhoudelijk getoetst wordt. Bewuste herhaling van belangrijke kennis in meerdere vraagvormen is toegestaan. Als de gekozen aantallen onvoldoende zijn, geef prioriteit aan alle afzonderlijke leerdoelen en vermijd oppervlakkige vragen. Leerdoelen: '.json_encode($learningPoints,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'. Maak concrete oefentoetsvragen voor precies de gevraagde sub-tests. Voor Leerstofvakken: behoud de afzonderlijke open-vragensubtests per onderwerp, maar maak één overkoepelende multiplechoicesubtest die de belangrijkste leerdoelen uit alle onderwerpen samen oefent. Multiplechoicevragen moeten dezelfde leerstof behandelen, maar hoeven niet letterlijk dezelfde vragen of hetzelfde totale aantal als de open vragen te zijn. Gebruik uitsluitend de bron wanneer er boekpagina’s zijn aangeleverd; gebruik bij een query de gebruikersopdracht en algemene kennis. Pas de beheerde vak- en sub-testconfiguratie toe. Maak exact het gevraagde aantal sub-tests en vragen. Bij mc zijn er exact vier opties en één correct antwoord. Bij open zijn er inhoudelijk geldige accepted_answers. Bij combinatie een evenwichtige mix. Verzin geen informatie die niet uit de bron of opdracht volgt.'.$aiRulesPrompt.' De gewenste opdrachten zijn: '.json_encode($requested,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'.';
                     $data=openai_generate_test_questions($prompt,(array)($saved['images']??[]),$query!=='' && empty($saved['images']));
                     if(isset($data['_leren_error']))$errors[]=$data['_leren_error'];
                     else{
@@ -904,8 +908,8 @@ dropzone?.addEventListener('dragleave',()=>dropzone.classList.remove('dragover')
 dropzone?.addEventListener('drop',e=>{e.preventDefault();dropzone.classList.remove('dragover');addPhotos(e.dataTransfer.files)});
 
 document.getElementById('addMorePhotos')?.addEventListener('click',()=>input?.click());
-const savedSpecs=<?=json_encode($savedRequest['specs']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;const proposedSpecs=<?=json_encode(array_values(array_filter(array_map(static function($st){$types=(array)($st['recommended_types']??[]);return ['type'=>count($types)>1?'mixed':(in_array('mc',$types,true)?'mc':'open'),'count'=>max(1,min(100,(int)($st['question_count']??10)))];},(array)($analysis['subtests']??[])),static fn($x)=>$x['count']>0)),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;const dualPracticeSubject=<?=json_encode($dualPracticeSubject)?>;
-const expandDualSpecs=rows=>dualPracticeSubject?rows.flatMap(row=>row.type==='mixed'?[{type:'open',count:row.count},{type:'mc',count:row.count}]:[row]):rows;
+const savedSpecs=<?=json_encode($savedRequest['specs']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;const proposedSpecs=<?=json_encode(array_values(array_filter(array_map(static function($st){$types=(array)($st['recommended_types']??[]);return ['type'=>count($types)>1?'mixed':(in_array('mc',$types,true)?'mc':'open'),'count'=>max(1,min(100,(int)($st['question_count']??10)))];},(array)($analysis['subtests']??[])),static fn($x)=>$x['count']>0)),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;const dualPracticeSubject=<?=json_encode($dualPracticeSubject)?>;const learningSubject=<?=json_encode($learningSubject)?>;
+const expandDualSpecs=rows=>{if(!dualPracticeSubject)return rows;let mc=0;const out=[];for(const row of rows){if(row.type==='mixed'){out.push({type:'open',count:row.count});if(learningSubject)mc+=Number(row.count)||0;else out.push({type:'mc',count:row.count});}else if(row.type==='mc'&&learningSubject){mc+=Number(row.count)||0;}else out.push(row);}if(learningSubject&&mc>0)out.push({type:'mc',count:Math.min(100,mc)});return out;};
 const specDefaults=savedSpecs.length?expandDualSpecs(savedSpecs):expandDualSpecs(proposedSpecs.length?proposedSpecs:[{type:'mixed',count:10}]);
 function fillSpecs(container,rows){container.innerHTML='';rows.slice(0,20).forEach((row,i)=>{const wrap=document.createElement('div');wrap.className='row g-2 align-items-end spec-row mb-2';wrap.innerHTML='<div class="col-6 col-md-4"><label class="form-label small">Aantal vragen</label><input class="form-control" type="number" name="specs['+i+'][count]" min="1" max="100" value="'+Math.max(1,Math.min(100,Number(row.count)||10))+'" required></div><div class="col-6 col-md-5"><label class="form-label small">Type</label><select class="form-select" name="specs['+i+'][type]"><option value="mc" '+(row.type==='mc'?'selected':'')+'>Multiple choice</option><option value="open" '+(row.type==='open'?'selected':'')+'>Open vragen</option>'+(dualPracticeSubject?'':'<option value="mixed" '+(row.type==='mixed'?'selected':'')+'>Combinatie</option>')+'</select></div><div class="col-3"><button type="button" class="btn btn-outline-danger remove-spec" aria-label="Verwijder toetsvorm">×</button></div>';wrap.querySelector('.remove-spec').addEventListener('click',()=>{wrap.remove();renumberSpecs()});container.appendChild(wrap)})}
 function renumberSpecs(){document.querySelectorAll('#specRowsAfter .spec-row').forEach((row,i)=>row.querySelectorAll('[name]').forEach(el=>el.name=el.name.replace(/specs\\[\\d+\\]/,'specs['+i+']')))}
