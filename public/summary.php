@@ -74,6 +74,7 @@ if($currentTitle!==null || $currentLines){
 if(!$sections)$sections=[['title'=>null,'content'=>trim($rawSummary)]];
 }
 ?>
+<?php if($isArchive):?><div class="mb-3"><a class="btn btn-outline-secondary btn-sm" href="source_regions.php?id=<?=$id?>">Brongebieden herkennen (beheer)</a></div><?php endif;?>
 <div id="summarySections">
 <?php foreach($sections as $i=>$section):?>
 <section class="summary-section <?=$i===0?'':'d-none'?>" data-index="<?=$i?>">
@@ -93,6 +94,16 @@ foreach($parts as $part){
     }
 }
 ?></div>
+<?php if($isArchive && !empty($section['id'])):
+    $regions=ai_source_section_regions($pdo,$id,(int)$section['id']);
+    if($regions):?>
+<div class="mt-4"><h3 class="h5">Afbeeldingen en tekst uit de bron</h3>
+<div class="row g-3"><?php foreach($regions as $region):?>
+<div class="col-md-6"><figure class="border rounded p-2 h-100">
+<img loading="lazy" class="img-fluid rounded" src="source_region_image.php?collection=<?=$id?>&amp;id=<?=(int)$region['id']?>" alt="<?=e($region['title'])?>">
+<figcaption class="small text-secondary mt-2"><?=e($region['title'])?> · pagina <?=(int)$region['page_number']?></figcaption>
+</figure></div><?php endforeach;?></div></div>
+<?php endif;endif;?>
 <?php if($isArchive && !empty($section['id'])):
     $sourcePages=ai_source_section_pages($pdo,$id,(int)$section['id']);
     if($sourcePages):?>
