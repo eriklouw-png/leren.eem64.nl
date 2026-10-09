@@ -13,8 +13,8 @@ $x->execute([$topicId]);
 $topic=$x->fetch();
 if(!$topic || !(int)$topic['is_active']){http_response_code(404);exit('Overhoring niet gevonden.');}
 
-$summaryStmt=$pdo->prepare("SELECT id,name,summary,updated_at,created_at FROM topic_summaries WHERE topic_id=? AND is_active=1 ORDER BY created_at,id");
-$summaryStmt->execute([$topicId]);
+require_once __DIR__.'/../app/ai_source_archive.php';
+ai_source_archive_tables($pdo);
 $cleanupZeroAttempts=$pdo->prepare("
     DELETE a
     FROM attempts a
@@ -31,7 +31,7 @@ $cleanupZeroAttempts=$pdo->prepare("
 ");
 $cleanupZeroAttempts->execute([$studentId,$topicId]);
 
-$topicSummaries=$summaryStmt->fetchAll();
+$topicSummaries=ai_source_summary_list($pdo,$topicId);
 usort($topicSummaries,function(array $a,array $b):int{
     return strnatcasecmp((string)$a['name'],(string)$b['name']);
 });
@@ -336,7 +336,7 @@ if($t['in_progress_attempt_id']){
 <div class="leren-list">
 <?php foreach($topicSummaries as $summary):?>
 <div class="leren-list-item">
-<a class="leren-list-item-main" href="summary.php?id=<?=(int)$summary['id']?>">
+<a class="leren-list-item-main" href="summary.php?source=archive&amp;id=<?=(int)$summary['id']?>">
 <div class="leren-list-item-content">
 <div class="leren-list-item-heading">
 <strong class="leren-list-item-title"><?=e($summary['name'])?></strong>
