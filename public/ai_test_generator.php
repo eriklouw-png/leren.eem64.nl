@@ -84,7 +84,7 @@ function ai_archive_summary_images(int $topicId,int $summaryId,array $paths):arr
     $dir=__DIR__.'/../storage/summaries/'.(int)$topicId.'/'.(int)$summaryId;
     if(!is_dir($dir)&&!@mkdir($dir,0755,true))throw new RuntimeException('De map voor samenvattingspagina’s kon niet worden aangemaakt.');
     $archived=[];
-    foreach($paths as $path){
+    foreach($paths as $index=>$path){
         if(!is_string($path)||!is_file($path))continue;
         $mime=(string)(@mime_content_type($path)?:'');
         $ext=$mime==='image/png'?'png':($mime==='image/webp'?'webp':'jpg');
