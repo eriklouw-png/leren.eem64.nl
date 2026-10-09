@@ -23,16 +23,16 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $path=realpath(__DIR__.'/'.$relative);
         if(!$base||!$path||!str_starts_with($path,$base.DIRECTORY_SEPARATOR))continue;
         $titles=array_column($sections,'title');
-        $prompt='Herken maximaal 12 rechthoekige tekstblokken, afbeeldingen, diagrammen en tabellen. Antwoord uitsluitend als JSON-object met array regions. Elk object bevat title, type (text/image/diagram/table), x, y, width, height als fracties van 0 tot 1 vanaf linksboven, en section_indices als array van 0-gebaseerde onderdeelindices. Geef geen onzekere gebieden. Leerstofonderdelen: '.json_encode($titles,JSON_UNESCAPED_UNICODE);
+        $prompt='Bekijk de foto in de juiste leesrichting. Identificeer uitsluitend zelfstandige VISUELE illustraties, foto\'s, tabellen of diagrammen die een leerstofonderdeel verduidelijken; geen tekstblokken, leerdoelen of paginatitels. Retourneer uitsluitend een JSON-object met regions. Elk gebied bevat title, type (image/diagram/table), x, y, width, height als fracties 0..1 van de originele ongedraaide foto en section_indices als 0-gebaseerde indices. Neem alleen grote, duidelijke rechthoeken met breedte en hoogte van minimaal 0.12 op. Bij twijfel geen gebied. Leerstofonderdelen: '.json_encode($titles,JSON_UNESCAPED_UNICODE);
         $response=openai_generate_topic_summary($prompt,[$path]);
         $data=is_array($response)&&!isset($response['_leren_error'])?openai_output_json($response):null;
         $raw=trim((string)($data['summary']??''));
         if(str_starts_with($raw,'```'))$raw=preg_replace('/^\x60{3}(?:json)?\s*|\s*\x60{3}$/u','',$raw);
         $parsed=json_decode($raw,true);
         foreach(array_slice((array)($parsed['regions']??[]),0,12) as $region){
-            if(!is_array($region)||!in_array(($region['type']??''),['text','image','diagram','table'],true))continue;
+            if(!is_array($region)||!in_array(($region['type']??''),['image','diagram','table'],true))continue;
             $x=(float)($region['x']??-1);$y=(float)($region['y']??-1);$w=(float)($region['width']??-1);$h=(float)($region['height']??-1);
-            if(!is_finite($x)||!is_finite($y)||!is_finite($w)||!is_finite($h)||$x<0||$y<0||$w<=0||$h<=0||$x+$w>1||$y+$h>1)continue;
+            if(!is_finite($x)||!is_finite($y)||!is_finite($w)||!is_finite($h)||$x<0||$y<0||$w<0.12||$h<0.12||$x+$w>1||$y+$h>1)continue;
             $linked=[];
             foreach((array)($region['section_indices']??[]) as $index)if(is_int($index)&&isset($sections[$index]))$linked[]=(int)$sections[$index]['id'];
             if(!$linked)continue;
