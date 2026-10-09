@@ -117,6 +117,29 @@ function ai_source_summary_sections(PDO $pdo,int $collectionId):array{
     }
     return $result;
 }
+/** Associate each learning section with its referenced original pages. */
+function ai_source_section_pages(PDO $pdo,int $collectionId,int $sectionId):array{
+    $stmt=$pdo->prepare("SELECT DISTINCT p.page_number,p.id FROM ai_source_links l JOIN ai_source_pages p ON p.id=l.page_id WHERE l.collection_id=? AND l.section_id=? AND l.page_id IS NOT NULL ORDER BY p.page_number");
+    $stmt->execute([$collectionId,$sectionId]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+/** The original image is always retained; region coordinates are normalized 0..1. */
+function ai_source_region_add(PDO $pdo,int $pageId,string $title,string $type,float $x,float $y,float $width,float $height,?string $text=null):int{
+    if(!in_array($type,['text','image','diagram','table'],true))throw new InvalidArgumentException('Ongeldig brontype.');
+    foreach([$x,$y,$width,$height] as $n)if(!is_finite($n)||$n<0||$n>1)throw new InvalidArgumentException('Ongeldige broncoordinaten.');
+    if($width<=0||$height<=0||$x+$width>1.00001||$y+$height>1.00001)throw new InvalidArgumentException('Brongebied buiten pagina.');
+    $stmt=$pdo->prepare("INSERT INTO ai_source_regions(page_id,title,region_type,x,y,width,height,extracted_text) VALUES(?,?,?,?,?,?,?,?)");
+    $stmt->execute([$pageId,$title,$type,$x,$y,$width,$height,$text]);
+    return (int)$pdo->lastInsertId();
+}
+function ai_source_region_link_section(PDO $pdo,int $collectionId,int $sectionId,int $regionId):void{
+    $stmt=$pdo->prepare("SELECT r.page_id FROM ai_source_regions r JOIN ai_source_pages p ON p.id=r.page_id JOIN ai_source_sections s ON s.collection_id=p.collection_id WHERE r.id=? AND s.id=? AND p.collection_id=?");
+    $stmt->execute([$regionId,$sectionId,$collectionId]);
+    $pageId=$stmt->fetchColumn();
+    if(!$pageId)throw new InvalidArgumentException('Brongebied hoort niet bij dit leerstofonderdeel.');
+    $stmt=$pdo->prepare("INSERT INTO ai_source_links(collection_id,section_id,page_id,region_id,link_type) VALUES(?,?,?,?,'section_region')");
+    $stmt->execute([$collectionId,$sectionId,$pageId,$regionId]);
+}
 /** Render a summary from its ordered source sections; no duplicate full-text field. */
 function ai_source_summary_compose(PDO $pdo,int $collectionId):string{
     $stmt=$pdo->prepare("SELECT title,summary FROM ai_source_sections WHERE collection_id=? ORDER BY sort_order,id");
