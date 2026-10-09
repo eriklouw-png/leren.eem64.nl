@@ -238,29 +238,6 @@ $browserToken=$_SESSION['learner_token'];
 </div>
 </div>
 
-<?php if($topicSummaries):?>
-<div class="mt-4 mb-4">
-<div class="d-flex justify-content-between align-items-center mb-3">
-<h2 class="h3 mb-0">Samenvattingen</h2>
-<span class="small text-secondary"><?=count($topicSummaries)?> beschikbaar</span>
-</div>
-<div class="list-group shadow-sm">
-<?php foreach($topicSummaries as $summary):?>
-<div class="list-group-item p-3 p-md-4">
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
-<div class="min-w-0">
-<strong class="fs-5"><?=e($summary['name'])?></strong>
-</div>
-<div class="d-flex flex-wrap gap-2 flex-shrink-0">
-<a class="btn btn-outline-primary btn-sm" href="summary.php?id=<?=(int)$summary['id']?>">Lees</a>
-</div>
-</div>
-</div>
-<?php endforeach;?>
-</div>
-</div>
-<?php endif;?>
-
 <h2 class="h3 mt-4 mb-3">Sub-Testen</h2>
 <?php if($reviewAvailable):?>
 <div class="card border-success shadow-sm mb-4">
@@ -349,6 +326,28 @@ if($t['in_progress_attempt_id']){
 </div>
 <?php endforeach;?>
 </div>
+<?php endif;?>
+<?php if($topicSummaries):?>
+<section class="mt-4 mb-4">
+<div class="d-flex justify-content-between align-items-center mb-3">
+<h2 class="h3 mb-0">Samenvattingen</h2>
+<span class="small text-secondary"><?=count($topicSummaries)?> beschikbaar</span>
+</div>
+<div class="leren-list">
+<?php foreach($topicSummaries as $summary):?>
+<div class="leren-list-item">
+<a class="leren-list-item-main" href="summary.php?id=<?=(int)$summary['id']?>">
+<div class="leren-list-item-content">
+<div class="leren-list-item-heading">
+<strong class="leren-list-item-title"><?=e($summary['name'])?></strong>
+</div>
+<div class="leren-list-item-subtitle">Samenvatting</div>
+</div>
+</a>
+</div>
+<?php endforeach;?>
+</div>
+</section>
 <?php endif;?>
 <div class="leren-modal" id="subtestOptionsModal" data-list-modal hidden aria-hidden="true">
 <div class="leren-modal-backdrop" data-list-modal-close></div>
