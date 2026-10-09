@@ -46,7 +46,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     if($detected){
         $pdo->beginTransaction();
         try{
-            $pdo->prepare("DELETE FROM ai_source_links WHERE collection_id=? AND link_type='section_region'")->execute([$id]);
+            // Keep manually edited section links intact on subsequent detections.
             // Do not remove manually adjusted regions or unrelated provenance links.
             // Existing regions remain in the archive; only their section associations are refreshed.
             foreach($detected as $region){
