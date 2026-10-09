@@ -330,6 +330,45 @@ function ai_test_rules_ensure_table():void{
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $ready=true;
 }
+function ai_subject_group_defaults():array{
+    return [
+        'talen'=>['label'=>'Talen','subjects'=>['nederlands','engels','duits','frans','spaans','italiaans','latijn'],'instructions'=>'Oefen woordenschat, zinnen, grammatica, spelling en tekstbegrip afhankelijk van de bron. Behoud alle expliciet gegeven vertalingen en vormen.'],
+        'exact'=>['label'=>'Exacte vakken','subjects'=>['wiskunde','nask','natuurkunde','scheikunde','biologie','rekenen'],'instructions'=>'Toets begrippen, processen, formules, berekeningen en toepassingen die daadwerkelijk in de bron staan. Gebruik waar nodig schema’s en afbeeldingen.'],
+        'maatschappij'=>['label'=>'Maatschappijvakken','subjects'=>['geschiedenis','aardrijkskunde','maatschappijleer','economie','maatschappijkunde'],'instructions'=>'Toets feiten, begrippen, oorzaken, gevolgen, verbanden, bronnen en chronologie voor zover de bron deze behandelt. Bied bij leerstof zowel open als multiplechoicevragen aan.']
+    ];
+}
+function ai_subject_group_ensure_tables():void{
+    global $pdo;
+    $pdo->exec("CREATE TABLE IF NOT EXISTS ai_subject_groups (group_key VARCHAR(32) NOT NULL PRIMARY KEY, instructions TEXT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS ai_subject_group_assignments (subject_id INT NOT NULL PRIMARY KEY, group_key VARCHAR(32) NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $insert=$pdo->prepare("INSERT IGNORE INTO ai_subject_groups(group_key,instructions) VALUES(?,?)");
+    foreach(ai_subject_group_defaults() as $key=>$group)$insert->execute([$key,$group['instructions']]);
+}
+function ai_subject_group_for_subject(int $subjectId):?string{
+    global $pdo;
+    ai_subject_group_ensure_tables();
+    $stmt=$pdo->prepare("SELECT a.group_key FROM ai_subject_group_assignments a WHERE a.subject_id=?");
+    $stmt->execute([$subjectId]);
+    $group=$stmt->fetchColumn();
+    if($group!==false)return $group===''?null:(string)$group;
+    $stmt=$pdo->prepare("SELECT name FROM subjects WHERE id=?");
+    $stmt->execute([$subjectId]);
+    $name=mb_strtolower(trim((string)$stmt->fetchColumn()),'UTF-8');
+    foreach(ai_subject_group_defaults() as $key=>$definition){
+        if(in_array($name,$definition['subjects'],true))return $key;
+    }
+    return null;
+}
+function ai_subject_group_prompt(int $subjectId):string{
+    global $pdo;
+    $group=ai_subject_group_for_subject($subjectId);
+    if(!$group)return '';
+    $stmt=$pdo->prepare("SELECT instructions FROM ai_subject_groups WHERE group_key=?");
+    $stmt->execute([$group]);
+    $instructions=trim((string)$stmt->fetchColumn());
+    if($instructions==='')return '';
+    return "GEDEELDE AI-INSTRUCTIES VOOR VAKGROEP ".mb_strtoupper($group,'UTF-8').":\n".$instructions."\nDeze instructies gelden naast de algemene instructies en de specifieke regels van dit vak.";
+}
 function ai_test_rules_for_subject(int $subjectId):array{
     global $pdo;
     ai_test_rules_ensure_table();
