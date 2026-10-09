@@ -719,6 +719,12 @@ $savedSummaryText=(string)($_SESSION['ai_test_analysis']['summary_text']??'');
 #saveForm .ai-question-list-main{flex:1;min-width:0}
 #saveForm .ai-question-side{flex-shrink:0}
 #saveForm .generated-test-card::after{content:"";display:block;clear:both}
+/* Houd de afsluitende acties buiten de subtest-kaders, met consistente ruimte. */
+#saveForm .generated-test-card{margin-bottom:1rem!important}
+#saveForm .ai-save-actions{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;clear:both;margin:1.5rem 0 0;padding:0;border:0;background:transparent;box-shadow:none}
+#saveForm .ai-save-actions .btn{min-width:0;white-space:normal;line-height:1.25;padding:.85rem 1rem;border-radius:.75rem}
+@media(max-width:575.98px){#saveForm .ai-save-actions{grid-template-columns:1fr}}
+
 </style>
 </head><body class="bg-light"><div id="aiLoading" class="ai-loading d-none" aria-live="polite" aria-busy="true"><div class="ai-loading-card"><div class="spinner-border text-primary mb-3" role="status"><span class="visually-hidden">Bezig...</span></div><div id="aiLoadingTitle" class="h5 mb-1">Bezig met AI...</div><div id="aiLoadingText" class="text-secondary">Even geduld.</div></div></div><main class="container py-4">
 <a href="subject_manage.php?id=<?=$subjectId?>">&larr; <?=e($subjectName)?></a>
@@ -877,7 +883,10 @@ $grammarShort=implode(' · ',$grammarParts);
 <?php endforeach;?>
 </div>
 <?php endforeach;?>
-<div class="d-flex flex-column flex-sm-row gap-2 mb-3"><button class="btn btn-success btn-lg" type="submit">Opslaan als sub-test<?=count($_SESSION['ai_test_analysis']['generated']['subtests'])===1?'':'s'?></button><button class="btn btn-outline-secondary btn-lg" type="submit" name="action" value="clear" formnovalidate>Annuleren</button></div>
+<div class="ai-save-actions">
+<button class="btn btn-success btn-lg" type="submit">Opslaan als sub-test<?=count($_SESSION['ai_test_analysis']['generated']['subtests'])===1?'':'s'?></button>
+<button class="btn btn-outline-secondary btn-lg" type="submit" name="action" value="clear" formnovalidate>Annuleren</button>
+</div>
 </form>
 <?php endif;?>
 
