@@ -2186,3 +2186,14 @@ body.leren-admin .ai-source-error,
 .subject-home-icon .subject-custom-icon{
   flex:none;
 }
+
+/* Homepage: square subject tiles and smaller icon badges. */
+.subject-home-tile{aspect-ratio:1 / 1;}
+.subject-home-icon{width:3.2rem;height:3.2rem;bottom:4.55rem;font-size:1.55rem;}
+@media(max-width:767.98px){
+  .subject-home-tile{aspect-ratio:1 / 1;}
+  .subject-home-icon{width:2.65rem;height:2.65rem;bottom:3.85rem;font-size:1.3rem;}
+}
+@media(max-width:390px){
+  .subject-home-icon{width:2.4rem;height:2.4rem;bottom:3.5rem;font-size:1.15rem;}
+}
