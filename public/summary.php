@@ -82,7 +82,7 @@ foreach($parts as $part){
     if(preg_match('/^\\[\\[BRONPAGINA:(\\d+)\\]\\]$/',$part,$match)){
         $page=(int)$match[1];
         if($page>=1 && $page<=10){
-            echo '<figure class="my-3"><img class="img-fluid rounded border" loading="lazy" src="summary_source_image.php?source=<?= $isArchive?'archive':'legacy' ?>&amp;id='.(int)$summary['id'].'&page='.$page.'" alt="Originele boekpagina '.$page.'"><figcaption class="small text-secondary">Bronpagina '.$page.'</figcaption></figure>';
+            echo '<figure class="my-3"><img class="img-fluid rounded border" loading="lazy" src="summary_source_image.php?source='.($isArchive?'archive':'legacy').'&amp;id='.(int)$summary['id'].'&page='.$page.'" alt="Originele boekpagina '.$page.'"><figcaption class="small text-secondary">Bronpagina '.$page.'</figcaption></figure>';
         }
     }else{
         echo nl2br(e($part));
