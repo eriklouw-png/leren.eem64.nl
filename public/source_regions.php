@@ -23,7 +23,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $path=realpath(__DIR__.'/'.$relative);
         if(!$base||!$path||!str_starts_with($path,$base.DIRECTORY_SEPARATOR))continue;
         $titles=array_column($sections,'title');
-        $prompt="Bepaal de rechthoekige zichtbare tekstblokken, illustraties, tabellen en diagrammen in deze ene boekfoto. Geef uitsluitend JSON, zonder codeblok: {\\\"regions\\\":[{\\\"title\\\":\\\"...\\\",\\\"type\\\":\\\"text\\\",\\\"x\\\":0.1,\\\"y\\\":0.2,\\\"width\\\":0.3,\\\"height\\\":0.2,\\\"section_indices\\\":[0]}]}. Alle coordinaten zijn fracties van 0 tot 1 van de volledige foto, oorsprong linksboven. Types: text,image,diagram,table. Maximaal 12 gebieden. section_indices zijn 0-gebaseerde indices in deze onderdelen: ".json_encode($titles,JSON_UNESCAPED_UNICODE).". Laat onzekere gebieden weg.";
+        $prompt='Herken maximaal 12 rechthoekige tekstblokken, afbeeldingen, diagrammen en tabellen. Antwoord uitsluitend als JSON-object met array regions. Elk object bevat title, type (text/image/diagram/table), x, y, width, height als fracties van 0 tot 1 vanaf linksboven, en section_indices als array van 0-gebaseerde onderdeelindices. Geef geen onzekere gebieden. Leerstofonderdelen: '.json_encode($titles,JSON_UNESCAPED_UNICODE);
         $response=openai_generate_topic_summary($prompt,[$path]);
         $data=is_array($response)&&!isset($response['_leren_error'])?openai_output_json($response):null;
         $raw=trim((string)($data['summary']??''));
