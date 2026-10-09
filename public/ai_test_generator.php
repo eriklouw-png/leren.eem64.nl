@@ -379,8 +379,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 if($isPracticeMode){
                     $pdo->exec("ALTER TABLE tests MODIFY COLUMN test_type ENUM('vocabulary','sentences','multiple_choice','open','mixed') NOT NULL DEFAULT 'mixed'");
                 }
-                $pdo->beginTransaction();
                 try{
+                    // Archive tables require DDL; create them before opening a transaction.
+                    if($sourceImages)ai_source_archive_tables($pdo);
+                    $pdo->beginTransaction();
                     $qIns=$pdo->prepare("INSERT INTO questions(test_id,question_text,image_path,question_type,vocab_direction,explanation,grammar_label,sort_order) VALUES(?,?,?,?,?,?,?,?)");
                     $optIns=$pdo->prepare("INSERT INTO question_options(question_id,option_text,is_correct,sort_order) VALUES(?,?,?,?)");
                     $oaIns=$pdo->prepare("INSERT INTO open_question_answers(question_id,answer_text,sort_order) VALUES(?,?,?)");
@@ -692,7 +694,8 @@ $displayTopicName=$queryLabel!==''?$queryLabel:$topicName;
 $savedRequest=$_SESSION['ai_test_analysis']['request']??['prefix'=>$prefix,'specs'=>$requestedSpecs];
 $detectedVocabulary=!empty($analysis['is_vocabulary_list'])&&is_array($analysis['vocabulary_pairs']??null)&&count($analysis['vocabulary_pairs'])>0;
 $detectedSentenceList=!empty($analysis['is_sentence_list'])&&is_array($analysis['vocabulary_pairs']??null)&&count($analysis['vocabulary_pairs'])>0;
-$detectedPracticeList=$detectedVocabulary||$detectedSentenceList;$detectedTypes=[]; if(is_array($analysis['subtests']??null)){foreach($analysis['subtests'] as $st){$t=trim((string)($st['recognized_type']??''));if($t!=='')$detectedTypes[]=$t;}}
+$detectedPracticeList=$detectedVocabulary||$detectedSentenceList;
+$isPracticeList=$detectedPracticeList;$detectedTypes=[]; if(is_array($analysis['subtests']??null)){foreach($analysis['subtests'] as $st){$t=trim((string)($st['recognized_type']??''));if($t!=='')$detectedTypes[]=$t;}}
 $ruleSummaryAllowed=true;
 foreach($detectedTypes as $type){$rule=ai_test_rule_for_type($aiRules,$type);if($rule!==null && !(int)$rule['allow_summary']){$ruleSummaryAllowed=false;break;}}
 if($aiRules&&!$detectedTypes){$ruleSummaryAllowed=false;foreach($aiRules as $rule){if((int)$rule['allow_summary']){$ruleSummaryAllowed=true;break;}}}
