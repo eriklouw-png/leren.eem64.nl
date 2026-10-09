@@ -524,6 +524,19 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         $savedCount++;
                     }
                     $pdo->commit();
+                    // Region detection is best-effort: saved tests must never be rolled back
+                    // when the vision service is unavailable or returns no regions.
+                    if($sourceCollectionId>0 && $sourceImages){
+                        try{
+                            require_once __DIR__.'/../app/ai_source_auto_regions.php';
+                            $regionResult=ai_source_auto_detect($pdo,$sourceCollectionId);
+                            if(!empty($regionResult['errors'])){
+                                error_log('AI source regions collection '.$sourceCollectionId.': '.implode('; ',array_slice($regionResult['errors'],0,5)));
+                            }
+                        }catch(Throwable $regionError){
+                            error_log('AI source regions collection '.$sourceCollectionId.' failed: '.$regionError->getMessage());
+                        }
+                    }
                     ai_cleanup_session();
                     if($pendingImageJobs){
                         $_SESSION['ai_image_jobs']=[
