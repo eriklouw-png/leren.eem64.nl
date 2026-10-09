@@ -500,24 +500,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         $savedCount++;
                     }
                     if($useSummary && !empty($saved['summary_text'])){
+                        if(!$sourceCollectionId)throw new RuntimeException('Geen broncollectie voor AI-samenvatting.');
+                        // Store only section content; the complete summary is composed on demand.
                         $summaryName=trim((string)($saved['request']['prefix']??''));
                         $summaryName=$summaryName!==''?$summaryName.' Samenvatting':'Samenvatting';
-                        $baseSummaryName=$summaryName;
-                        $summarySuffix=2;
-                        $summaryCheck=$pdo->prepare("SELECT id FROM topic_summaries WHERE topic_id=? AND name=? AND is_active=1 LIMIT 1");
-                        while(true){
-                            $summaryCheck->execute([$topicId,$summaryName]);
-                            if(!$summaryCheck->fetchColumn())break;
-                            $summaryName=$baseSummaryName.' ('.$summarySuffix.')';
-                            $summarySuffix++;
-                        }
-                        $summaryIns=$pdo->prepare("INSERT INTO topic_summaries(topic_id,name,summary,is_active) VALUES(?,?,?,1)");
-                        $summaryIns->execute([$topicId,$summaryName,(string)$saved['summary_text']]);
-                        $summaryId=(int)$pdo->lastInsertId();
-                        if($sourceCollectionId){
-                            foreach($sourcePageIds as $pageId)ai_source_archive_link($pdo,$sourceCollectionId,null,$pageId,null,$summaryId,'summary');
-                        }
-                        ai_archive_summary_images($topicId,$summaryId,$sourceImages);
+                        $summarySection=$pdo->prepare("INSERT INTO ai_source_sections(collection_id,title,summary,sort_order) VALUES(?,?,?,?)");
+                        $summarySection->execute([$sourceCollectionId,$summaryName,(string)$saved['summary_text'],count($sectionIds)+1]);
                     }
                     $pdo->commit();
                     ai_cleanup_session();
