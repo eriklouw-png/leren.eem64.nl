@@ -26,7 +26,7 @@ function ai_source_auto_detect(PDO $pdo,int $collectionId):array{
         foreach((array)($analysis['regions']??[]) as $region){
             if(!is_array($region)||!in_array($region['type']??'', ['image','diagram','table'],true))continue;
             $coords=[];
-            foreach(['x','y','width','height'] as $k)$coords[$k]=filter_var($region[$k]??null,FILTER_VALIDATE_FLOAT);
+            foreach(['x','y','width','height'] as $k)$coords[$k]=isset($region[$k])&&is_numeric($region[$k])?filter_var($region[$k],FILTER_VALIDATE_FLOAT):false;
             if(in_array(false,$coords,true))continue;
             [$x,$y,$w,$h]=array_values($coords);
             if($x<0||$y<0||$w<0.12||$h<0.12||$x+$w>1||$y+$h>1)continue;
