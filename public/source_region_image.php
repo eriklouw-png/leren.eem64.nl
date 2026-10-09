@@ -12,7 +12,16 @@ $base=realpath(__DIR__.'/uploads/ai_sources');
 $relative=(string)$row['image_path'];
 $path=realpath(__DIR__.'/'.$relative);
 if(!str_starts_with($relative,'uploads/ai_sources/')||!$base||!$path||!str_starts_with($path,$base.DIRECTORY_SEPARATOR)){http_response_code(404);exit;}
-if(!extension_loaded('gd')){http_response_code(503);exit('GD niet beschikbaar');}
+if(!extension_loaded('gd')){
+    // Preserve a usable image on PHP installations without the GD extension.
+    $mime=(string)(@mime_content_type($path)?:'');
+    if(!in_array($mime,['image/jpeg','image/png','image/webp'],true)){http_response_code(404);exit;}
+    header('Content-Type: '.$mime);
+    header('Cache-Control: private, max-age=3600');
+    header('X-Content-Type-Options: nosniff');
+    readfile($path);
+    exit;
+}
 $mime=(string)(@mime_content_type($path)?:'');
 $src=match($mime){'image/jpeg'=>@imagecreatefromjpeg($path),'image/png'=>@imagecreatefrompng($path),'image/webp'=>@imagecreatefromwebp($path),default=>false};
 if(!$src){http_response_code(404);exit;}
