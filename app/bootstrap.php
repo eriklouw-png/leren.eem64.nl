@@ -53,7 +53,7 @@ ob_start(static function(string $html): string{
         'admin.php','subject_manage.php','subject_edit.php','topic_manage.php','topic_new.php','topic_edit.php',
         'test_new.php','ai_test_generator.php','test_edit.php','import.php','vocabulary_import.php',
         'questions.php','question_edit.php','summary_edit.php','user_edit.php','user_permissions.php',
-        'system_update.php','debug_question.php','ai_usage.php','ai_rules.php'
+        'system_update.php','debug_question.php','ai_usage.php','ai_rules.php','source_region_manage.php','source_regions.php'
     ];
     $isAdminPage=in_array($script,$adminPages,true);
 
