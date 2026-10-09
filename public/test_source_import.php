@@ -73,8 +73,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <?php else:?>
 <form method="post" class="card card-body"><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="token" value="<?=e($_SESSION['source_import_csrf'])?>">
 <h2 class="h5">Controleer de koppelingen</h2><p>Er zijn <?=count($stage['paths'])?> foto’s geselecteerd. Kies de bronpagina per vraag.</p>
-<?php foreach($questions as $question):?><div class="border-bottom py-2"><label class="form-label"><?=e($question['question_text'])?></label><select class="form-select" name="page[<?=(int)$question['id']?>]"><option value="0">Geen koppeling</option>
-<?php foreach($stage['paths'] as $i=>$path):?><option value="<?=$i+1?>">Foto <?=$i+1?></option><?php endforeach;?></select></div><?php endforeach;?>
+<?php foreach($questions as $question):?><div class="border-bottom py-2"><label class="form-label"><?=e($question['question_text'])?></label><select class="form-select" name="page[<?=(int)$question['id']?>]"><?php if(count($stage['paths'])===1):?><option value="1" selected>Foto 1 (automatisch gekoppeld)</option><option value="0">Geen koppeling</option><?php else:?><option value="0">Geen koppeling</option><?php endif;?>
+<?php foreach($stage['paths'] as $i=>$path):?><?php if(count($stage['paths'])!==1):?><option value="<?=$i+1?>">Foto <?=$i+1?></option><?php endif;?><?php endforeach;?></select></div><?php endforeach;?>
 <button class="btn btn-primary mt-3" name="action" value="confirm">Definitief opslaan</button></form>
 <form method="post" class="mt-2"><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="token" value="<?=e($_SESSION['source_import_csrf'])?>"><button class="btn btn-outline-secondary" name="action" value="cancel">Annuleren</button></form>
 <?php endif;?></main></body></html>
