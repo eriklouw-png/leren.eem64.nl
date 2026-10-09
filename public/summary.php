@@ -67,7 +67,19 @@ if(!$sections)$sections=[['title'=>null,'content'=>trim($rawSummary)]];
 <?php if($section['title']!==null):?>
 <h2 class="h3 mb-4"><?=e($section['title'])?></h2>
 <?php endif;?>
-<div class="lh-lg"><?=nl2br(e($section['content']))?></div>
+<div class="lh-lg"><?php
+$parts=preg_split('/(\\[\\[BRONPAGINA:\\d+\\]\\])/u',(string)$section['content'],-1,PREG_SPLIT_DELIM_CAPTURE);
+foreach($parts as $part){
+    if(preg_match('/^\\[\\[BRONPAGINA:(\\d+)\\]\\]$/',$part,$match)){
+        $page=(int)$match[1];
+        if($page>=1 && $page<=10){
+            echo '<figure class="my-3"><img class="img-fluid rounded border" loading="lazy" src="summary_source_image.php?id='.(int)$summary['id'].'&page='.$page.'" alt="Originele boekpagina '.$page.'"><figcaption class="small text-secondary">Bronpagina '.$page.'</figcaption></figure>';
+        }
+    }else{
+        echo nl2br(e($part));
+    }
+}
+?></div>
 </section>
 <?php endforeach;?>
 </div>
