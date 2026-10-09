@@ -44,7 +44,8 @@ function leren_navbar_html(string $area): string{
         .'</div></nav>';
 }
 
-leren_apply_access_control();
+// CLI maintenance scripts do not have browser sessions. Keep web access checks intact.
+if(PHP_SAPI!=='cli')leren_apply_access_control();
 
 ob_start(static function(string $html): string{
     $script=basename((string)($_SERVER['SCRIPT_NAME']??''));
