@@ -33,5 +33,11 @@ $h=min($ih-$y,max(1,(int)ceil((float)$row['height']*$ih)));
 $crop=imagecrop($src,['x'=>$x,'y'=>$y,'width'=>$w,'height'=>$h]);
 imagedestroy($src);
 if(!$crop){http_response_code(404);exit;}
-header('Content-Type: image/jpeg');header('Cache-Control: private, max-age=3600');header('X-Content-Type-Options: nosniff');
+// A landscape illustration can be returned as a portrait crop when the source
+// was photographed sideways. Rotate only strongly portrait-shaped regions.
+if(imagesy($crop)>imagesx($crop)*1.3){
+    $corrected=imagerotate($crop,270,0);
+    if($corrected!==false){imagedestroy($crop);$crop=$corrected;}
+}
+header('Content-Type: image/jpeg');header('Cache-Control: private, no-cache, must-revalidate');header('X-Content-Type-Options: nosniff');
 imagejpeg($crop,null,88);imagedestroy($crop);
