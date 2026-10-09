@@ -49,6 +49,9 @@ if(!$summary){http_response_code(404);exit('Samenvatting niet gevonden.');}
 <div class="small text-secondary mb-4"><?=!empty($summary['updated_at'])?'Bijgewerkt':'Aangemaakt'?> <?=e(date('d-m-Y',strtotime((string)(($summary['updated_at']??null)?:$summary['created_at']))))?></div>
 <?php endif;?>
 <?php
+if($isArchive){
+    $sections=ai_source_summary_sections($pdo,$id);
+}else{
 $rawSummary=(string)$summary['summary'];
 $lines=preg_split("/\\r\\n|\\r|\\n/",$rawSummary);
 $sections=[];
@@ -69,6 +72,7 @@ if($currentTitle!==null || $currentLines){
     $sections[]=['title'=>$currentTitle,'content'=>trim(implode("\n",$currentLines))];
 }
 if(!$sections)$sections=[['title'=>null,'content'=>trim($rawSummary)]];
+}
 ?>
 <div id="summarySections">
 <?php foreach($sections as $i=>$section):?>
