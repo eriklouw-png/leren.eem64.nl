@@ -46,7 +46,7 @@ function ai_source_archive_tables(PDO $pdo):void{
 function ai_source_archive_create(PDO $pdo,array $saved,int $subjectId,int $topicId,string $title,string $description):array{
     $images=array_values(array_filter((array)($saved['images']??[]),'is_file'));
     if(!$images)return ['collection_id'=>null,'pages'=>[]];
-    ai_source_archive_tables($pdo);
+    // Schema is prepared by the caller before beginTransaction(); DDL here would implicitly commit MariaDB transactions.
     $dir=__DIR__.'/../public/uploads/ai_sources/'.bin2hex(random_bytes(12));
     if(!@mkdir($dir,0755,true))throw new RuntimeException('Bronarchiefmap kon niet worden aangemaakt.');
     $paths=[];
