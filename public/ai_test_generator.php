@@ -704,7 +704,9 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 <div class="upload-rules mt-3"><span>JPG, PNG of WebP</span><span>Max. 10 pagina’s</span><span>Max. 5 MB per foto</span></div>
 <input class="d-none" id="pages" type="file" name="pages[]" accept="image/jpeg,image/png,image/webp" multiple>
 </label>
-<div id="fileList" class="upload-file-list mb-4"></div>
+<div id="photoCounter" class="small text-secondary mb-2" aria-live="polite">0 van 10 foto’s toegevoegd</div>
+<div id="fileList" class="upload-file-list mb-3"></div>
+<button type="button" id="addMorePhotos" class="btn btn-outline-primary mb-4">+ Nog een foto toevoegen</button>
 </div>
 
 <div id="sourceActions" class="d-none d-flex flex-column flex-sm-row gap-2">
@@ -800,13 +802,54 @@ let selectedSource='';
 function updateAnalyzeButton(){if(!analyzeButton)return;const hasQuery=!!queryInput&&queryInput.value.trim()!=='';const hasFiles=!!input&&!!input.files&&input.files.length>0;analyzeButton.disabled=selectedSource==='query'?!hasQuery:selectedSource==='book'?!hasFiles:true}
 function selectSource(source){selectedSource=source;sourceChoice?.classList.add('d-none');querySource?.classList.toggle('d-none',source!=='query');bookSource?.classList.toggle('d-none',source!=='book');sourceActions?.classList.remove('d-none');if(queryInput)queryInput.disabled=source!=='query';if(input)input.disabled=source!=='book';updateAnalyzeButton();if(source==='query')queryInput?.focus()}
 document.querySelectorAll('[data-source]').forEach(btn=>btn.addEventListener('click',()=>selectSource(btn.dataset.source)));
-function renderFiles(){if(!input||!list)return;const files=[...input.files];list.innerHTML='';if(!files.length){updateAnalyzeButton();return;}files.forEach((file,index)=>{const item=document.createElement('div');item.className='upload-file';item.innerHTML='<span>🖼️</span><div class="flex-grow-1 min-w-0"><div class="upload-file-name">'+(index+1)+'. '+file.name.replace(/[<>&"]/g,'')+'</div><div class="small text-secondary">'+Math.round(file.size/1024)+' KB</div></div>';list.appendChild(item)});updateAnalyzeButton()}
-input?.addEventListener('change',renderFiles);
+let selectedPhotos=[];
+function syncPhotos(){
+ if(!input)return;
+ const transfer=new DataTransfer();
+ selectedPhotos.forEach(file=>transfer.items.add(file));
+ input.files=transfer.files;
+ updateAnalyzeButton();
+}
+function addPhotos(files){
+ const additions=[...files];
+ for(const file of additions){
+  if(!['image/jpeg','image/png','image/webp'].includes(file.type)){alert('Alleen JPG, PNG en WebP zijn toegestaan.');continue;}
+  if(file.size>5*1024*1024){alert('Foto '+file.name+' is groter dan 5 MB.');continue;}
+  if(selectedPhotos.length>=10){alert('Je kunt maximaal 10 boekpagina’s toevoegen.');break;}
+  selectedPhotos.push(file);
+ }
+ syncPhotos();renderFiles();
+}
+function renderFiles(){
+ if(!list)return;
+ list.replaceChildren();
+ selectedPhotos.forEach((file,index)=>{
+  const item=document.createElement('div');item.className='upload-file d-flex align-items-center gap-2';
+  const thumb=document.createElement('img');thumb.alt='';thumb.style.cssText='width:54px;height:54px;object-fit:cover;border-radius:6px;flex-shrink:0';
+  const url=URL.createObjectURL(file);thumb.src=url;thumb.onload=()=>URL.revokeObjectURL(url);
+  const details=document.createElement('div');details.className='flex-grow-1 min-w-0';
+  const name=document.createElement('div');name.className='upload-file-name text-truncate';name.textContent=(index+1)+'. '+file.name;
+  const size=document.createElement('div');size.className='small text-secondary';size.textContent=Math.round(file.size/1024)+' KB';
+  details.append(name,size);
+  const remove=document.createElement('button');remove.type='button';remove.className='btn btn-danger btn-sm flex-shrink-0';remove.textContent='×';remove.style.cssText='font-size:22px;line-height:1;width:34px;height:34px';remove.setAttribute('aria-label','Verwijder foto '+(index+1));
+  remove.addEventListener('click',()=>{selectedPhotos.splice(index,1);syncPhotos();renderFiles()});
+  item.append(thumb,details,remove);list.appendChild(item);
+ });
+ const counter=document.getElementById('photoCounter');
+ if(counter)counter.textContent=selectedPhotos.length+' van 10 foto’s toegevoegd';
+ updateAnalyzeButton();
+}
+input?.addEventListener('change',()=>{
+ const files=[...input.files];
+ // Laat de native iOS camera/kiezer opnieuw openen zonder de bestaande selectie te verliezen.
+ addPhotos(files);
+});
 queryInput?.addEventListener('input',updateAnalyzeButton);
 dropzone?.addEventListener('dragover',e=>{e.preventDefault();dropzone.classList.add('dragover')});
 dropzone?.addEventListener('dragleave',()=>dropzone.classList.remove('dragover'));
-dropzone?.addEventListener('drop',e=>{e.preventDefault();dropzone.classList.remove('dragover');if(input&&e.dataTransfer.files.length){input.files=e.dataTransfer.files;renderFiles()}});
+dropzone?.addEventListener('drop',e=>{e.preventDefault();dropzone.classList.remove('dragover');addPhotos(e.dataTransfer.files)});
 
+document.getElementById('addMorePhotos')?.addEventListener('click',()=>input?.click());
 const savedSpecs=<?=json_encode($savedRequest['specs']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;const proposedSpecs=<?=json_encode(array_values(array_filter(array_map(static function($st){$types=(array)($st['recommended_types']??[]);return ['type'=>count($types)>1?'mixed':(in_array('mc',$types,true)?'mc':'open'),'count'=>max(1,min(100,(int)($st['question_count']??10)))];},(array)($analysis['subtests']??[])),static fn($x)=>$x['count']>0)),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;const specDefaults=savedSpecs.length?savedSpecs:(proposedSpecs.length?proposedSpecs:[{type:'mixed',count:10}]);
 function fillSpecs(container,rows){container.innerHTML='';rows.slice(0,10).forEach((row,i)=>{const wrap=document.createElement('div');wrap.className='row g-2 align-items-end spec-row mb-2';wrap.innerHTML='<div class="col-6 col-md-4"><label class="form-label small">Aantal vragen</label><input class="form-control" type="number" name="specs['+i+'][count]" min="1" max="100" value="'+Math.max(1,Math.min(100,Number(row.count)||10))+'" required></div><div class="col-6 col-md-5"><label class="form-label small">Type</label><select class="form-select" name="specs['+i+'][type]"><option value="mc" '+(row.type==='mc'?'selected':'')+'>Multiple choice</option><option value="open" '+(row.type==='open'?'selected':'')+'>Open vragen</option><option value="mixed" '+(row.type==='mixed'?'selected':'')+'>Combinatie</option></select></div><div class="col-3"><button type="button" class="btn btn-outline-danger remove-spec" aria-label="Verwijder toetsvorm">×</button></div>';wrap.querySelector('.remove-spec').addEventListener('click',()=>{wrap.remove();renumberSpecs()});container.appendChild(wrap)})}
 function renumberSpecs(){document.querySelectorAll('#specRowsAfter .spec-row').forEach((row,i)=>row.querySelectorAll('[name]').forEach(el=>el.name=el.name.replace(/specs\\[\\d+\\]/,'specs['+i+']')))}
