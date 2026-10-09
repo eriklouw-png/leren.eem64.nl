@@ -73,6 +73,12 @@ if(in_array(($test['test_type']??'mixed'),['vocabulary','sentences'],true) && $n
 .quiz-action-icon{color:#fff}
 @media (min-width:768px){.quiz-action-label{display:inline}.quiz-next-top,.quiz-answer-action{width:auto!important;min-width:120px!important;padding-left:1rem!important;padding-right:1rem!important}}
 </style>
+<style>
+#quiz-ai-loading{position:fixed;inset:0;z-index:3000;background:rgba(14,26,21,.76);display:none;align-items:center;justify-content:center;padding:1.5rem;backdrop-filter:blur(3px)}
+#quiz-ai-loading.is-visible{display:flex}
+#quiz-ai-loading .quiz-ai-loading-box{max-width:420px;width:100%;background:#fff;color:#24342d;border-radius:16px;padding:2rem;text-align:center;box-shadow:0 18px 60px #0005}
+#quiz-ai-loading .spinner-border{width:3rem;height:3rem;color:#138a59}
+</style>
 </head>
     <body class="bg-light"><main class="container py-4">
     <a href="subject.php?id=<?=(int)$test['subject_id']?>">&larr; Terug</a>
@@ -502,11 +508,14 @@ if($q['question_type']==='multiple_choice'){
 <?php if(!$viewAnswered):?> <span>Niet ingevuld.</span><?php endif;?>
 <?php if(!$viewCorrect && $viewCorrectAnswers):?><div class="mt-2"><strong>Juiste antwoord:</strong> <?=e(implode(' / ',$viewCorrectAnswers))?></div><?php endif;?>
 </div>
-<?php else:?><div class="feedback mt-4 d-none"></div><?php endif;?></div></div></section><?php endforeach;?></form></main><script>
+<?php else:?><div class="feedback mt-4 d-none"></div><?php endif;?></div></div></section><?php endforeach;?></form></main><div id="quiz-ai-loading" role="status" aria-live="polite" aria-label="AI controleert het antwoord"><div class="quiz-ai-loading-box"><div class="spinner-border mb-3" aria-hidden="true"></div><h2 class="h5 mb-2">Even de antwoorden met AI dubbelchecken.</h2><p class="text-secondary mb-0">Je antwoord wordt gecontroleerd. Een ogenblik geduld…</p></div></div><script>
 (function(){
  const attemptId='<?= (int)$attemptId ?>',testId='<?= (int)$testId ?>';
  const cards=[...document.querySelectorAll('.question-card')],bar=document.getElementById('progressBar'),form=document.getElementById('quizForm');
  let current=<?= (int)$resumeIndex ?>,checking=false;
+ const aiLoading=document.getElementById('quiz-ai-loading');
+ const showAiLoading=()=>{if(aiLoading)aiLoading.classList.add('is-visible')};
+ const hideAiLoading=()=>{if(aiLoading)aiLoading.classList.remove('is-visible')};
  function activity(data){fetch('activity.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data),keepalive:true}).catch(()=>{});}
  const saveUrl='quiz.php?id='+testId+<?= $reviewMode ? "'&review=1&topic_id=".(int)$topicId."'" : ($mode==='mistakes' ? "'&mode=mistakes'" : "''") ?>;
  function save(questionId,value){return fetch(saveUrl,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({action:'save_answer',attempt_id:attemptId,question_id:questionId,answer:value})}).then(r=>r.json());}
@@ -602,6 +611,8 @@ if($q['question_type']==='multiple_choice'){
    const v=value(card);
    if(!v){warningFeedback(card.querySelector('.feedback'),'Geef eerst een antwoord voordat je verdergaat.');return;}
    if(checking)return;checking=true;btn.disabled=true;
+   const needsAiCheck=!!card.querySelector('textarea.answer-input');
+   if(needsAiCheck)showAiLoading();
    try{
      const data=await save(card.dataset.questionId,v);
      if(!data.ok||data.answered===false)throw new Error(data.message||data.error||'save_failed');
@@ -616,7 +627,7 @@ if($q['question_type']==='multiple_choice'){
    }catch(e){
      btn.disabled=false;
      warningFeedback(card.querySelector('.feedback'),'Het antwoord kon niet worden opgeslagen. '+(e&&e.message?'Fout: '+e.message:'Probeer het opnieuw.'));
-   }finally{checking=false;}
+   }finally{hideAiLoading();checking=false;}
  }
  async function finish(){
    btnFinishState();
