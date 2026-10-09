@@ -217,20 +217,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     $topicSummarySetting=$pdo->prepare("UPDATE topics SET use_summary=? WHERE id=?");
                     $topicSummarySetting->execute([$useSummary?1:0,$topicId]);
                 }
-                $summaryText=null;
-                if($useSummary){
-                    try{
-                        $summaryPrompt='Maak de zelfstandige leersamenvatting voor deze overhoring van de aangeleverde boekpagina’s.';
-                        $summaryData=openai_generate_topic_summary($summaryPrompt,(array)($saved['images']??[]));
-                        if(isset($summaryData['_leren_error']))throw new RuntimeException((string)$summaryData['_leren_error']);
-                        $summaryJson=openai_output_json($summaryData);
-                        $summaryText=trim((string)($summaryJson['summary']??''));
-                        if($summaryText==='')throw new RuntimeException('De AI gaf geen bruikbare samenvatting terug.');
-                    }catch(Throwable $summaryError){
-                        $errors[]='De samenvatting kon niet worden gemaakt: '.$summaryError->getMessage();
-                    }
-                }
-                if(!$errors)$_SESSION['ai_test_analysis']['summary_text']=$summaryText;
+                // Section summaries are generated after the teacher has reviewed and
+                // optionally edited the sub-test titles, immediately before saving.
+                $_SESSION['ai_test_analysis']['summary_text']=null;
                 $_SESSION['ai_test_analysis']['request']=['prefix'=>$isPracticeList?'':$prefix,'specs'=>$requestedSpecs];
                 $requested=[];
                 foreach($requestedSpecs as $i=>$spec){
@@ -375,6 +364,28 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 if($validQuestions)$validTests[]=['title'=>$title,'description'=>$description,'questions'=>$validQuestions];
             }
             if(!$errors&&!$validTests)$errors[]='Er is geen geldige sub-test om op te slaan.';
+            // Generate one independent summary for each approved learning section.
+            // Do this before the DB transaction to avoid long-running locks.
+            $sectionSummaries=[];
+            if(!$errors && $useSummary && $sourceImages){
+                foreach($validTests as $sectionIndex=>$plannedTest){
+                    try{
+                        $sectionTitle=(string)$plannedTest['title'];
+                        $sectionDescription=(string)$plannedTest['description'];
+                        $summaryPrompt="Maak uitsluitend een zelfstandige Nederlandse leersamenvatting voor het leerstofonderdeel: ".$sectionTitle."\nOmschrijving: ".$sectionDescription."\nGebruik uitsluitend de meegestuurde boekpagina's. Behandel geen andere onderdelen. Geef alle relevante feiten, begrippen en verbanden, zonder informatie te verzinnen. Zet geen andere leerstofonderdelen in de samenvatting.";
+                        $summaryData=openai_generate_topic_summary($summaryPrompt,$sourceImages);
+                        if(isset($summaryData['_leren_error']))throw new RuntimeException((string)$summaryData['_leren_error']);
+                        $summaryJson=openai_output_json($summaryData);
+                        $sectionText=trim((string)($summaryJson['summary']??''));
+                        if($sectionText==='')throw new RuntimeException('AI gaf geen tekst terug.');
+                        $sectionSummaries[$sectionIndex]=$sectionText;
+                    }catch(Throwable $summaryError){
+                        $errors[]='Samenvatting voor "'.$sectionTitle.'" mislukt: '.$summaryError->getMessage();
+                        break;
+                    }
+                }
+            }
+
             if(!$errors){
                 if($isPracticeMode){
                     $pdo->exec("ALTER TABLE tests MODIFY COLUMN test_type ENUM('vocabulary','sentences','multiple_choice','open','mixed') NOT NULL DEFAULT 'mixed'");
@@ -398,9 +409,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     $sourcePageIds=(array)($sourceArchive['pages']??[]);
                     $sectionIds=[];
                     if($sourceCollectionId){
-                        $sectionInsert=$pdo->prepare("INSERT INTO ai_source_sections(collection_id,title,description,sort_order) VALUES(?,?,?,?)");
+                        $sectionInsert=$pdo->prepare("INSERT INTO ai_source_sections(collection_id,title,description,summary,sort_order) VALUES(?,?,?,?,?)");
                         foreach($validTests as $index=>$plannedTest){
-                            $sectionInsert->execute([$sourceCollectionId,$plannedTest['title'],$plannedTest['description'],$index+1]);
+                            $sectionInsert->execute([$sourceCollectionId,$plannedTest['title'],$plannedTest['description'],$sectionSummaries[$index]??null,$index+1]);
                             $sectionIds[$index]=(int)$pdo->lastInsertId();
                         }
                     }
@@ -498,14 +509,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                             }
                         }
                         $savedCount++;
-                    }
-                    if($useSummary && !empty($saved['summary_text'])){
-                        if(!$sourceCollectionId)throw new RuntimeException('Geen broncollectie voor AI-samenvatting.');
-                        // Store only section content; the complete summary is composed on demand.
-                        $summaryName=trim((string)($saved['request']['prefix']??''));
-                        $summaryName=$summaryName!==''?$summaryName.' Samenvatting':'Samenvatting';
-                        $summarySection=$pdo->prepare("INSERT INTO ai_source_sections(collection_id,title,summary,sort_order) VALUES(?,?,?,?)");
-                        $summarySection->execute([$sourceCollectionId,$summaryName,(string)$saved['summary_text'],count($sectionIds)+1]);
                     }
                     $pdo->commit();
                     ai_cleanup_session();
