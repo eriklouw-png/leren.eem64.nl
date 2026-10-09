@@ -217,7 +217,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     $topicSummarySetting->execute([$useSummary?1:0,$topicId]);
                 }
                 $summaryText=null;
-                if($useSummary && $ruleSummaryAllowed){
+                if($useSummary){
                     try{
                         $summaryPrompt='Maak de zelfstandige leersamenvatting voor deze overhoring van de aangeleverde boekpagina’s.';
                         $summaryData=openai_generate_topic_summary($summaryPrompt,(array)($saved['images']??[]));
