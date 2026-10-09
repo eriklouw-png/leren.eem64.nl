@@ -1,5 +1,6 @@
 <?php
-require __DIR__.'/../app/bootstrap.php';require_admin();
+require __DIR__.'/../app/bootstrap.php';require_once __DIR__.'/../app/ai_source_archive.php';require_admin();
+ai_source_archive_tables($pdo);
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if(!$id)redirect('admin.php');
 
@@ -8,7 +9,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $itemId=filter_var($_POST['item_id']??null,FILTER_VALIDATE_INT);
     if(!$itemId){http_response_code(400);exit('Ongeldig ID.');}
     if($action==='delete_summary'){
-        $x=$pdo->prepare("UPDATE topic_summaries SET is_active=0,deleted_at=NOW(),updated_at=NOW() WHERE id=? AND topic_id=?");
+        $x=$pdo->prepare("DELETE FROM ai_source_sections WHERE collection_id=? AND collection_id IN (SELECT id FROM ai_source_collections WHERE topic_id=?)");
         $x->execute([$itemId,$id]);
         redirect('topic_manage.php?id='.$id);
     }
@@ -23,8 +24,7 @@ $s=$pdo->prepare("SELECT tp.id,tp.name,tp.test_date,tp.is_active,s.id subject_id
 $s->execute([$id]);$topic=$s->fetch();
 if(!$topic){http_response_code(404);exit('Overhoring niet gevonden.');}
 
-$x=$pdo->prepare("SELECT ts.id,ts.topic_id,ts.name,ts.is_active,ts.updated_at,ts.created_at FROM topic_summaries ts WHERE ts.topic_id=? AND ts.is_active=1 ORDER BY ts.created_at,ts.id");
-$x->execute([$id]);$summaries=$x->fetchAll();
+$summaries=ai_source_summary_list($pdo,$id);
 
 $x=$pdo->prepare("SELECT t.id,t.topic_id,t.title,t.description,t.test_type,t.vocab_direction,t.is_active,COUNT(q.id) question_count FROM tests t LEFT JOIN questions q ON q.test_id=t.id WHERE t.topic_id=? AND t.is_active=1 GROUP BY t.id ORDER BY t.created_at DESC,t.id DESC");
 $x->execute([$id]);$tests=$x->fetchAll();
