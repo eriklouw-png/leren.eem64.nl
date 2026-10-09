@@ -6,6 +6,12 @@ require_login();
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if(!$id)redirect('index.php');
 
+$isArchive=($_GET['source']??'')==='archive';
+if($isArchive){
+    require_once __DIR__.'/../app/ai_source_archive.php';
+    ai_source_archive_tables($pdo);
+    $summary=ai_source_summary_get($pdo,$id);
+}else{
 $x=$pdo->prepare("
     SELECT ts.id,ts.name,ts.summary,ts.updated_at,ts.created_at,
            tp.id topic_id,tp.name topic_name,
@@ -18,6 +24,9 @@ $x=$pdo->prepare("
 $x->execute([$id]);
 $summary=$x->fetch();
 
+if(!$summary){http_response_code(404);exit('Samenvatting niet gevonden.');}
+
+}
 if(!$summary){http_response_code(404);exit('Samenvatting niet gevonden.');}
 ?>
 <!doctype html>
@@ -73,7 +82,7 @@ foreach($parts as $part){
     if(preg_match('/^\\[\\[BRONPAGINA:(\\d+)\\]\\]$/',$part,$match)){
         $page=(int)$match[1];
         if($page>=1 && $page<=10){
-            echo '<figure class="my-3"><img class="img-fluid rounded border" loading="lazy" src="summary_source_image.php?id='.(int)$summary['id'].'&page='.$page.'" alt="Originele boekpagina '.$page.'"><figcaption class="small text-secondary">Bronpagina '.$page.'</figcaption></figure>';
+            echo '<figure class="my-3"><img class="img-fluid rounded border" loading="lazy" src="summary_source_image.php?source=<?= $isArchive?'archive':'legacy' ?>&amp;id='.(int)$summary['id'].'&page='.$page.'" alt="Originele boekpagina '.$page.'"><figcaption class="small text-secondary">Bronpagina '.$page.'</figcaption></figure>';
         }
     }else{
         echo nl2br(e($part));
@@ -104,7 +113,7 @@ foreach($parts as $part){
  function activity(data){
    fetch('activity.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data),keepalive:true}).catch(()=>{});
  }
- activity({action:'start',summary_id:summaryId});
+ if(!<?= $isArchive?'true':'false' ?>)activity({action:'start',summary_id:summaryId});
 
  const sections=[...document.querySelectorAll('.summary-section')];
  const nextButton=document.getElementById('nextSection');
@@ -137,8 +146,8 @@ foreach($parts as $part){
  const touch=()=>{activeUntil=Date.now()+60000;};
  ['mousemove','mousedown','keydown','touchstart','scroll'].forEach(e=>window.addEventListener(e,touch,{passive:true}));
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')touch();});
- setInterval(()=>activity({action:'heartbeat',active:(document.visibilityState==='visible'&&Date.now()<activeUntil)?'1':'0'}),15000);
- window.addEventListener('beforeunload',()=>activity({action:'end'}));
+ if(!<?= $isArchive?'true':'false' ?>)setInterval(()=>activity({action:'heartbeat',active:(document.visibilityState==='visible'&&Date.now()<activeUntil)?'1':'0'}),15000);
+ if(!<?= $isArchive?'true':'false' ?>)window.addEventListener('beforeunload',()=>activity({action:'end'}));
 })();
 </script>
 </body>
