@@ -39,7 +39,7 @@ $subjects=$subjects->fetchAll();
 <?php foreach($subjects as $s):
     [$icon,$iconColor]=subject_visual((string)$s['name']);
 ?>
-<div class="col-6 subject-col">
+<div class="col-6 col-lg-3 subject-col">
 <a class="leren-tile subject-home-tile text-decoration-none" href="subject.php?id=<?=(int)$s['id']?>">
 <div class="subject-card-image" style="background-image:<?=($s['image_mime']?'url(\'subject_image.php?id='.(int)$s['id'].'\')':'none')?>;">
 <div class="subject-card-overlay"></div>
