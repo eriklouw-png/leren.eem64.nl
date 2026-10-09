@@ -333,8 +333,8 @@ function ai_test_rules_ensure_table():void{
 function ai_subject_group_defaults():array{
     return [
         'talen'=>['label'=>'Talen','subjects'=>['nederlands','engels','duits','frans','spaans','italiaans','latijn'],'instructions'=>'Oefen woordenschat, zinnen, grammatica, spelling en tekstbegrip afhankelijk van de bron. Behoud alle expliciet gegeven vertalingen en vormen.'],
-        'exact'=>['label'=>'Exacte vakken','subjects'=>['wiskunde','nask','natuurkunde','scheikunde','biologie','rekenen'],'instructions'=>'Toets begrippen, processen, formules, berekeningen en toepassingen die daadwerkelijk in de bron staan. Gebruik waar nodig schema’s en afbeeldingen.'],
-        'maatschappij'=>['label'=>'Maatschappijvakken','subjects'=>['geschiedenis','aardrijkskunde','maatschappijleer','economie','maatschappijkunde'],'instructions'=>'Toets feiten, begrippen, oorzaken, gevolgen, verbanden, bronnen en chronologie voor zover de bron deze behandelt. Bied bij leerstof zowel open als multiplechoicevragen aan.']
+        'exact'=>['label'=>'Exacte vakken','subjects'=>['wiskunde','nask','natuurkunde','scheikunde','rekenen'],'instructions'=>'Toets begrippen, processen, formules, berekeningen en toepassingen die daadwerkelijk in de bron staan. Gebruik waar nodig schema’s en afbeeldingen.'],
+        'maatschappij'=>['label'=>'Leerstofvakken','subjects'=>['geschiedenis','aardrijkskunde','biologie','maatschappijleer','economie','maatschappijkunde'],'instructions'=>'Toets feiten, begrippen, oorzaken, gevolgen, verbanden, bronnen en chronologie voor zover de bron deze behandelt. Bied bij leerstof zowel open als multiplechoicevragen aan.']
     ];
 }
 function ai_subject_group_ensure_tables():void{
