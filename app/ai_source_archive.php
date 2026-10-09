@@ -8,6 +8,7 @@ function ai_source_archive_tables(PDO $pdo):void{
       id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
       subject_id INT NOT NULL, topic_id INT NOT NULL,
       title VARCHAR(255) NOT NULL, description TEXT NULL,
+      source_type VARCHAR(16) NOT NULL DEFAULT 'ai',
       analysis_json LONGTEXT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       KEY idx_source_topic(topic_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
@@ -30,9 +31,15 @@ function ai_source_archive_tables(PDO $pdo):void{
       id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
       collection_id BIGINT UNSIGNED NOT NULL,
       title VARCHAR(255) NOT NULL, description TEXT NULL, summary LONGTEXT NULL,
+      source_text LONGTEXT NULL,
       sort_order INT NOT NULL DEFAULT 0,
       KEY idx_section_collection(collection_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    // Upgrade existing installations without discarding source collections or summaries.
+    $columns=$pdo->query("SHOW COLUMNS FROM ai_source_collections")->fetchAll(PDO::FETCH_COLUMN);
+    if(!in_array('source_type',$columns,true))$pdo->exec("ALTER TABLE ai_source_collections ADD COLUMN source_type VARCHAR(16) NOT NULL DEFAULT 'ai'");
+    $columns=$pdo->query("SHOW COLUMNS FROM ai_source_sections")->fetchAll(PDO::FETCH_COLUMN);
+    if(!in_array('source_text',$columns,true))$pdo->exec("ALTER TABLE ai_source_sections ADD COLUMN source_text LONGTEXT NULL");
     $pdo->exec("CREATE TABLE IF NOT EXISTS ai_source_links (
       id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
       collection_id BIGINT UNSIGNED NOT NULL, section_id BIGINT UNSIGNED NULL,
@@ -81,4 +88,26 @@ function ai_source_archive_create(PDO $pdo,array $saved,int $subjectId,int $topi
 function ai_source_archive_link(PDO $pdo,int $collectionId,?int $sectionId,?int $pageId,?int $questionId,?int $summaryId,string $type='source'):void{
     $stmt=$pdo->prepare("INSERT INTO ai_source_links(collection_id,section_id,page_id,question_id,summary_id,link_type) VALUES(?,?,?,?,?,?)");
     $stmt->execute([$collectionId,$sectionId,$pageId,$questionId,$summaryId,$type]);
+}
+
+/** Create a manually authored summary in the same archive as AI source material. */
+function ai_source_manual_summary_create(PDO $pdo,int $subjectId,int $topicId,string $title,string $summary):int{
+    $stmt=$pdo->prepare("INSERT INTO ai_source_collections(subject_id,topic_id,title,description,source_type) VALUES(?,?,?,'Handmatige samenvatting','manual')");
+    $stmt->execute([$subjectId,$topicId,$title]);
+    $id=(int)$pdo->lastInsertId();
+    $stmt=$pdo->prepare("INSERT INTO ai_source_sections(collection_id,title,summary,sort_order) VALUES(?,?,?,1)");
+    $stmt->execute([$id,$title,$summary]);
+    return $id;
+}
+/** Render a summary from its ordered source sections; no duplicate full-text field. */
+function ai_source_summary_compose(PDO $pdo,int $collectionId):string{
+    $stmt=$pdo->prepare("SELECT title,summary FROM ai_source_sections WHERE collection_id=? ORDER BY sort_order,id");
+    $stmt->execute([$collectionId]);
+    $parts=[];
+    foreach($stmt->fetchAll(PDO::FETCH_ASSOC) as $section){
+        $body=trim((string)$section['summary']);
+        if($body==='')continue;
+        $parts[]='## '.trim((string)$section['title'])."\\n\\n".$body;
+    }
+    return implode("\\n\\n",$parts);
 }
