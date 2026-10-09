@@ -73,12 +73,7 @@ if(in_array(($test['test_type']??'mixed'),['vocabulary','sentences'],true) && $n
 .quiz-action-icon{color:#fff}
 @media (min-width:768px){.quiz-action-label{display:inline}.quiz-next-top,.quiz-answer-action{width:auto!important;min-width:120px!important;padding-left:1rem!important;padding-right:1rem!important}}
 </style>
-<style>
-#quiz-ai-loading{position:fixed;inset:0;z-index:3000;background:rgba(14,26,21,.76);display:none;align-items:center;justify-content:center;padding:1.5rem;backdrop-filter:blur(3px)}
-#quiz-ai-loading.is-visible{display:flex}
-#quiz-ai-loading .quiz-ai-loading-box{max-width:420px;width:100%;background:#fff;color:#24342d;border-radius:16px;padding:2rem;text-align:center;box-shadow:0 18px 60px #0005}
-#quiz-ai-loading .spinner-border{width:3rem;height:3rem;color:#138a59}
-</style>
+
 </head>
     <body class="bg-light"><main class="container py-4">
     <a href="subject.php?id=<?=(int)$test['subject_id']?>">&larr; Terug</a>
@@ -467,7 +462,19 @@ foreach($questions as &$q){
 }
 unset($q);
 ?>
-<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($test['title'])?></title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><main class="container py-4"><a href="topic.php?id=<?=$test['topic_id']?>">&larr; Terug naar <?=e($test['topic_name'])?></a><h1 class="mt-3"><?=e($test['title'])?></h1><div class="mb-3"><?php $typeLabels=['vocabulary'=>'Woordjes oefenen','sentences'=>'Zinnen oefenen','multiple_choice'=>'Alleen multiple choice','mixed'=>'Combinatie'];?><span class="badge text-bg-secondary"><?=e($typeLabels[$test['test_type']??'mixed']??'Combinatie')?></span><?php if(in_array(($test['test_type']??'mixed'),['vocabulary','sentences'],true) && $vocabDirectionChoice):?> <span class="badge text-bg-primary"><?=e($test['vocab_left_label'])?> → <?=e($test['vocab_right_label'])?><?php if($vocabDirectionChoice==='right_to_left'):?> omgekeerd<?php endif;?></span><?php endif;?></div><div class="progress mb-4" style="height:8px"><div id="progressBar" class="progress-bar" style="width:<?=count($questions)?100/count($questions):0?>%"></div></div><form method="post" id="quizForm"><input type="hidden" name="action" value="finish"><?php foreach($questions as $n=>$q):?><section class="question-card <?=$n===0?'':'d-none'?>" data-index="<?=$n?>" data-question-id="<?=$q['id']?>"><div class="card shadow-sm mb-4"><div class="card-body"><div class="d-flex justify-content-between align-items-center gap-3 mb-3"><div class="text-secondary question-counter">Vraag <?=$n+1?> van <?=count($questions)?></div><button type="button" class="btn <?=$viewMode?'btn-primary':'quiz-check-btn'?> next-btn quiz-next-top" aria-label="<?=$viewMode ? ($n===count($questions)-1?'Klaar':'Volgende') : 'Check'?>"><span class="quiz-action-icon" aria-hidden="true"><?=$viewMode ? '→' : '✓'?></span><span class="quiz-action-label"><?=$viewMode ? ($n===count($questions)-1?'Afronden':'Volgende') : 'Check'?></span></button></div><h2 class="h5 quiz-question-title"><?=e($q['question_text'])?><?php
+<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($test['title'])?></title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><style>
+#quiz-ai-loading{position:fixed;inset:0;z-index:3000;background:rgba(14,26,21,.76);display:none;align-items:center;justify-content:center;padding:1.5rem;backdrop-filter:blur(3px)}
+#quiz-ai-loading.is-visible{display:flex}
+#quiz-ai-loading .quiz-ai-loading-box{max-width:420px;width:100%;background:#fff;color:#24342d;border-radius:16px;padding:2rem;text-align:center;box-shadow:0 18px 60px #0005}
+#quiz-ai-loading .spinner-border{width:3rem;height:3rem;color:#138a59}
+</style>
+<style>
+.quiz-next-top{flex-direction:row}
+.quiz-next-top .quiz-action-label{order:0}
+.quiz-next-top .quiz-action-icon{order:1}
+#progressBar{background-color:#dc3545;transition:width .25s ease,background-color .25s ease}
+</style>
+</head><body class="bg-light"><main class="container py-4"><a href="topic.php?id=<?=$test['topic_id']?>">&larr; Terug naar <?=e($test['topic_name'])?></a><h1 class="mt-3"><?=e($test['title'])?></h1><div class="mb-3"><?php $typeLabels=['vocabulary'=>'Woordjes oefenen','sentences'=>'Zinnen oefenen','multiple_choice'=>'Alleen multiple choice','mixed'=>'Combinatie'];?><span class="badge text-bg-secondary"><?=e($typeLabels[$test['test_type']??'mixed']??'Combinatie')?></span><?php if(in_array(($test['test_type']??'mixed'),['vocabulary','sentences'],true) && $vocabDirectionChoice):?> <span class="badge text-bg-primary"><?=e($test['vocab_left_label'])?> → <?=e($test['vocab_right_label'])?><?php if($vocabDirectionChoice==='right_to_left'):?> omgekeerd<?php endif;?></span><?php endif;?></div><div class="progress mb-4" style="height:8px"><div id="progressBar" class="progress-bar" style="width:<?=count($questions)?100/count($questions):0?>%"></div></div><form method="post" id="quizForm"><input type="hidden" name="action" value="finish"><?php foreach($questions as $n=>$q):?><section class="question-card <?=$n===0?'':'d-none'?>" data-index="<?=$n?>" data-question-id="<?=$q['id']?>"><div class="card shadow-sm mb-4"><div class="card-body"><div class="d-flex justify-content-between align-items-center gap-3 mb-3"><div class="text-secondary question-counter">Vraag <?=$n+1?> van <?=count($questions)?></div><button type="button" class="btn <?=$viewMode?'btn-primary':'quiz-check-btn'?> next-btn quiz-next-top" aria-label="<?=$viewMode ? ($n===count($questions)-1?'Klaar':'Volgende') : 'Check'?>"><span class="quiz-action-icon" aria-hidden="true"><?=$viewMode ? '→' : '✓'?></span><span class="quiz-action-label"><?=$viewMode ? ($n===count($questions)-1?'Afronden':'Volgende') : 'Check'?></span></button></div><h2 class="h5 quiz-question-title"><?=e($q['question_text'])?><?php
 $grammarLabel=mb_strtolower(trim((string)($q['grammar_label']??'')));
 $grammarParts=[];
 if(str_contains($grammarLabel,'mannelijk'))$grammarParts[]='m';
@@ -597,7 +604,9 @@ if($q['question_type']==='multiple_choice'){
      box.innerHTML+='<div class="mt-3 small text-warning">⚠ AI-beoordeling niet beschikbaar. Het antwoord is daarom niet als goed beoordeeld.</div>';
    }
  }
- function show(i){cards.forEach((c,n)=>c.classList.toggle('d-none',n!==i));current=i;bar.style.width=((i+1)/cards.length*100)+'%';window.scrollTo({top:0,behavior:'smooth'});}
+ function show(i){cards.forEach((c,n)=>c.classList.toggle('d-none',n!==i));current=i;updateProgress(i);window.scrollTo({top:0,behavior:'smooth'});}
+ function updateProgress(i){if(!bar||!cards.length)return;const percent=(i+1)/cards.length*100;bar.style.width=percent+'%';bar.style.backgroundColor=percent>=75?'#198754':percent>=25?'#fd7e14':'#dc3545';}
+ updateProgress(current);
  async function check(card,i,btn){
    if(<?= $viewMode ? 'true' : 'false' ?>){
      if(i===cards.length-1){window.location.href='topic.php?id='+<?= (int)$test['topic_id'] ?>;return;}
