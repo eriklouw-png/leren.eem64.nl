@@ -93,6 +93,21 @@ foreach($parts as $part){
     }
 }
 ?></div>
+<?php if($isArchive && !empty($section['id'])):
+    $sourcePages=ai_source_section_pages($pdo,$id,(int)$section['id']);
+    if($sourcePages):?>
+<details class="mt-4 border-top pt-3">
+<summary class="text-secondary" style="cursor:pointer">Originele bronpagina<?=count($sourcePages)>1?'’s':''?> (<?=count($sourcePages)?>)</summary>
+<div class="mt-3">
+<?php foreach($sourcePages as $sourcePage):?>
+<figure class="mb-3">
+<img loading="lazy" class="img-fluid rounded border" src="summary_source_image.php?source=archive&amp;id=<?=$id?>&amp;page=<?=(int)$sourcePage['page_number']?>" alt="Boekpagina <?=(int)$sourcePage['page_number']?>">
+<figcaption class="small text-secondary">Pagina <?=(int)$sourcePage['page_number']?></figcaption>
+</figure>
+<?php endforeach;?>
+</div>
+</details>
+<?php endif;endif;?>
 </section>
 <?php endforeach;?>
 </div>
