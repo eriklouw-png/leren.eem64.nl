@@ -2,6 +2,7 @@
 require __DIR__.'/../app/bootstrap.php';
 require __DIR__.'/../app/auth.php';
 require_login();
+require_once __DIR__.'/../app/ai_source_vision.php';
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 $collectionId=filter_input(INPUT_GET,'collection',FILTER_VALIDATE_INT);
 if(!$id||!$collectionId){http_response_code(400);exit;}
@@ -23,20 +24,8 @@ if(!extension_loaded('gd')){
     exit;
 }
 $mime=(string)(@mime_content_type($path)?:'');
-$src=match($mime){'image/jpeg'=>@imagecreatefromjpeg($path),'image/png'=>@imagecreatefrompng($path),'image/webp'=>@imagecreatefromwebp($path),default=>false};
+$src=ai_source_oriented_image($path);
 if(!$src){http_response_code(404);exit;}
-// Browsers and vision models honor JPEG EXIF orientation; GD does not.
-if($mime==='image/jpeg' && function_exists('exif_read_data')){
-    $exif=@exif_read_data($path);
-    $orientation=(int)($exif['Orientation']??1);
-    $rotated=match($orientation){
-        3=>imagerotate($src,180,0),
-        6=>imagerotate($src,270,0),
-        8=>imagerotate($src,90,0),
-        default=>false
-    };
-    if($rotated!==false){imagedestroy($src);$src=$rotated;}
-}
 $iw=imagesx($src);$ih=imagesy($src);
 $x=max(0,(int)floor((float)$row['x']*$iw));$y=max(0,(int)floor((float)$row['y']*$ih));
 $w=min($iw-$x,max(1,(int)ceil((float)$row['width']*$iw)));
