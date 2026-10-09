@@ -53,7 +53,7 @@ $menuActions=[
 ];
 ?>
 <div class="leren-list-item">
-<a class="leren-list-item-main" href="summary_edit.php?id=<?=$summary['id']?>"><div class="leren-list-item-content"><div class="leren-list-item-heading"><strong class="leren-list-item-title"><?=e($summary['name'])?></strong></div><div class="leren-list-item-subtitle">Bijgewerkt <?=e(date('d-m-Y',strtotime((string)($summary['updated_at']?:$summary['created_at']))))?></div></div></a>
+<a class="leren-list-item-main" href="summary_edit.php?id=<?=$summary['id']?>"><div class="leren-list-item-content"><div class="leren-list-item-heading"><strong class="leren-list-item-title"><?=e($summary['name'])?></strong></div><div class="leren-list-item-subtitle"><?=!empty($summary['updated_at'])?'Bijgewerkt':'Aangemaakt'?> <?=e(date('d-m-Y',strtotime((string)(($summary['updated_at']??null)?:$summary['created_at']))))?></div></div></a>
 <button class="leren-list-item-menu" type="button" data-list-menu data-list-modal="manageOptionsModal" data-menu-title="<?=e($summary['name'])?>" data-list-actions="<?=e(json_encode($menuActions, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES))?>" aria-label="Opties voor <?=e($summary['name'])?>"><span></span><span></span><span></span></button>
 </div>
 <?php endforeach;?>
