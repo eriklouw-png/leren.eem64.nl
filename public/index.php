@@ -71,18 +71,6 @@ $subjects=$subjects->fetchAll();
 <div class="alert alert-info mt-3">Er zijn nog geen vakken met actieve sub-testen.</div>
 <?php endif;?>
 
-<section class="mt-4 mb-3" aria-label="iOS linktest">
-  <h2 class="h6">iOS linktest (vak 106)</h2>
-  <div class="d-flex flex-column align-items-start gap-2">
-    <a href="subject.php?id=106">1. Relatieve link</a>
-    <a href="/subject.php?id=106">2. Link vanaf domeinroot</a>
-    <a href="https://leren.eem64.nl/subject.php?id=106">3. Absolute HTTPS-link</a>
-    <a href="subject.php?id=106" target="_self">4. Relatieve link met target="_self"</a>
-    <a href="/subject.php?id=106" target="_top">5. Link met target="_top"</a>
-    <a href="subject.php?id=106" onclick="event.preventDefault(); window.location.assign(this.href);">6. JavaScript location.assign()</a>
-    <a href="subject.php?id=106" onclick="event.preventDefault(); window.location.replace(this.href);">7. JavaScript location.replace()</a>
-  </div>
-</section>
 </main>
 </body>
 </html>
