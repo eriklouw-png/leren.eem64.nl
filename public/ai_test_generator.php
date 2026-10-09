@@ -589,6 +589,31 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     $analysis['max_unique_questions']=$pairCount;
                     $analysis['summary']='Er is een zinnenlijst herkend met '.$pairCount.' zinnen.'.($language!==''?' Brontaal: '.$language.'.':'');
                 }
+                // Voorkom mini-toetsen: maak het toetsplan minimaal even uitgebreid
+                // als de geïnventariseerde leerdoelen, met ruimte voor toepassing.
+                if($analysis && empty($analysis['is_vocabulary_list']) && empty($analysis['is_sentence_list'])){
+                    $points=array_values(array_filter(array_map('trim',(array)($analysis['learning_points']??[]))));
+                    $subtests=(array)($analysis['subtests']??[]);
+                    $total=array_sum(array_map(static fn($st)=>max(0,(int)($st['question_count']??0)),$subtests));
+                    $target=max(count($points), (int)ceil(count($points)*1.5));
+                    if($subtests && $target>$total){
+                        $remaining=$target-$total;
+                        while($remaining>0){
+                            $changed=false;
+                            foreach($subtests as &$subtest){
+                                if($remaining<=0)break;
+                                if((int)($subtest['question_count']??0)>=50)continue;
+                                $subtest['question_count']=(int)($subtest['question_count']??0)+1;
+                                $remaining--;
+                                $changed=true;
+                            }
+                            unset($subtest);
+                            if(!$changed)break;
+                        }
+                        $analysis['subtests']=$subtests;
+                    }
+                    $analysis['recommended_question_count']=array_sum(array_map(static fn($st)=>(int)($st['question_count']??0),(array)($analysis['subtests']??[])));
+                }
                 if(!$analysis||!isset($analysis['subtests'])||!is_array($analysis['subtests'])||count($analysis['subtests'])===0){
                     foreach($valid as $path)@unlink($path);                    if($sessionDir&&is_dir($sessionDir))@rmdir($sessionDir);
                     $reason=(string)($data['incomplete_details']['reason']??'');
