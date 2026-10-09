@@ -99,6 +99,24 @@ function ai_source_manual_summary_create(PDO $pdo,int $subjectId,int $topicId,st
     $stmt->execute([$id,$title,$summary]);
     return $id;
 }
+/** Remove test-format prefixes only from presentation titles, never from tests. */
+function ai_source_section_display_title(string $title):string{
+    $clean=preg_replace('/^(?:(?:multiple\\s*choice|open\\s+vragen|gemengde\\s+vragen|combinatie|woordjes\\s+oefenen|zinnen\\s+oefenen)\\s*\\d*\\s*[-–—:]\\s*)+/iu','',$title);
+    return trim((string)$clean)!==''?trim((string)$clean):$title;
+}
+function ai_source_summary_sections(PDO $pdo,int $collectionId):array{
+    $stmt=$pdo->prepare("SELECT id,title,summary FROM ai_source_sections WHERE collection_id=? AND NULLIF(TRIM(summary),'') IS NOT NULL ORDER BY sort_order,id");
+    $stmt->execute([$collectionId]);
+    $result=[];
+    foreach($stmt->fetchAll(PDO::FETCH_ASSOC) as $section){
+        $title=ai_source_section_display_title((string)$section['title']);
+        $body=trim((string)$section['summary']);
+        // AI sometimes starts with its own Markdown heading; avoid a duplicate title.
+        $body=preg_replace('/\\A(?:\\s*##?\\s+[^\\r\\n]+\\s*(?:\\r?\\n|$))+/u','',$body);
+        $result[]=['title'=>$title,'content'=>trim((string)$body)];
+    }
+    return $result;
+}
 /** Render a summary from its ordered source sections; no duplicate full-text field. */
 function ai_source_summary_compose(PDO $pdo,int $collectionId):string{
     $stmt=$pdo->prepare("SELECT title,summary FROM ai_source_sections WHERE collection_id=? ORDER BY sort_order,id");
