@@ -2207,3 +2207,20 @@ body.leren-admin .ai-source-error,
 @media (min-width:1100px){
   .subjects-grid > .subject-col{width:25%;}
 }
+
+/* Confirmation dialogs: keep Cancel on the left and the action on the right,
+   including on narrow mobile screens. Do not change ordinary menu modals. */
+#lerenConfirmModal .leren-modal-actions{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:.65rem;
+  align-items:stretch;
+}
+#lerenConfirmModal .leren-modal-actions > .leren-modal-action{
+  width:100%;
+  min-width:0;
+  justify-content:center;
+  text-align:center;
+  padding:.75rem .4rem;
+  white-space:normal;
+}
