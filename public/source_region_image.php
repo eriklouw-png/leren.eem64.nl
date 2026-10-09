@@ -2,11 +2,13 @@
 require __DIR__.'/../app/bootstrap.php';
 require __DIR__.'/../app/auth.php';
 require_login();
+require_once __DIR__.'/../app/ai_source_archive.php';
+ai_source_archive_tables($pdo);
 require_once __DIR__.'/../app/ai_source_vision.php';
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 $collectionId=filter_input(INPUT_GET,'collection',FILTER_VALIDATE_INT);
 if(!$id||!$collectionId){http_response_code(400);exit;}
-$stmt=$pdo->prepare("SELECT r.x,r.y,r.width,r.height,p.image_path FROM ai_source_regions r JOIN ai_source_pages p ON p.id=r.page_id JOIN ai_source_collections c ON c.id=p.collection_id JOIN topics t ON t.id=c.topic_id WHERE r.id=? AND c.id=? AND t.is_active=1");
+$stmt=$pdo->prepare("SELECT r.x,r.y,r.width,r.height,r.rotation_degrees,p.image_path FROM ai_source_regions r JOIN ai_source_pages p ON p.id=r.page_id JOIN ai_source_collections c ON c.id=p.collection_id JOIN topics t ON t.id=c.topic_id WHERE r.id=? AND c.id=? AND t.is_active=1");
 $stmt->execute([$id,$collectionId]);$row=$stmt->fetch(PDO::FETCH_ASSOC);
 if(!$row){http_response_code(404);exit;}
 $base=realpath(__DIR__.'/uploads/ai_sources');
@@ -35,9 +37,13 @@ imagedestroy($src);
 if(!$crop){http_response_code(404);exit;}
 // A landscape illustration can be returned as a portrait crop when the source
 // was photographed sideways. Rotate only strongly portrait-shaped regions.
-if(imagesy($crop)>imagesx($crop)*1.3){
+if((int)$row['rotation_degrees']===0 && imagesy($crop)>imagesx($crop)*1.3){
     $corrected=imagerotate($crop,270,0);
     if($corrected!==false){imagedestroy($crop);$crop=$corrected;}
+}
+if((int)$row['rotation_degrees']!==0){
+    $rotated=imagerotate($crop,(int)$row['rotation_degrees'],0);
+    if($rotated!==false){imagedestroy($crop);$crop=$rotated;}
 }
 header('Content-Type: image/jpeg');header('Cache-Control: private, no-cache, must-revalidate');header('X-Content-Type-Options: nosniff');
 imagejpeg($crop,null,88);imagedestroy($crop);
