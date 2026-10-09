@@ -47,7 +47,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $pdo->beginTransaction();
         try{
             $pdo->prepare("DELETE FROM ai_source_links WHERE collection_id=? AND link_type='section_region'")->execute([$id]);
-            $pdo->prepare("DELETE r FROM ai_source_regions r JOIN ai_source_pages p ON p.id=r.page_id WHERE p.collection_id=? AND r.region_type<>'page'")->execute([$id]);
+            // Do not remove manually adjusted regions or unrelated provenance links.
+            // Existing regions remain in the archive; only their section associations are refreshed.
             foreach($detected as $region){
                 $regionId=ai_source_region_add($pdo,$region['page_id'],$region['title'],$region['type'],$region['x'],$region['y'],$region['w'],$region['h']);
                 foreach($region['sections'] as $sectionId)ai_source_region_link_section($pdo,$id,$sectionId,$regionId);
