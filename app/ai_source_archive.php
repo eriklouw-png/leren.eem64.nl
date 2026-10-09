@@ -113,7 +113,7 @@ function ai_source_summary_sections(PDO $pdo,int $collectionId):array{
         $body=trim((string)$section['summary']);
         // AI sometimes starts with its own Markdown heading; avoid a duplicate title.
         $body=preg_replace('/\\A(?:\\s*##?\\s+[^\\r\\n]+\\s*(?:\\r?\\n|$))+/u','',$body);
-        $result[]=['title'=>$title,'content'=>trim((string)$body)];
+        $result[]=['id'=>(int)$section['id'],'title'=>$title,'content'=>trim((string)$body)];
     }
     return $result;
 }
