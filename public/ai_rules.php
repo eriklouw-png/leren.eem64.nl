@@ -24,6 +24,7 @@ foreach([
  'rule_generation_instructions'=>'ALTER TABLE ai_general_instructions ADD COLUMN rule_generation_instructions TEXT NULL AFTER image_validation_instructions'
 ] as $sql){try{$pdo->exec($sql);}catch(Throwable $ignored){}}
 
+ai_subject_group_ensure_tables();
 $defaults=ai_general_instruction_defaults();
 $generalRow=$pdo->query("SELECT * FROM ai_general_instructions WHERE id=1")->fetch();
 if(!$generalRow){
@@ -42,6 +43,19 @@ if(!$generalRow){
 }
 if($_SERVER['REQUEST_METHOD']==='POST'){
  $action=$_POST['action']??'';
+ if($action==='save_groups'){
+  $groups=ai_subject_group_defaults();
+  $update=$pdo->prepare("UPDATE ai_subject_groups SET instructions=? WHERE group_key=?");
+  foreach($groups as $key=>$definition)$update->execute([trim((string)($_POST['group_instructions'][$key]??'')),$key]);
+  $subjectIds=$pdo->query("SELECT id FROM subjects")->fetchAll(PDO::FETCH_COLUMN);
+  $assign=$pdo->prepare("INSERT INTO ai_subject_group_assignments(subject_id,group_key) VALUES(?,?) ON DUPLICATE KEY UPDATE group_key=VALUES(group_key)");
+  foreach($subjectIds as $id){
+   $key=(string)($_POST['subject_group'][(int)$id]??'');
+   if($key!==''&&!isset($groups[$key]))continue;
+   $assign->execute([(int)$id,$key]);
+  }
+  redirect('ai_rules.php?saved=1#groepen');
+ }
  if($action==='save_general'){
   $columns=array_keys($defaults);$sets=[];$values=[];
   foreach($columns as $column){$sets[]=$column.'=?';$values[]=trim((string)($_POST[$column]??''));}
@@ -98,6 +112,11 @@ $ruleInsert=$pdo->prepare("INSERT IGNORE INTO ai_test_rules(subject_id,test_type
 foreach($newSubjectRules as $r){
     $ruleInsert->execute([$r[1],$r[2],$r[3],$r[4],$r[5],$r[6],$r[7],$r[8],$r[9],$r[10],$r[0]]);
 }
+$groupDefinitions=ai_subject_group_defaults();
+$groupInstructions=[];
+foreach($pdo->query("SELECT group_key,instructions FROM ai_subject_groups")->fetchAll() as $groupRow)$groupInstructions[$groupRow['group_key']]=$groupRow['instructions'];
+$subjectGroups=[];
+foreach($subjects as $subject)$subjectGroups[(int)$subject['id']]=ai_subject_group_for_subject((int)$subject['id']);
 $generalInstructions=$generalRow;
 $rules=$pdo->query("SELECT * FROM ai_test_rules ORDER BY subject_id,sort_order,label")->fetchAll();
 $bySubject=[];foreach($rules as $r)$bySubject[(int)$r['subject_id']][]=$r;
@@ -105,7 +124,14 @@ $bySubject=[];foreach($rules as $r)$bySubject[(int)$r['subject_id']][]=$r;
 </head><body><main class="container py-4">
 <div class="d-flex justify-content-between align-items-center mb-4"><div><h1 class="mb-1">AI-instructies per vak</h1><div class="text-secondary">Beheer per vak en type sub-test de AI-herkenning, opties en instructies.</div></div><a class="btn btn-outline-light" href="admin.php">← Beheer</a></div>
 <?php if(isset($_GET['saved'])):?><div class="alert alert-success">De AI-instructies zijn opgeslagen.</div><?php endif;?>
-<section class="mb-5"><h2 class="h3 mb-3">Algemeen</h2>
+<nav class="d-flex gap-2 flex-wrap mb-4" aria-label="AI-instructies navigatie">
+<a class="btn btn-outline-primary" href="#algemeen">Algemeen</a>
+<a class="btn btn-outline-primary" href="#talen">Talen</a>
+<a class="btn btn-outline-primary" href="#exact">Exacte vakken</a>
+<a class="btn btn-outline-primary" href="#maatschappij">Maatschappijvakken</a>
+<a class="btn btn-outline-primary" href="#vakken">Vakspecifiek</a>
+</nav>
+<section class="mb-5" id="algemeen"><h2 class="h3 mb-3">Algemeen</h2>
 <div class="rule-card"><form method="post">
 <input type="hidden" name="action" value="save_general">
 <div class="rule-grid">
@@ -120,6 +146,26 @@ $bySubject=[];foreach($rules as $r)$bySubject[(int)$r['subject_id']][]=$r;
 </div>
 <button class="btn btn-primary mt-3" type="submit">Algemene AI-instructies opslaan</button>
 </form></div></section>
+<form method="post" class="mb-5" id="groepen"><input type="hidden" name="action" value="save_groups">
+<?php foreach($groupDefinitions as $key=>$group):?>
+<section class="mb-4" id="<?=e($key)?>">
+<h2 class="h3 mb-3"><?=e($group['label'])?></h2>
+<div class="rule-card">
+<label class="form-label fw-semibold" for="group-<?=e($key)?>">Gedeelde AI-instructies</label>
+<textarea class="form-control" id="group-<?=e($key)?>" name="group_instructions[<?=e($key)?>]" rows="6"><?=e((string)($groupInstructions[$key]??''))?></textarea>
+<div class="form-text">Deze regels gelden naast de algemene en vakspecifieke instructies.</div>
+</div></section>
+<?php endforeach;?>
+<section class="mb-4"><h2 class="h4">Vakken indelen</h2><div class="row g-3">
+<?php foreach($subjects as $subject):?><div class="col-md-6 col-lg-4">
+<label class="form-label" for="subject-group-<?=(int)$subject['id']?>"><?=e($subject['name'])?></label>
+<select class="form-select" id="subject-group-<?=(int)$subject['id']?>" name="subject_group[<?=(int)$subject['id']?>]">
+<option value="">Geen vakgroep</option>
+<?php foreach($groupDefinitions as $key=>$group):?><option value="<?=e($key)?>" <?=$subjectGroups[(int)$subject['id']]===$key?'selected':''?>><?=e($group['label'])?></option><?php endforeach;?>
+</select></div><?php endforeach;?></div></section>
+<button class="btn btn-primary" type="submit">Vakgroepen en instructies opslaan</button>
+</form>
+<h2 class="h3 mb-3" id="vakken">Vakspecifieke instructies</h2>
 <form method="post"><input type="hidden" name="action" value="save">
 <?php foreach($subjects as $subject):?><section class="mb-5"><h2 class="h3 mb-3"><?=e($subject['name'])?></h2>
 <?php if(empty($bySubject[(int)$subject['id']])):?><div class="text-secondary">Nog geen AI-regels ingesteld voor dit vak.</div><?php else:foreach($bySubject[(int)$subject['id']] as $rule):$id=(int)$rule['id'];?>
