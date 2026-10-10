@@ -146,7 +146,7 @@ function mastery_label(?float $score):string{
 
 .student-subject-row{display:flex;align-items:center;text-decoration:none;color:inherit}
 .student-subject-row .leren-list-item-main{flex:1;min-width:0}
-.student-subject-grade{min-width:5rem;text-align:right;padding:0 .6rem;white-space:nowrap}
+.student-subject-grade{min-width:5rem;align-self:stretch;display:flex;align-items:center;justify-content:flex-end;text-align:right;padding:0 .6rem;white-space:nowrap}
 .student-subject-grade strong{font-size:1.7rem;font-weight:700;font-variant-numeric:tabular-nums}
 .student-subject-chevron{display:flex;align-items:center;justify-content:center;flex:0 0 2.5rem;color:inherit;padding-right:.8rem}
 .student-subject-row:hover{color:inherit}
