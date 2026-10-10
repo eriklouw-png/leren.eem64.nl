@@ -38,7 +38,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <a href="subject_manage.php?id=<?=$subjectId?>">&larr; Terug naar <?=e($subject['name'])?></a>
 <div class="card shadow-sm mt-3"><div class="card-body p-4">
 <h1 class="h3 mb-1">Nieuwe overhoring</h1>
-<p class="text-secondary mb-4">Maak eerst de overhoring aan. Daarna kun je er sub-testen of een AI-toets aan toevoegen.</p>
+<p class="text-secondary mb-4">Maak eerst de overhoring aan. Daarna kun je er testen of een AI-toets aan toevoegen.</p>
 <?php foreach($errors as $error):?><div class="alert alert-danger"><?=e($error)?></div><?php endforeach;?>
 <form method="post" action="topic_new.php?subject_id=<?=$subjectId?>">
 <input type="hidden" name="subject_id" value="<?=$subjectId?>">
