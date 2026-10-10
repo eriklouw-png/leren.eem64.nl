@@ -144,6 +144,12 @@ function mastery_label(?float $score):string{
 .mastery-card{padding:0}
 .mastery-score{font-size:1.45rem;font-weight:700;line-height:1}
 
+.student-subject-row{display:flex;align-items:center;text-decoration:none;color:inherit}
+.student-subject-row .leren-list-item-main{flex:1;min-width:0}
+.student-subject-grade{min-width:5rem;text-align:right;padding:0 .6rem;white-space:nowrap}
+.student-subject-grade strong{font-size:1.7rem;font-weight:700;font-variant-numeric:tabular-nums}
+.student-subject-chevron{display:flex;align-items:center;justify-content:center;flex:0 0 2.5rem;color:inherit;padding-right:.8rem}
+.student-subject-row:hover{color:inherit}
 </style>
 </head>
 <body class="bg-light">
@@ -195,32 +201,46 @@ function mastery_label(?float $score):string{
 </div>
 </div>
 
-<h2 class="h4 mb-3">Actieve overhoringen</h2>
 <?php
-$studentSubjects=[];
-foreach($topics as $topic){
-    $sid=(int)$topic['subject_id'];
-    if(!isset($studentSubjects[$sid]))$studentSubjects[$sid]=['name'=>$topic['subject_name'],'topics'=>0,'completed'=>0,'total'=>0];
-    $studentSubjects[$sid]['topics']++;
-    $studentSubjects[$sid]['completed']+=$topic['completed'];
-    $studentSubjects[$sid]['total']+=$topic['total'];
+$subjectList=$pdo->query('SELECT id,name FROM subjects ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
+$gradeQuery=$pdo->prepare("
+    SELECT tp.subject_id,
+           SUM(g.grade*g.weight)/NULLIF(SUM(g.weight),0) AS average_grade
+    FROM topic_grades g
+    JOIN topics tp ON tp.id=g.topic_id
+    WHERE g.student_id=?
+    GROUP BY tp.subject_id
+");
+$gradeQuery->execute([$studentId]);
+$gradeAverages=[];
+foreach($gradeQuery->fetchAll(PDO::FETCH_ASSOC) as $gradeRow){
+    $gradeAverages[(int)$gradeRow['subject_id']]=(float)$gradeRow['average_grade'];
 }
-uasort($studentSubjects,static fn($a,$b)=>strnatcasecmp($a['name'],$b['name']));
 ?>
-<?php if(!$studentSubjects):?>
-<div class="alert alert-secondary">Er zijn geen actieve overhoringen.</div>
+<h2 class="h4 mb-3">Alle vakken</h2>
+<?php if(!$subjectList):?>
+<div class="alert alert-secondary">Er zijn nog geen vakken.</div>
 <?php else:?>
 <div class="leren-list mb-4">
-<?php foreach($studentSubjects as $subjectId=>$subject):?>
-<div class="leren-list-item">
-<a class="leren-list-item-main" href="student_subject.php?id=<?=$studentId?>&amp;subject_id=<?=$subjectId?>">
+<?php foreach($subjectList as $subject):
+    $subjectId=(int)$subject['id'];
+    $average=$gradeAverages[$subjectId]??null;
+?>
+<a class="leren-list-item student-subject-row" href="student_subject.php?id=<?=$studentId?>&amp;subject_id=<?=$subjectId?>">
+<div class="leren-list-item-main">
 <div class="leren-list-item-content">
 <div class="leren-list-item-heading"><strong class="leren-list-item-title"><?=e($subject['name'])?></strong></div>
-<div class="leren-list-item-description"><?=$subject['topics']?> <?=$subject['topics']===1?'overhoring':'overhoringen'?> &middot; <?=$subject['completed']?> van <?=$subject['total']?> testen afgerond</div>
 </div>
+</div>
+<div class="student-subject-grade" aria-label="Gemiddeld cijfer">
+<?php if($average!==null):?>
+<strong><?=e(number_format($average,1,',','.'))?></strong>
+<?php else:?>
+<strong class="text-secondary">—</strong>
+<?php endif;?>
+</div>
+<span class="student-subject-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span>
 </a>
-<a class="leren-list-item-menu d-flex align-items-center justify-content-center text-decoration-none" href="student_subject.php?id=<?=$studentId?>&amp;subject_id=<?=$subjectId?>" aria-label="<?=e($subject['name'])?> bekijken"><span aria-hidden="true" style="font-size:1.5rem;line-height:1">›</span></a>
-</div>
 <?php endforeach;?>
 </div>
 <?php endif;?>
