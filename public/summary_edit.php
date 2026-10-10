@@ -2,7 +2,7 @@
 require __DIR__.'/../app/bootstrap.php';
 require_once __DIR__.'/../app/ai_source_archive.php';
 require_admin();
-ai_source_archive_tables($pdo);
+ai_source_archive_tables($pdo);require_once __DIR__.'/../app/trash_schema.php';trash_schema($pdo);
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT)?:0;
 $topicId=filter_input(INPUT_GET,'topic_id',FILTER_VALIDATE_INT)?:0;
 if($_SERVER['REQUEST_METHOD']==='POST'){
@@ -21,7 +21,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }
     require_subject_management($subjectId);
     if($action==='delete' && $id){
-        $pdo->prepare("DELETE FROM ai_source_sections WHERE collection_id=?")->execute([$id]);
+        $pdo->prepare("UPDATE ai_source_collections SET deleted_at=NOW() WHERE id=? AND deleted_at IS NULL")->execute([$id]);
         // Keep provenance, images and question links intact.
     }elseif($action==='save'){
         $name=trim((string)($_POST['name']??''));
