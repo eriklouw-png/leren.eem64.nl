@@ -186,7 +186,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <div class="card border-danger mt-4">
 <div class="card-body">
 <h2 class="h5 text-danger">Vak verwijderen</h2>
-<p class="mb-3">Hiermee worden ook de overhoringen, sub-testen, vragen en resultaten van dit vak verwijderd.</p>
+<p class="mb-3">Hiermee worden ook de overhoringen, testen, vragen en resultaten van dit vak verwijderd.</p>
 <form method="post" onsubmit="return confirm('Weet u zeker dat u dit vak wilt verwijderen? Het vak verdwijnt uit de website. De gegevens blijven in de database bewaard.');">
 <input type="hidden" name="action" value="delete">
 <input type="hidden" name="id" value="<?=$id?>">
