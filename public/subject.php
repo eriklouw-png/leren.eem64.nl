@@ -7,7 +7,7 @@ $studentId=$currentUser ? (int)$currentUser['id'] : 0;
 $subjectId=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if(!$subjectId)redirect('index.php');
 
-$s=$pdo->prepare("SELECT id,name,description,image_mime FROM subjects WHERE id=?");
+$s=$pdo->prepare("SELECT id,name,image_mime FROM subjects WHERE id=?");
 $s->execute([$subjectId]);
 $subject=$s->fetch();
 if(!$subject){http_response_code(404);exit('Vak niet gevonden.');}
@@ -100,7 +100,7 @@ if($studentId && $topics){
 <div class="subject-header-overlay"></div>
 <div class="subject-header-content">
 <h1><?=e($subject['name'])?></h1>
-<?php if($subject['description']):?><p><?=e($subject['description'])?></p><?php endif;?>
+
 </div>
 </div>
 
