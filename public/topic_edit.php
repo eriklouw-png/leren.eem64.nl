@@ -15,10 +15,23 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $name=trim((string)($_POST['name']??''));
         $testDate=trim((string)($_POST['test_date']??''));
         $useSummary=!empty($_POST['use_summary']);
+        $archived=!empty($_POST['archived']);
+        $gradeText=str_replace(',','.',trim((string)($_POST['grade']??'')));
+        if($gradeText!=='' && !preg_match('/^(?:[1-9](?:\\.[0-9])?|10(?:\\.0)?)$/',$gradeText)){http_response_code(422);exit('Ongeldig cijfer (1,0 t/m 10,0).');}
+        if($archived && ($testDate==='' || $testDate>=date('Y-m-d'))){http_response_code(422);exit('Kies voor archivering een datum in het verleden.');}
+        if($gradeText!=='' && !$archived){http_response_code(422);exit('Archiveer de overhoring om een cijfer op te slaan.');}
         if($name===''){http_response_code(400);exit('Naam is verplicht.');}
         if($testDate!=='' && !preg_match('/^\d{4}-\d{2}-\d{2}$/',$testDate)){http_response_code(400);exit('Ongeldige datum.');}
+        $pdo->beginTransaction();
         $x=$pdo->prepare("UPDATE topics SET name=?,test_date=?,use_summary=? WHERE id=?");
         $x->execute([$name,$testDate!==''?$testDate:null,$useSummary?1:0,$id]);
+        $g=$pdo->prepare('DELETE FROM topic_grades WHERE topic_id=? AND student_id=?');
+        if($gradeText==='')$g->execute([$id,(int)$_SESSION['user']['id']]);
+        else{
+            $g=$pdo->prepare('INSERT INTO topic_grades(topic_id,student_id,grade) VALUES(?,?,?) ON DUPLICATE KEY UPDATE grade=VALUES(grade),recorded_at=CURRENT_TIMESTAMP');
+            $g->execute([$id,(int)$_SESSION['user']['id'],(float)$gradeText]);
+        }
+        $pdo->commit();
         redirect('subject_manage.php?id='.$_POST['subject_id']);
     }
 }
@@ -26,6 +39,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 $x=$pdo->prepare("SELECT tp.id,tp.name,tp.test_date,tp.is_active,tp.use_summary,tp.summary_updated_at,tp.subject_id,s.name subject_name FROM topics tp JOIN subjects s ON s.id=tp.subject_id WHERE tp.id=?");
 $x->execute([$id]);$topic=$x->fetch();
 if(!$topic){http_response_code(404);exit('Overhoring niet gevonden.');}
+$gradeQuery=$pdo->prepare('SELECT grade FROM topic_grades WHERE topic_id=? AND student_id=?');
+$gradeQuery->execute([$id,(int)$_SESSION['user']['id']]);
+$currentGrade=$gradeQuery->fetchColumn();
+$isArchived=!empty($topic['test_date']) && $topic['test_date']<date('Y-m-d');
 ?>
 <!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Overhoring bewerken</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head>
 <body class="bg-light"><main class="container py-4" style="max-width:700px">
@@ -37,6 +54,12 @@ if(!$topic){http_response_code(404);exit('Overhoring niet gevonden.');}
 <input type="hidden" name="action" value="save">
 <div class="mb-3"><label class="form-label">Overhoring</label><input class="form-control" name="name" value="<?=e($topic['name'])?>" required></div>
 <div class="mb-3"><label class="form-label">Overhoringsdatum</label><input class="form-control" type="date" name="test_date" value="<?=e($topic['test_date']??'')?>"><div class="form-text">Na deze datum wordt het overhoring automatisch gearchiveerd. Laat leeg als er geen overhoringsdatum is.</div></div>
+<div class="form-check mb-3">
+<input class="form-check-input" type="checkbox" name="archived" id="archived" value="1" <?=$isArchived?'checked':''?>>
+<label class="form-check-label" for="archived"><strong>Gearchiveerd</strong></label>
+<div class="form-text">Gearchiveerd betekent: de overhoringsdatum ligt in het verleden. Haal het vinkje weg en kies een toekomstige datum of maak de datum leeg om te heractiveren.</div>
+</div>
+<div class="mb-3"><label class="form-label" for="grade">Cijfer</label><input class="form-control" id="grade" type="number" name="grade" min="1" max="10" step="0.1" inputmode="decimal" value="<?=$currentGrade!==false?e((string)$currentGrade):''?>" placeholder="Nog geen cijfer"><div class="form-text">Cijfer voor je eigen gebruikersaccount; leeg laten verwijdert het eerder ingevoerde cijfer.</div></div>
 <div class="form-check mb-4">
 <input class="form-check-input" type="checkbox" name="use_summary" value="1" id="useSummary" <?=!empty($topic['use_summary'])?'checked':''?>>
 <label class="form-check-label" for="useSummary"><strong>Samenvatting gebruiken</strong><br><span class="text-secondary">Je kunt voor deze overhoring meerdere afzonderlijke samenvattingen maken. Elke samenvatting kan bijvoorbeeld de naam 1.3 Samenvatting krijgen.</span></label>
