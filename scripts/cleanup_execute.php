@@ -24,11 +24,8 @@ $pdo=new PDO(sprintf('mysql:host=%s;port=%s;dbname=%s;charset=%s',
     ]);
 $pdo->exec("SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ");
 $expected=['topics'=>3,'tests'=>86,'questions'=>1328,'attempts'=>21,'summaries'=>5,'ai_question_links'=>154,'ai_summary_links'=>2,'images'=>108];
-$backupDir='/mnt/POOL/BACKUPS/leren';
-$backupCheck=[
-    $backupDir.'/leren_20261011_000117.sql',
-    $backupDir.'/uploads_20261011_000009.tar.gz'
-];
+// Back-ups worden op de TrueNAS-host geverifieerd door cleanup_host_preflight.sh.
+// Rechtstreeks --execute vanuit de container blijft uitgeschakeld.
 $base=$root.'/public/uploads/questions';
 $quarantine=$root.'/public/uploads/.cleanup-quarantine-'.date('Ymd_His');
 function cnt(PDO $pdo,string $sql):int {return (int)$pdo->query($sql)->fetchColumn();}
@@ -72,9 +69,7 @@ try {
         $pdo->rollBack();
         exit(0);
     }
-    // The CLI container must have the host backup volume mounted; if not, refuse execution.
-    foreach($backupCheck as $file) if(!is_file($file)||filesize($file)<1024)
-        throw new RuntimeException("Back-up niet toegankelijk in container: $file");
+    throw new RuntimeException('Uitvoering geblokkeerd: host-side uitvoeringsprotocol nog niet geactiveerd.');
     if(!is_dir($base)) throw new RuntimeException("Afbeeldingsmap ontbreekt: $base");
     foreach($images as $image) if(!is_file($base.'/'.$image))
         throw new RuntimeException("Afbeeldingsbestand ontbreekt: $image");
