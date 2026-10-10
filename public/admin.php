@@ -203,20 +203,41 @@ if(is_admin()){
 <div><a class="btn btn-outline-primary" href="subject_edit.php">Nieuw vak</a></div>
 </div>
 
-<div class="row g-3 mb-5 admin-grid">
+<div class="leren-list mb-5">
 <?php foreach($subjects as $subject):?>
-<div class="col-6 col-md-6 col-lg-4 admin-col">
-<a href="subject_manage.php?id=<?=(int)$subject['id']?>" class="leren-tile text-decoration-none">
-<div class="subject-card-image" style="background-image:<?=($subject['image_mime']?'url(\'subject_image.php?id='.(int)$subject['id'].'\')':'none')?>;">
-<div class="subject-card-overlay"></div>
-<div class="card-body position-relative d-flex flex-column justify-content-end subject-card-body">
-<h2 class="h4 text-white mb-1 subject-card-title"><?=e($subject['name'])?></h2>
-<?php if($subject['description']):?><p class="mb-0 subject-card-description"><?=e($subject['description'])?></p><?php endif;?>
-</div>
+<?php
+$subjectId=(int)$subject['id'];
+$subjectActions=[
+ ['label'=>'Bekijken','href'=>'subject_manage.php?id='.$subjectId,'primary'=>true],
+ ['label'=>'Bewerken','href'=>'subject_edit.php?id='.$subjectId],
+];
+if(is_admin()){
+ $subjectActions[]=['type'=>'form','label'=>'Vak verwijderen','action'=>'admin.php','fields'=>['action'=>'delete_subject','id'=>$subjectId],'confirm'=>'Weet je zeker dat je dit vak wilt verwijderen? Ook gekoppelde overhoringen en toetsen kunnen worden verwijderd.','danger'=>true];
+}
+?>
+<div class="leren-list-item">
+<?php if($subject['image_mime']):?>
+<div class="leren-list-item-thumbnail"><img src="subject_image.php?id=<?=$subjectId?>" alt="" loading="lazy"></div>
+<?php else:?><div class="leren-list-item-thumbnail" aria-hidden="true"></div><?php endif;?>
+<a class="leren-list-item-main" href="subject_manage.php?id=<?=$subjectId?>">
+<div class="leren-list-item-content">
+<div class="leren-list-item-heading"><div class="leren-list-item-title"><?=e($subject['name'])?></div></div>
+<?php if($subject['description']):?><div class="leren-list-item-description"><?=e($subject['description'])?></div><?php endif;?>
 </div>
 </a>
+<button type="button" class="leren-list-item-menu" data-list-menu data-list-modal="subjectOptionsModal" data-menu-title="<?=e($subject['name'])?>" data-list-actions="<?=e(json_encode($subjectActions,JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES))?>" aria-label="Opties voor <?=e($subject['name'])?>">
+<span></span><span></span><span></span>
+</button>
 </div>
 <?php endforeach;?>
+</div>
+<div class="leren-modal" id="subjectOptionsModal" data-list-modal hidden aria-hidden="true">
+<div class="leren-modal-backdrop" data-list-modal-close></div>
+<div class="leren-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="subjectOptionsTitle">
+<button type="button" class="leren-modal-close" data-list-modal-close aria-label="Sluiten">&times;</button>
+<h2 id="subjectOptionsTitle" data-list-modal-title>Vak</h2>
+<div class="leren-modal-actions" data-list-modal-actions></div>
+</div>
 </div>
 </section>
 
