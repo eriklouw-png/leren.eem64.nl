@@ -3,6 +3,7 @@ require __DIR__.'/../app/bootstrap.php';
 
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if(!$id){http_response_code(400);exit;}
+require_subject_access((int)$id);
 
 $s=$pdo->prepare("SELECT image_mime,image_data FROM subjects WHERE id=?");
 $s->execute([$id]);
