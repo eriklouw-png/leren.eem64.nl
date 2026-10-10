@@ -162,12 +162,12 @@ function ai_source_summary_compose(PDO $pdo,int $collectionId):string{
 
 /** Each summary is a source collection; the complete text is composed at read time. */
 function ai_source_summary_list(PDO $pdo,int $topicId):array{
-    $stmt=$pdo->prepare("SELECT c.id,c.title name,c.created_at FROM ai_source_collections c WHERE c.topic_id=? AND EXISTS (SELECT 1 FROM ai_source_sections s WHERE s.collection_id=c.id AND NULLIF(TRIM(s.summary),'') IS NOT NULL) ORDER BY c.created_at,c.id");
+    $stmt=$pdo->prepare("SELECT c.id,c.title name,c.created_at FROM ai_source_collections c WHERE c.topic_id=? AND c.deleted_at IS NULL AND EXISTS (SELECT 1 FROM ai_source_sections s WHERE s.collection_id=c.id AND NULLIF(TRIM(s.summary),'') IS NOT NULL) ORDER BY c.created_at,c.id");
     $stmt->execute([$topicId]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 function ai_source_summary_get(PDO $pdo,int $id):?array{
-    $stmt=$pdo->prepare("SELECT c.id,c.title name,c.topic_id,c.subject_id,c.source_type,c.created_at,tp.name topic_name,s.name subject_name FROM ai_source_collections c JOIN topics tp ON tp.id=c.topic_id JOIN subjects s ON s.id=c.subject_id WHERE c.id=? AND tp.is_active=1");
+    $stmt=$pdo->prepare("SELECT c.id,c.title name,c.topic_id,c.subject_id,c.source_type,c.created_at,tp.name topic_name,s.name subject_name FROM ai_source_collections c JOIN topics tp ON tp.id=c.topic_id JOIN subjects s ON s.id=c.subject_id WHERE c.id=? AND c.deleted_at IS NULL AND tp.is_active=1");
     $stmt->execute([$id]);$row=$stmt->fetch(PDO::FETCH_ASSOC);
     if(!$row)return null;
     $row['summary']=ai_source_summary_compose($pdo,$id);
