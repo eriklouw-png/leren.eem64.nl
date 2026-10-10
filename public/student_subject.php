@@ -17,18 +17,6 @@ $x->execute([$studentId]);
 $student=$x->fetch();
 if(!$student){http_response_code(404);exit('Student niet gevonden.');}
 
-$x=$pdo->prepare("SELECT COALESCE(SUM(active_seconds),0) FROM study_sessions WHERE student_id=?");
-$x->execute([$studentId]);
-$totalSeconds=(int)$x->fetchColumn();
-
-$x=$pdo->prepare("SELECT COALESCE(SUM(active_seconds),0) FROM study_sessions WHERE student_id=? AND activity_type='test'");
-$x->execute([$studentId]);
-$testSeconds=(int)$x->fetchColumn();
-
-$x=$pdo->prepare("SELECT COALESCE(SUM(active_seconds),0) FROM study_sessions WHERE student_id=? AND activity_type='summary'");
-$x->execute([$studentId]);
-$summarySeconds=(int)$x->fetchColumn();
-
 $x=$pdo->prepare("
     SELECT
         ts.id,
@@ -65,7 +53,7 @@ $x=$pdo->prepare("
         la.score,la.finished_at
     FROM topics tp
     JOIN subjects s ON s.id=tp.subject_id
-    JOIN tests t ON t.topic_id=tp.id AND t.is_active=1
+    LEFT JOIN tests t ON t.topic_id=tp.id AND t.is_active=1
     LEFT JOIN questions q ON q.test_id=t.id
     LEFT JOIN (
         SELECT a1.id,a1.test_id,a1.score,a1.finished_at
@@ -87,7 +75,6 @@ $x=$pdo->prepare("
           )
     ) la ON la.test_id=t.id
     WHERE tp.is_active=1 AND s.id=?
-      AND (tp.test_date IS NULL OR tp.test_date>=CURDATE())
     GROUP BY tp.id,tp.name,tp.test_date,s.id,s.name,t.id,t.title,t.test_type,la.score,la.finished_at
     ORDER BY s.name,tp.name,t.title
 ");
@@ -110,9 +97,11 @@ foreach($rows as $row){
             'score_count'=>0
         ];
     }
-    $topics[$topicKey]['tests'][]=$row;
-    $topics[$topicKey]['total']++;
-    if($row['score']!==null){
+    if($row['test_id']!==null){
+        $topics[$topicKey]['tests'][]=$row;
+        $topics[$topicKey]['total']++;
+    }
+    if($row['test_id']!==null && $row['score']!==null){
         $topics[$topicKey]['completed']++;
         $topics[$topicKey]['score_total']+=(float)$row['score'];
         $topics[$topicKey]['score_count']++;
@@ -165,45 +154,9 @@ function mastery_label(?float $score):string{
 </nav>
 <main class="container py-4" style="max-width:1100px">
 <a href="student.php?id=<?=$studentId?>">&larr; <?=e($student['name'])?></a>
-<div class="card shadow-sm mt-3 mb-4 overflow-hidden">
-<?php if($student['image_mime']):?>
-<img src="student_image.php?id=<?=(int)$student['id']?>" style="height:220px;width:100%;object-fit:cover" alt="<?=e($student['name'])?>">
-<?php endif;?>
-<div class="card-body p-4">
-<div class="d-flex align-items-center gap-3">
-<div class="flex-grow-1 min-w-0">
-<h1 class="h2 mb-1"><?=e($student['name'])?></h1>
-<div class="text-secondary text-truncate"><?=e($student['email'])?></div>
-</div>
-<a class="btn btn-outline-primary flex-shrink-0" href="user_edit.php?id=<?=(int)$student['id']?>">Bewerken</a>
-</div>
-</div>
-</div>
-
-<div class="row g-2 mb-4">
-<div class="col-12 col-md-4">
-<div class="card shadow-sm h-100"><div class="card-body py-2 px-3 d-flex justify-content-between align-items-center gap-3">
-<div class="small text-secondary">Totale leertijd</div>
-<div class="fw-semibold"><?=e(format_duration_student($totalSeconds))?></div>
-</div></div>
-</div>
-<div class="col-12 col-md-4">
-<div class="card shadow-sm h-100"><div class="card-body py-2 px-3 d-flex justify-content-between align-items-center gap-3">
-<div class="small text-secondary">Testen</div>
-<div class="fw-semibold"><?=e(format_duration_student($testSeconds))?></div>
-</div></div>
-</div>
-<div class="col-12 col-md-4">
-<div class="card shadow-sm h-100"><div class="card-body py-2 px-3 d-flex justify-content-between align-items-center gap-3">
-<div class="small text-secondary">Samenvattingen</div>
-<div class="fw-semibold"><?=e(format_duration_student($summarySeconds))?></div>
-</div></div>
-</div>
-</div>
-
-<h2 class="h4 mb-3"><?=e($selectedSubjectName)?> — Actieve overhoringen</h2>
+<h2 class="h4 mb-3"><?=e($selectedSubjectName)?> — Alle overhoringen</h2>
 <?php if(!$topics):?>
-<div class="alert alert-secondary">Er zijn geen actieve overhoringen.</div>
+<div class="alert alert-secondary">Er zijn geen overhoringen.</div>
 <?php else:
 $subjects=[];
 foreach($topics as $topic){
@@ -242,7 +195,7 @@ foreach($topics as $topic){
 <div class="w-100 d-flex justify-content-between align-items-center gap-3 pe-2">
 <div>
 <strong><?=e($topic['name'])?></strong>
-<?php if($topic['test_date']):?><div class="small text-secondary">Overhoring: <?=e(date('d-m-Y',strtotime($topic['test_date'])))?></div><?php endif;?>
+<?php if($topic['test_date']):?><div class="small text-secondary">Overhoring: <?=e(date('d-m-Y',strtotime($topic['test_date'])))?><?php if($topic['test_date']<date('Y-m-d')):?> · Gearchiveerd<?php endif;?></div><?php endif;?>
 </div>
 <div class="text-end">
 <?php if($mastery===null):?>
@@ -294,6 +247,7 @@ foreach($topics as $topic){
 </div>
 <?php endif;?>
 
+<?php if($topic['tests']):?>
 <div class="small fw-semibold text-secondary mb-2">Testen</div>
 <div class="list-group">
 <?php foreach($topic['tests'] as $test):?>
@@ -314,6 +268,7 @@ foreach($topics as $topic){
 </div>
 <?php endforeach;?>
 </div>
+<?php endif;?>
 </div>
 </div>
 </div>
