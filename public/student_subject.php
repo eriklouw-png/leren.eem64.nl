@@ -33,7 +33,7 @@ $x=$pdo->prepare("
         ON ss.summary_id=ts.id
        AND ss.student_id=?
        AND ss.activity_type='summary'
-    WHERE s.id=?
+    WHERE s.id=? AND s.user_id=$studentId
     GROUP BY ts.id,ts.name,ts.is_active,tp.name,s.name
     ORDER BY s.name,tp.name,ts.name
 ");
