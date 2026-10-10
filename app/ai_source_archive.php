@@ -162,11 +162,13 @@ function ai_source_summary_compose(PDO $pdo,int $collectionId):string{
 
 /** Each summary is a source collection; the complete text is composed at read time. */
 function ai_source_summary_list(PDO $pdo,int $topicId):array{
+    require_once __DIR__.'/trash_schema.php';trash_schema($pdo);
     $stmt=$pdo->prepare("SELECT c.id,c.title name,c.created_at FROM ai_source_collections c WHERE c.topic_id=? AND c.deleted_at IS NULL AND EXISTS (SELECT 1 FROM ai_source_sections s WHERE s.collection_id=c.id AND NULLIF(TRIM(s.summary),'') IS NOT NULL) ORDER BY c.created_at,c.id");
     $stmt->execute([$topicId]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 function ai_source_summary_get(PDO $pdo,int $id):?array{
+    require_once __DIR__.'/trash_schema.php';trash_schema($pdo);
     $stmt=$pdo->prepare("SELECT c.id,c.title name,c.topic_id,c.subject_id,c.source_type,c.created_at,tp.name topic_name,s.name subject_name FROM ai_source_collections c JOIN topics tp ON tp.id=c.topic_id JOIN subjects s ON s.id=c.subject_id WHERE c.id=? AND c.deleted_at IS NULL AND tp.is_active=1");
     $stmt->execute([$id]);$row=$stmt->fetch(PDO::FETCH_ASSOC);
     if(!$row)return null;
