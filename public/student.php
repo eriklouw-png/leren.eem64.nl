@@ -150,6 +150,11 @@ function mastery_label(?float $score):string{
 .student-subject-grade strong{font-size:1.7rem;font-weight:700;font-variant-numeric:tabular-nums}
 .student-subject-chevron{display:flex;align-items:center;justify-content:center;flex:0 0 2.5rem;color:inherit;padding-right:.8rem}
 .student-subject-row:hover{color:inherit}
+.student-subject-progress{height:7px;background:rgba(150,160,165,.25);border-radius:999px;overflow:hidden;margin:.65rem 0 .4rem}
+.student-subject-progress span{display:block;height:100%;border-radius:inherit}
+.student-subject-count{font-size:.85rem;color:#aeb9b3}
+.student-subject-row .leren-list-item-content{width:100%}
+.student-subject-row .leren-list-item-main{padding-top:1rem;padding-bottom:1rem}
 </style>
 </head>
 <body class="bg-light">
@@ -216,6 +221,13 @@ $gradeAverages=[];
 foreach($gradeQuery->fetchAll(PDO::FETCH_ASSOC) as $gradeRow){
     $gradeAverages[(int)$gradeRow['subject_id']]=(float)$gradeRow['average_grade'];
 }
+$subjectProgress=[];
+foreach($topics as $topic){
+    $sid=(int)$topic['subject_id'];
+    if(!isset($subjectProgress[$sid]))$subjectProgress[$sid]=['completed'=>0,'total'=>0];
+    $subjectProgress[$sid]['completed']+=(int)$topic['completed'];
+    $subjectProgress[$sid]['total']+=(int)$topic['total'];
+}
 ?>
 <h2 class="h4 mb-3">Alle vakken</h2>
 <?php if(!$subjectList):?>
@@ -225,11 +237,18 @@ foreach($gradeQuery->fetchAll(PDO::FETCH_ASSOC) as $gradeRow){
 <?php foreach($subjectList as $subject):
     $subjectId=(int)$subject['id'];
     $average=$gradeAverages[$subjectId]??null;
+    $progress=$subjectProgress[$subjectId]??['completed'=>0,'total'=>0];
+    $progressPercent=$progress['total']>0?round(100*$progress['completed']/$progress['total']):0;
+    $progressColor=$progressPercent<25?'#dc3545':($progressPercent<75?'#f59e0b':'#198754');
 ?>
 <a class="leren-list-item student-subject-row" href="student_subject.php?id=<?=$studentId?>&amp;subject_id=<?=$subjectId?>">
 <div class="leren-list-item-main">
 <div class="leren-list-item-content">
 <div class="leren-list-item-heading"><strong class="leren-list-item-title"><?=e($subject['name'])?></strong></div>
+<div class="student-subject-progress" role="progressbar" aria-valuenow="<?=$progressPercent?>" aria-valuemin="0" aria-valuemax="100" aria-label="Voortgang <?=$progressPercent?>%">
+<span style="width:<?=$progressPercent?>%;background:<?=$progressColor?>"></span>
+</div>
+<div class="student-subject-count"><?=$progress['completed']?> van <?=$progress['total']?> testen afgerond</div>
 </div>
 </div>
 <div class="student-subject-grade" aria-label="Gemiddeld cijfer">
