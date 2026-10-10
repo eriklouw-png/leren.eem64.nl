@@ -11,7 +11,7 @@ $s=$pdo->prepare("SELECT id,name,image_mime,user_id FROM subjects WHERE id=?");
 $s->execute([$subjectId]);
 $subject=$s->fetch();
 if(!$subject){http_response_code(404);exit('Vak niet gevonden.');}
-if((int)$subject['user_id']!==$studentId && !in_array(($currentUser['role']??''),['admin','beheerder'],true)){http_response_code(403);exit('Geen toegang tot dit vak.');}
+require_subject_access($subjectId);
 
 if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='reactivate_topic'){
     if(!in_array(($currentUser['role']??''),['admin','beheerder'],true)){http_response_code(403);exit('Geen toegang.');}
