@@ -77,6 +77,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
      if((int)$x->fetchColumn()>0)$error='Deze test bevat vragen van het verkeerde type. Een test van dit type mag alleen '.$wrongLabel.'vragen bevatten.';
  }
  if(empty($error)){
+   $destination=$pdo->prepare('SELECT subject_id FROM topics WHERE id=? AND is_active=1');
+   $destination->execute([$topicId]);
+   require_subject_management((int)$destination->fetchColumn());
    try{
      $leftLabel=$test['subject_name']??'';$rightLabel='Nederlands';
      $s=$pdo->prepare("UPDATE tests SET topic_id=?,title=?,description=?,test_type=?,vocab_left_label=?,vocab_right_label=?,vocab_direction=?,shuffle_questions=? WHERE id=?");
