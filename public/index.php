@@ -57,7 +57,7 @@ $subjects=$subjects->fetchAll();
 </div>
 <div class="subject-home-text">
 <h2 class="subject-card-title"><?=e($s['name'])?></h2>
-<div class="subject-card-count"><?=$s['test_count']?> <?=((int)$s['test_count']===1?'sub-test':'sub-testen')?></div>
+<div class="subject-card-count"><?=$s['test_count']?> <?=((int)$s['test_count']===1?'test':'testen')?></div>
 </div>
 <div class="subject-home-chevron" aria-hidden="true"><i class="bi bi-chevron-right"></i></div>
 </div>
@@ -68,7 +68,7 @@ $subjects=$subjects->fetchAll();
 </div>
 
 <?php if(!$subjects):?>
-<div class="alert alert-info mt-3">Er zijn nog geen vakken met actieve sub-testen.</div>
+<div class="alert alert-info mt-3">Er zijn nog geen vakken met actieve testen.</div>
 <?php endif;?>
 
 </main>
