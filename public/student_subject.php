@@ -7,8 +7,8 @@ if(!$studentId){redirect('admin.php');}
 require_manage_student((int)$studentId);
 $subjectId=filter_input(INPUT_GET,'subject_id',FILTER_VALIDATE_INT);
 if(!$subjectId)redirect('student.php?id='.$studentId);
-$subjectCheck=$pdo->prepare('SELECT name FROM subjects WHERE id=?');
-$subjectCheck->execute([$subjectId]);
+$subjectCheck=$pdo->prepare('SELECT name FROM subjects WHERE id=? AND user_id=?');
+$subjectCheck->execute([$subjectId,$studentId]);
 $selectedSubjectName=$subjectCheck->fetchColumn();
 if($selectedSubjectName===false){http_response_code(404);exit('Vak niet gevonden.');}
 
