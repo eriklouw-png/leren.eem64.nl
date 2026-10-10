@@ -4,3 +4,13 @@
 .DS_Store
 Thumbs.db
 .update_status.json
+
+# Gegenereerde afbeeldingen en bronmateriaal
+/public/uploads/questions/
+/public/uploads/ai_sources/
+
+# Logbestanden
+*.log
+
+# Lokale debugbestanden
+/public/debug_question.php
