@@ -142,7 +142,7 @@ Overhoring
 <div class="progress" role="progressbar" aria-label="Voortgang van overhoring" aria-valuenow="<?=$topic['progress_percent']?>" aria-valuemin="0" aria-valuemax="100">
 <div class="progress-bar" style="width:<?=$topic['progress_percent']?>%"></div>
 </div>
-<div class="small text-secondary mt-1"><?=$topic['progress_done']?> van <?=$topic['progress_total']?> sub-testen afgerond</div>
+<div class="small text-secondary mt-1"><?=$topic['progress_done']?> van <?=$topic['progress_total']?> testen afgerond</div>
 </div>
 <?php endif;?>
 </div>
