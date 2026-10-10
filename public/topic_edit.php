@@ -17,6 +17,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $useSummary=!empty($_POST['use_summary']);
         $archived=!empty($_POST['archived']);
         $gradeText=str_replace(',','.',trim((string)($_POST['grade']??'')));
+        $gradeWeight=(int)($_POST['grade_weight']??1);
+        if(!in_array($gradeWeight,[1,2,3],true)){http_response_code(422);exit('Ongeldige weging.');}
         if($gradeText!=='' && !preg_match('/^(?:[1-9](?:\\.[0-9])?|10(?:\\.0)?)$/',$gradeText)){http_response_code(422);exit('Ongeldig cijfer (1,0 t/m 10,0).');}
         if($archived && ($testDate==='' || $testDate>=date('Y-m-d'))){http_response_code(422);exit('Kies voor archivering een datum in het verleden.');}
         if(!$archived && $testDate!=='' && $testDate<date('Y-m-d')){http_response_code(422);exit('Een datum in het verleden betekent Gearchiveerd.');}
@@ -29,8 +31,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $g=$pdo->prepare('DELETE FROM topic_grades WHERE topic_id=? AND student_id=?');
         if($gradeText==='')$g->execute([$id,(int)$_SESSION['user']['id']]);
         else{
-            $g=$pdo->prepare('INSERT INTO topic_grades(topic_id,student_id,grade) VALUES(?,?,?) ON DUPLICATE KEY UPDATE grade=VALUES(grade),recorded_at=CURRENT_TIMESTAMP');
-            $g->execute([$id,(int)$_SESSION['user']['id'],(float)$gradeText]);
+            $g=$pdo->prepare('INSERT INTO topic_grades(topic_id,student_id,grade,weight) VALUES(?,?,?,?) ON DUPLICATE KEY UPDATE grade=VALUES(grade),weight=VALUES(weight),recorded_at=CURRENT_TIMESTAMP');
+            $g->execute([$id,(int)$_SESSION['user']['id'],(float)$gradeText,$gradeWeight]);
         }
         $pdo->commit();
         redirect('subject_manage.php?id='.$_POST['subject_id']);
@@ -40,9 +42,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 $x=$pdo->prepare("SELECT tp.id,tp.name,tp.test_date,tp.is_active,tp.use_summary,tp.summary_updated_at,tp.subject_id,s.name subject_name FROM topics tp JOIN subjects s ON s.id=tp.subject_id WHERE tp.id=?");
 $x->execute([$id]);$topic=$x->fetch();
 if(!$topic){http_response_code(404);exit('Overhoring niet gevonden.');}
-$gradeQuery=$pdo->prepare('SELECT grade FROM topic_grades WHERE topic_id=? AND student_id=?');
+$gradeQuery=$pdo->prepare('SELECT grade,weight FROM topic_grades WHERE topic_id=? AND student_id=?');
 $gradeQuery->execute([$id,(int)$_SESSION['user']['id']]);
-$currentGrade=$gradeQuery->fetchColumn();
+$gradeRow=$gradeQuery->fetch(PDO::FETCH_ASSOC);
+$currentGrade=$gradeRow['grade']??false;
+$currentWeight=(int)($gradeRow['weight']??1);
 $isArchived=!empty($topic['test_date']) && $topic['test_date']<date('Y-m-d');
 ?>
 <!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Overhoring bewerken</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head>
@@ -61,6 +65,7 @@ $isArchived=!empty($topic['test_date']) && $topic['test_date']<date('Y-m-d');
 <div class="form-text">Gearchiveerd betekent: de overhoringsdatum ligt in het verleden. Haal het vinkje weg en kies een toekomstige datum of maak de datum leeg om te heractiveren.</div>
 </div>
 <div class="mb-3"><label class="form-label" for="grade">Cijfer</label><input class="form-control" id="grade" type="number" name="grade" min="1" max="10" step="0.1" inputmode="decimal" value="<?=$currentGrade!==false?e((string)$currentGrade):''?>" placeholder="Nog geen cijfer"><div class="form-text">Cijfer voor je eigen gebruikersaccount; leeg laten verwijdert het eerder ingevoerde cijfer.</div></div>
+<div class="mb-3"><label class="form-label" for="grade_weight">Weging van het cijfer</label><select class="form-select" name="grade_weight" id="grade_weight"><?php foreach([1,2,3] as $w):?><option value="<?=$w?>" <?=$currentWeight===$w?'selected':''?>><?=$w?>x</option><?php endforeach;?></select></div>
 <div class="form-check mb-4">
 <input class="form-check-input" type="checkbox" name="use_summary" value="1" id="useSummary" <?=!empty($topic['use_summary'])?'checked':''?>>
 <label class="form-check-label" for="useSummary"><strong>Samenvatting gebruiken</strong><br><span class="text-secondary">Je kunt voor deze overhoring meerdere afzonderlijke samenvattingen maken. Elke samenvatting kan bijvoorbeeld de naam 1.3 Samenvatting krijgen.</span></label>
