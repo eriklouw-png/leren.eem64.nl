@@ -8,7 +8,7 @@ if(is_logged_in()){
     $pending=$pdo->prepare("SELECT tp.id,tp.name,tp.test_date,s.name subject_name FROM topics tp JOIN subjects s ON s.id=tp.subject_id LEFT JOIN topic_grades g ON g.topic_id=tp.id AND g.student_id=? WHERE tp.is_active=1 AND tp.test_date<CURDATE() AND g.id IS NULL ORDER BY tp.test_date ASC,tp.id ASC");
     $pending->execute([$gradeStudentId]);
     foreach($pending->fetchAll() as $candidate){
-        if(empty($_SESSION['grade_later'][(int)$candidate['id']])){$gradePrompt=$candidate;break;}
+        if(($_SESSION['grade_later'][(int)$candidate['id']]??'')!==date('Y-m-d')){$gradePrompt=$candidate;break;}
     }
 }
 
