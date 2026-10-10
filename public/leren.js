@@ -199,6 +199,27 @@ function initConfirmModal(){
     });
 }
 
+function initFormValidation(){
+    document.querySelectorAll('form').forEach(function(form){
+        form.addEventListener('invalid',function(event){
+            const field=event.target;
+            if(!(field instanceof HTMLElement))return;
+            field.classList.add('is-invalid');
+            let feedback=field.parentElement.querySelector('.leren-field-error');
+            if(!feedback){feedback=document.createElement('div');feedback.className='leren-field-error invalid-feedback d-block text-danger';field.insertAdjacentElement('afterend',feedback);}
+            feedback.textContent=field.validity && field.validity.valueMissing?'Dit veld is verplicht.':'Controleer de ingevulde waarde.';
+        },true);
+        form.addEventListener('input',function(event){
+            const field=event.target;
+            if(field instanceof HTMLElement && typeof field.checkValidity==='function' && field.checkValidity()){
+                field.classList.remove('is-invalid');
+                const feedback=field.parentElement.querySelector('.leren-field-error');
+                if(feedback)feedback.remove();
+            }
+        });
+    });
+}
+
 function initProgressBars(){
     document.querySelectorAll('.progress-bar').forEach(function(bar){
         const progress=bar.closest('.progress');
@@ -221,5 +242,6 @@ document.addEventListener('DOMContentLoaded',function(){
     initListMenus();
     initConfirmModal();
     initProgressBars();
+    initFormValidation();
 });
 })();
