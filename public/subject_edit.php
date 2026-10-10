@@ -12,6 +12,7 @@ if($id){
 }
 
 $error=null;
+$errorField=null;
 if($_SERVER['REQUEST_METHOD']==='POST'){
     $action=$_POST['action']??'save';
     $postId=filter_var($_POST['id']??null,FILTER_VALIDATE_INT)?:0;
@@ -46,6 +47,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $description=trim((string)($_POST['description']??''));
     if($name===''){
         $error='Vul een naam voor het vak in.';
+        $errorField='name';
     }else{
         try{
             $createdNewSubject=false;
@@ -65,19 +67,19 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
             if(isset($_FILES['image']) && $_FILES['image']['error']!==UPLOAD_ERR_NO_FILE){
                 if($_FILES['image']['error']!==UPLOAD_ERR_OK){
-                    $error='De afbeelding kon niet worden geüpload.';
+                    $error='De afbeelding kon niet worden geüpload.';$errorField='image';
                 }elseif((int)$_FILES['image']['size']>5*1024*1024){
-                    $error='De afbeelding is groter dan 5 MB.';
+                    $error='De afbeelding is groter dan 5 MB.';$errorField='image';
                 }else{
                     $info=@getimagesize($_FILES['image']['tmp_name']);
                     $allowed=['image/jpeg','image/png','image/webp'];
                     $mime=$info['mime']??'';
                     if(!$info || !in_array($mime,$allowed,true)){
-                        $error='Gebruik een JPG-, PNG- of WebP-afbeelding.';
+                        $error='Gebruik een JPG-, PNG- of WebP-afbeelding.';$errorField='image';
                     }else{
                         $data=file_get_contents($_FILES['image']['tmp_name']);
                         if($data===false){
-                            $error='De afbeelding kon niet worden gelezen.';
+                            $error='De afbeelding kon niet worden gelezen.';$errorField='image';
                         }else{
                             $x=$pdo->prepare("UPDATE subjects SET image_mime=?,image_data=? WHERE id=?");
                             $x->execute([$mime,$data,$id]);
@@ -93,7 +95,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $x=$pdo->prepare("SELECT id,name,description,image_mime FROM subjects WHERE id=?");
             $x->execute([$id]);$subject=$x->fetch();
         }catch(PDOException $e){
-            if((int)$e->errorInfo[1]===1062)$error='Er bestaat al een vak met deze naam.';
+            if((int)$e->errorInfo[1]===1062){$error='Er bestaat al een vak met deze naam.';$errorField='name';}
             else throw $e;
         }
     }
@@ -124,7 +126,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
 <div class="mb-3">
 <label class="form-label">Naam</label>
-<input class="form-control" name="name" value="<?=e($subject['name']??'')?>" required maxlength="150" placeholder="Bijvoorbeeld Engels">
+<input class="form-control<?=$errorField==='name'?' is-invalid':''?>" name="name" value="<?=e($subject['name']??'')?>" required maxlength="150" placeholder="Bijvoorbeeld Engels">
 </div>
 
 <div class="mb-3">
@@ -137,7 +139,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <?php if(!empty($subject['image_mime'])):?>
 <img src="subject_image.php?id=<?=$id?>" class="img-fluid rounded mb-2 d-block" style="max-height:220px;object-fit:cover" alt="">
 <?php endif;?>
-<input class="form-control" type="file" name="image" accept="image/jpeg,image/png,image/webp">
+<input class="form-control<?=$errorField==='image'?' is-invalid':''?>" type="file" name="image" accept="image/jpeg,image/png,image/webp">
 <div class="form-text">JPG, PNG of WebP. Maximaal 5 MB.</div>
 </div>
 
