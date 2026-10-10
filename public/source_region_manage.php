@@ -10,6 +10,9 @@ $collectionQuery=$pdo->prepare("SELECT id,title FROM ai_source_collections WHERE
 $collectionQuery->execute([$id]);
 $collection=$collectionQuery->fetch(PDO::FETCH_ASSOC);
 if(!$collection){http_response_code(404);exit('Samenvatting niet gevonden.');}
+$subjectCheck=$pdo->prepare('SELECT s.id FROM ai_source_collections c JOIN topics tp ON tp.id=c.topic_id JOIN subjects s ON s.id=tp.subject_id WHERE c.id=?');
+$subjectCheck->execute([$id]);
+require_subject_management((int)$subjectCheck->fetchColumn());
 $error='';
 if($_SERVER['REQUEST_METHOD']==='POST'){
     if(!hash_equals((string)($_SESSION['region_edit_token']??''),(string)($_POST['token']??''))){http_response_code(403);exit('Ongeldige sessie.');}
