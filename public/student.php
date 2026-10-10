@@ -79,7 +79,7 @@ $x=$pdo->prepare("
                 )
           )
     ) la ON la.test_id=t.id
-    WHERE tp.is_active=1
+    WHERE tp.is_active=1 AND s.user_id=$studentId
       AND (tp.test_date IS NULL OR tp.test_date>=CURDATE())
     GROUP BY tp.id,tp.name,tp.test_date,s.id,s.name,t.id,t.title,t.test_type,la.score,la.finished_at
     ORDER BY s.name,tp.name,t.title
