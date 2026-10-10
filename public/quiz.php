@@ -12,6 +12,10 @@ $testId=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 
 if($reviewMode){
     if(!$topicId)redirect('index.php');
+    $archivedCheck=$pdo->prepare('SELECT test_date FROM topics WHERE id=?');
+    $archivedCheck->execute([$topicId]);
+    $reviewDate=$archivedCheck->fetchColumn();
+    if($reviewDate && $reviewDate<date('Y-m-d')){http_response_code(403);exit('Deze overhoring is gearchiveerd.');}
     $reviewTestName='Fouten oefenen';
     $findReview=$pdo->prepare("SELECT id FROM tests WHERE topic_id=? AND title=? LIMIT 1");
     $findReview->execute([$topicId,$reviewTestName]);
@@ -26,9 +30,10 @@ if($reviewMode){
 
 if(!$testId)redirect('index.php');
 
-$s=$pdo->prepare("SELECT t.id,t.title,t.description,t.test_type,t.vocab_left_label,t.vocab_right_label,t.vocab_direction,s.id subject_id,s.name subject_name,tp.id topic_id,tp.name topic_name FROM tests t JOIN topics tp ON tp.id=t.topic_id JOIN subjects s ON s.id=tp.subject_id WHERE t.id=? AND (t.is_active=1 OR ?=1)");
+$s=$pdo->prepare("SELECT t.id,t.title,t.description,t.test_type,t.vocab_left_label,t.vocab_right_label,t.vocab_direction,s.id subject_id,s.name subject_name,tp.id topic_id,tp.name topic_name,tp.test_date topic_test_date FROM tests t JOIN topics tp ON tp.id=t.topic_id JOIN subjects s ON s.id=tp.subject_id WHERE t.id=? AND (t.is_active=1 OR ?=1)");
 $s->execute([$testId,$reviewMode?1:0]);$test=$s->fetch();
 if(!$test){http_response_code(404);exit('Test niet gevonden.');}
+if(!empty($test['topic_test_date']) && $test['topic_test_date']<date('Y-m-d')){http_response_code(403);exit('Deze overhoring is gearchiveerd en niet meer toegankelijk.');}
 if($reviewMode && (int)$test['topic_id']!==$topicId){http_response_code(404);exit('Overhoring niet gevonden.');}
 
 if(!isset($_SESSION['learner_token']))$_SESSION['learner_token']=bin2hex(random_bytes(32));
