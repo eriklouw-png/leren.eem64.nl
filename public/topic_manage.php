@@ -1,6 +1,6 @@
 <?php
 require __DIR__.'/../app/bootstrap.php';require_once __DIR__.'/../app/ai_source_archive.php';require_admin();
-ai_source_archive_tables($pdo);
+ai_source_archive_tables($pdo);require_once __DIR__.'/../app/trash_schema.php';trash_schema($pdo);
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if(!$id)redirect('admin.php');
 $ownerCheck=$pdo->prepare('SELECT subject_id FROM topics WHERE id=?');
@@ -12,7 +12,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $itemId=filter_var($_POST['item_id']??null,FILTER_VALIDATE_INT);
     if(!$itemId){http_response_code(400);exit('Ongeldig ID.');}
     if($action==='delete_summary'){
-        $x=$pdo->prepare("DELETE FROM ai_source_sections WHERE collection_id=? AND collection_id IN (SELECT id FROM ai_source_collections WHERE topic_id=?)");
+        $x=$pdo->prepare("UPDATE ai_source_collections SET deleted_at=NOW() WHERE id=? AND topic_id=? AND deleted_at IS NULL");
         $x->execute([$itemId,$id]);
         redirect('topic_manage.php?id='.$id);
     }
