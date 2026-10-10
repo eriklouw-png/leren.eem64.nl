@@ -72,10 +72,14 @@ try {
     if (getenv('LEREN_HOST_BACKUP_VERIFIED') !== 'YES-20261011')
         throw new RuntimeException('Uitvoering vereist host-back-upcontrole.');
     if(!is_dir($base)) throw new RuntimeException("Afbeeldingsmap ontbreekt: $base");
-    foreach($images as $image) if(!is_file($base.'/'.$image))
-        throw new RuntimeException("Afbeeldingsbestand ontbreekt: $image");
+    $missing=[];
+    foreach($images as $image) if(!is_file($base.'/'.$image)) $missing[]=$image;
+    if(count($missing)!==6) throw new RuntimeException('Aantal ontbrekende afbeeldingen veranderd: '.count($missing));
+    logline('Ontbrekende afbeeldingen: '.count($missing).' (verwacht 6)');
+    foreach($missing as $image) logline('ONTBREEKT: '.$image);
     if(!mkdir($quarantine,0700,true)) throw new RuntimeException('Quarantainemap aanmaken mislukt.');
     foreach($images as $image) {
+        if(in_array($image,$missing,true)) continue;
         if(!rename($base.'/'.$image,$quarantine.'/'.$image))
             throw new RuntimeException("Verplaatsen mislukt: $image");
         $moved[]=$image;
@@ -86,7 +90,7 @@ try {
     $pdo->exec('DELETE FROM topic_summaries WHERE is_active=0');
     $pdo->exec('DELETE FROM topics WHERE is_active=0');
     $pdo->commit();
-    logline('SUCCES: database opgeschoond. Afbeeldingen in quarantaine: '.$quarantine);
+    logline('SUCCES: database opgeschoond. Verplaatste afbeeldingen: '.count($moved).'. Ontbrekende bestanden: '.count($missing).'. Quarantaine: '.$quarantine);
 } catch(Throwable $e) {
     if($pdo->inTransaction()) $pdo->rollBack();
     foreach(array_reverse($moved) as $image) {
