@@ -13,6 +13,7 @@ $subject=$s->fetch();
 if(!$subject){http_response_code(404);exit('Vak niet gevonden.');}
 
 if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='reactivate_topic'){
+    if(!in_array(($currentUser['role']??''),['admin','beheerder'],true)){http_response_code(403);exit('Geen toegang.');}
     $topicId=filter_var($_POST['topic_id']??null,FILTER_VALIDATE_INT);
     if(!$topicId){http_response_code(400);exit('Ongeldig overhoring.');}
     $x=$pdo->prepare("UPDATE topics SET test_date=NULL WHERE id=? AND subject_id=?");
@@ -23,6 +24,13 @@ if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='reactivate_t
 $x=$pdo->prepare("SELECT id,name,test_date FROM topics WHERE subject_id=? AND is_active=1 ORDER BY test_date DESC,created_at DESC,name");
 $x->execute([$subjectId]);
 $topics=$x->fetchAll();
+if(empty($_SESSION['grade_csrf']))$_SESSION['grade_csrf']=bin2hex(random_bytes(24));
+$gradesByTopic=[];
+if($studentId){
+    $g=$pdo->prepare('SELECT g.topic_id,g.grade FROM topic_grades g JOIN topics tp ON tp.id=g.topic_id WHERE tp.subject_id=? AND g.student_id=?');
+    $g->execute([$subjectId,$studentId]);
+    foreach($g->fetchAll() as $row)$gradesByTopic[(int)$row['topic_id']]=$row['grade'];
+}
 
 if($studentId && $topics){
     $topicIds=array_map(fn($row)=>(int)$row['id'],$topics);
@@ -107,10 +115,8 @@ if($studentId && $topics){
     $topicId=(int)($topic['id']);
     $archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d');
     $topicUrl='topic.php?id='.$topicId;
-    $menuActions=[
-        ['label'=>'Bekijken','href'=>$topicUrl,'primary'=>true],
-    ];
-    if($archived){
+    $menuActions=$archived?[]:[['label'=>'Bekijken','href'=>$topicUrl,'primary'=>true]];
+    if($archived && in_array(($currentUser['role']??''),['admin','beheerder'],true)){
         $menuActions[]=[
             'type'=>'form',
             'label'=>'Heractiveren',
@@ -123,7 +129,7 @@ if($studentId && $topics){
     }
 ?>
 <div class="leren-list-item<?=$archived?' topic-archived':''?><?=!empty($topic['is_complete'])?' subtest-complete':''?>">
-<a class="leren-list-item-main" href="<?=e($topicUrl)?>">
+<?php if(!$archived):?><a class="leren-list-item-main" href="<?=e($topicUrl)?>"><?php else:?><div class="leren-list-item-main" aria-disabled="true" style="cursor:default"><?php endif;?>
 <div class="leren-list-item-content">
 <div class="leren-list-item-heading">
 <?php if(!empty($topic['is_complete'])):?><span class="leren-list-item-check" aria-label="100 procent behaald">✓</span><?php endif;?>
@@ -131,7 +137,7 @@ if($studentId && $topics){
 </div>
 <div class="leren-list-item-subtitle">
 <?php if($topic['test_date']):?>
-Overhoring: <?=e(date('d-m-Y',strtotime($topic['test_date'])))?><?=$archived?' · Gearchiveerd':''?>
+Overhoring: <?=e(date('d-m-Y',strtotime($topic['test_date'])))?><?=$archived?' · Gearchiveerd':''?><?php if(isset($gradesByTopic[$topicId])):?> · Cijfer: <?=e(number_format((float)$gradesByTopic[$topicId],1,',','.'))?><?php endif;?>
 <?php else:?>
 Overhoring
 <?php endif;?>
@@ -146,19 +152,32 @@ Overhoring
 </div>
 <?php endif;?>
 </div>
-</a>
-<button type="button" class="leren-list-item-menu" data-list-menu data-list-modal="topicOptionsModal"
+<?php if(!$archived):?></a><?php else:?></div><?php endif;?>
+<?php if($menuActions):?><button type="button" class="leren-list-item-menu" data-list-menu data-list-modal="topicOptionsModal"
  data-menu-title="<?=e($topic['name'])?>"
  data-list-actions="<?=e(json_encode($menuActions,JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES))?>"
  aria-label="Opties voor <?=e($topic['name'])?>">
 <span></span><span></span><span></span>
-</button>
+</button><?php endif;?>
 </div>
 <?php endforeach;?>
 </div>
 <?php endif;?>
 </section>
 
+<section class="leren-section mt-4">
+<div class="leren-section-title"><h2>Cijfer uit het verleden toevoegen</h2></div>
+<form method="post" action="topic_grade.php" class="card card-body">
+<input type="hidden" name="action" value="historical">
+<input type="hidden" name="csrf" value="<?=e($_SESSION['grade_csrf'])?>">
+<input type="hidden" name="subject_id" value="<?=$subjectId?>">
+<div class="mb-3"><label class="form-label" for="historyTopicName">Naam overhoring</label><input id="historyTopicName" class="form-control" name="topic_name" maxlength="150" required></div>
+<div class="row g-3 mb-3">
+<div class="col-sm-6"><label class="form-label" for="historyTopicDate">Datum van de toets</label><input id="historyTopicDate" class="form-control" type="date" name="test_date" max="<?=date('Y-m-d',strtotime('-1 day'))?>" required></div>
+<div class="col-sm-6"><label class="form-label" for="historyTopicGrade">Cijfer</label><input id="historyTopicGrade" class="form-control" type="number" name="grade" min="1" max="10" step="0.1" placeholder="Bijvoorbeeld 8,0" required></div>
+</div>
+<button type="submit" class="btn btn-primary">Cijfer toevoegen</button>
+</form></section>
 <div class="leren-modal" id="topicOptionsModal" data-list-modal hidden aria-hidden="true">
 <div class="leren-modal-backdrop" data-list-modal-close></div>
 <div class="leren-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="topicOptionsTitle">
