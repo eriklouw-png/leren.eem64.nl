@@ -19,6 +19,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $gradeText=str_replace(',','.',trim((string)($_POST['grade']??'')));
         if($gradeText!=='' && !preg_match('/^(?:[1-9](?:\\.[0-9])?|10(?:\\.0)?)$/',$gradeText)){http_response_code(422);exit('Ongeldig cijfer (1,0 t/m 10,0).');}
         if($archived && ($testDate==='' || $testDate>=date('Y-m-d'))){http_response_code(422);exit('Kies voor archivering een datum in het verleden.');}
+        if(!$archived && $testDate!=='' && $testDate<date('Y-m-d')){http_response_code(422);exit('Een datum in het verleden betekent Gearchiveerd.');}
         if($gradeText!=='' && !$archived){http_response_code(422);exit('Archiveer de overhoring om een cijfer op te slaan.');}
         if($name===''){http_response_code(400);exit('Naam is verplicht.');}
         if($testDate!=='' && !preg_match('/^\d{4}-\d{2}-\d{2}$/',$testDate)){http_response_code(400);exit('Ongeldige datum.');}
