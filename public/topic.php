@@ -12,6 +12,7 @@ $x=$pdo->prepare("SELECT tp.id,tp.name,tp.test_date,tp.is_active,tp.use_summary,
 $x->execute([$topicId]);
 $topic=$x->fetch();
 if(!$topic || !(int)$topic['is_active']){http_response_code(404);exit('Overhoring niet gevonden.');}
+if(!empty($topic['test_date']) && $topic['test_date']<date('Y-m-d')){http_response_code(403);exit('Deze overhoring is gearchiveerd en niet meer toegankelijk.');}
 
 require_once __DIR__.'/../app/ai_source_archive.php';
 ai_source_archive_tables($pdo);
