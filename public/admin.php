@@ -59,7 +59,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     if($action==='delete_test'){
         $x=$pdo->prepare("SELECT title FROM tests WHERE id=?");
         $x->execute([$id]);$item=$x->fetch();
-        if(!$item){http_response_code(404);exit('Sub-Test niet gevonden.');}
+        if(!$item){http_response_code(404);exit('Test niet gevonden.');}
         $x=$pdo->prepare("DELETE FROM tests WHERE id=?");$x->execute([$id]);
         redirect('admin.php?deleted=test');
     }
