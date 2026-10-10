@@ -165,19 +165,6 @@ Overhoring
 <?php endif;?>
 </section>
 
-<section class="leren-section mt-4">
-<div class="leren-section-title"><h2>Cijfer uit het verleden toevoegen</h2></div>
-<form method="post" action="topic_grade.php" class="card card-body">
-<input type="hidden" name="action" value="historical">
-<input type="hidden" name="csrf" value="<?=e($_SESSION['grade_csrf'])?>">
-<input type="hidden" name="subject_id" value="<?=$subjectId?>">
-<div class="mb-3"><label class="form-label" for="historyTopicName">Naam overhoring</label><input id="historyTopicName" class="form-control" name="topic_name" maxlength="150" required></div>
-<div class="row g-3 mb-3">
-<div class="col-sm-6"><label class="form-label" for="historyTopicDate">Datum van de toets</label><input id="historyTopicDate" class="form-control" type="date" name="test_date" max="<?=date('Y-m-d',strtotime('-1 day'))?>" required></div>
-<div class="col-sm-6"><label class="form-label" for="historyTopicGrade">Cijfer</label><input id="historyTopicGrade" class="form-control" type="number" name="grade" min="1" max="10" step="0.1" placeholder="Bijvoorbeeld 8,0" required></div>
-</div>
-<button type="submit" class="btn btn-primary">Cijfer toevoegen</button>
-</form></section>
 <div class="leren-modal" id="topicOptionsModal" data-list-modal hidden aria-hidden="true">
 <div class="leren-modal-backdrop" data-list-modal-close></div>
 <div class="leren-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="topicOptionsTitle">
