@@ -4,8 +4,15 @@ require_manager();
 
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT)?:0;
 $subject=null;
-$owners=$pdo->query("SELECT id,name FROM users WHERE role='student' ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
-if(!$owners)$owners=$pdo->query("SELECT id,name FROM users WHERE role IN ('admin','beheerder') ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+if(is_admin()){
+    $owners=$pdo->query("SELECT id,name FROM users WHERE role IN ('student','beheerder','admin') ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+}else{
+    $allowedIds=array_unique(array_merge([(int)$_SESSION['user']['id']],managed_student_ids()));
+    $ph=implode(',',array_fill(0,count($allowedIds),'?'));
+    $ownerQuery=$pdo->prepare("SELECT id,name FROM users WHERE id IN ($ph) ORDER BY name");
+    $ownerQuery->execute(array_values($allowedIds));
+    $owners=$ownerQuery->fetchAll(PDO::FETCH_ASSOC);
+}
 $ownerIds=array_map('intval',array_column($owners,'id'));
 $ownerId=(int)($_POST['user_id']??($owners[0]['id']??0));
 if($id){
@@ -13,6 +20,8 @@ if($id){
     $x->execute([$id]);
     $subject=$x->fetch();
     if(!$subject){http_response_code(404);exit('Vak niet gevonden.');}
+    require_subject_management($id);
+    $ownerId=(int)$subject['user_id'];
 }
 
 $error=null;
@@ -20,6 +29,7 @@ $errorField=null;
 if($_SERVER['REQUEST_METHOD']==='POST'){
     $action=$_POST['action']??'save';
     $postId=filter_var($_POST['id']??null,FILTER_VALIDATE_INT)?:0;
+    if($postId)require_subject_management($postId);
 
     if($action==='delete'){
         if(!$postId){http_response_code(400);exit('Ongeldig ID.');}
@@ -49,6 +59,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
     $name=trim((string)($_POST['name']??''));
     $ownerId=(int)($_POST['user_id']??0);
+    if($postId && $postId!==$id){http_response_code(400);exit('Ongeldig vak.');}
     if(!in_array($ownerId,$ownerIds,true)){
         $error='Selecteer een geldige eigenaar.';
         $errorField='user_id';
