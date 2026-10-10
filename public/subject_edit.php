@@ -59,6 +59,14 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
     $name=trim((string)($_POST['name']??''));
     $ownerId=(int)($_POST['user_id']??0);
+    if($postId){
+        $previousOwner=(int)$subject['user_id'];
+        if($ownerId!==$previousOwner){
+            $hasActivity=$pdo->prepare('SELECT 1 FROM topics tp LEFT JOIN tests t ON t.topic_id=tp.id LEFT JOIN attempts a ON a.test_id=t.id LEFT JOIN topic_grades g ON g.topic_id=tp.id WHERE tp.subject_id=? AND (a.id IS NOT NULL OR g.id IS NOT NULL) LIMIT 1');
+            $hasActivity->execute([$postId]);
+            if($hasActivity->fetchColumn()){http_response_code(409);exit('Dit vak bevat cijfers of toetsresultaten. Eigenaarschap wijzigen is geblokkeerd om bestaande leerlinggegevens te beschermen.');}
+        }
+    }
     if($postId && $postId!==$id){http_response_code(400);exit('Ongeldig vak.');}
     if(!in_array($ownerId,$ownerIds,true)){
         $error='Selecteer een geldige eigenaar.';
