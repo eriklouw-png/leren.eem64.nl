@@ -7,6 +7,7 @@ $ownerStmt=$pdo->prepare('SELECT s.user_id FROM topics tp JOIN subjects s ON s.i
 $ownerStmt->execute([$id]);
 $gradeStudentId=(int)$ownerStmt->fetchColumn();
 if(!$gradeStudentId){http_response_code(404);exit('Eigenaar niet gevonden.');}
+require_manage_student($gradeStudentId);
 if($_SERVER['REQUEST_METHOD']==='POST'){
     $action=$_POST['action']??'save';
     if($action==='delete'){
