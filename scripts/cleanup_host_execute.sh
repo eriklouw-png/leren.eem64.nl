@@ -13,7 +13,7 @@ test -s "$DB" || { echo "STOP: DB-back-up ontbreekt"; exit 1; }
 test -s "$UPLOADS" || { echo "STOP: uploadback-up ontbreekt"; exit 1; }
 grep -aq '^-- Dump completed on ' "$DB" || { echo "STOP: DB-dump onvolledig"; exit 1; }
 gzip -t "$UPLOADS" || { echo "STOP: uploadarchief beschadigd"; exit 1; }
-tar -tzf "$UPLOADS" | grep -q '^uploads/questions/' || { echo "STOP: vragen ontbreken in archief"; exit 1; }
+tar -tzf "$UPLOADS" | grep '^uploads/questions/' >/dev/null || { echo "STOP: vragen ontbreken in archief"; exit 1; }
 echo "Back-ups aanwezig en archief leesbaar."
 echo "=== Laatste database-dry-run ==="
 docker exec leren-web php /var/www/html/scripts/cleanup_execute.php --dry-run
