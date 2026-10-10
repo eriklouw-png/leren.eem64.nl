@@ -1,5 +1,10 @@
 <?php
 require __DIR__.'/../app/bootstrap.php';require_admin();
+$ownerId=(int)($_SESSION['user']['id']??0);
+$managed=managed_student_ids();
+if(count($managed)===1)$ownerId=$managed[0];
+if(isset($_POST['owner_id']))$ownerId=(int)$_POST['owner_id'];
+if(!is_admin() && $ownerId!==(int)($_SESSION['user']['id']??0) && !in_array($ownerId,$managed,true)){http_response_code(403);exit('Ongeldige eigenaar.');}
 $errors=[];$success=null;$preview=[];$pastePath=null;
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['csv_text'])){
     $csvText=(string)$_POST['csv_text'];
@@ -68,7 +73,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     $fh=fopen($_FILES['csv']['tmp_name'],'rb');fgetcsv($fh,0,';');
                     $pdo->beginTransaction();
                     try{
-                        $subject=$pdo->prepare("INSERT INTO subjects(name) VALUES(?) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)");
+                        $subject=$pdo->prepare("INSERT INTO subjects(name,user_id) VALUES(?,?) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)");
                         $topic=$pdo->prepare("INSERT INTO topics(subject_id,name) VALUES(?,?) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)");
                         $findTest=$pdo->prepare("SELECT id FROM tests WHERE topic_id=? AND title=? LIMIT 1");
                         $createTest=$pdo->prepare("INSERT INTO tests(topic_id,title,description,is_active) VALUES(?,?,?,?)");
@@ -80,7 +85,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         while(($row=fgetcsv($fh,0,';'))!==false){
                             if(count($row)!==count($expected))continue;$data=array_combine($expected,array_map(fn($v)=>trim((string)$v),$row));
                             if($expected===$shortExpected){$data=array_merge($shortImportDefaults,$data);}
-                            $subject->execute([$data['vak']]);$subjectId=(int)$pdo->lastInsertId();
+                            $subject->execute([$data['vak'],$ownerId]);$subjectId=(int)$pdo->lastInsertId();
                             $topic->execute([$subjectId,$data['overhoring']]);$topicId=(int)$pdo->lastInsertId();
                             $active=$data['actief']===''?1:(int)in_array(strtolower($data['actief']),['1','ja','yes','true'],true);
                             $findTest->execute([$topicId,$data['sub-test']]);$existingTest=$findTest->fetchColumn();
