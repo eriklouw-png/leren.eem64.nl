@@ -182,7 +182,7 @@ function mastery_label(?float $score):string{
 </div>
 <div class="col-12 col-md-4">
 <div class="card shadow-sm h-100"><div class="card-body py-2 px-3 d-flex justify-content-between align-items-center gap-3">
-<div class="small text-secondary">Sub-testen</div>
+<div class="small text-secondary">Testen</div>
 <div class="fw-semibold"><?=e(format_duration_student($testSeconds))?></div>
 </div></div>
 </div>
@@ -254,7 +254,7 @@ foreach($topics as $topic){
 <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-2">
 <div>
 <div class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em">Kennisniveau</div>
-<div class="small text-secondary"><?=$completed?> van <?=$total?> sub-testen afgerond · <?=e($label)?></div>
+<div class="small text-secondary"><?=$completed?> van <?=$total?> testen afgerond · <?=e($label)?></div>
 </div>
 <?php if($mastery===null):?>
 <div class="mastery-score text-secondary">—</div>
@@ -287,7 +287,7 @@ foreach($topics as $topic){
 </div>
 <?php endif;?>
 
-<div class="small fw-semibold text-secondary mb-2">Sub-testen</div>
+<div class="small fw-semibold text-secondary mb-2">Testen</div>
 <div class="list-group">
 <?php foreach($topic['tests'] as $test):?>
 <div class="list-group-item">
