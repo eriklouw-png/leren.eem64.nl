@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../app/bootstrap.php';require_manager();
+require __DIR__.'/../app/bootstrap.php';require_once __DIR__.'/../app/trash_schema.php';require_manager();trash_schema($pdo);
 if($_SERVER['REQUEST_METHOD']==='POST'){
     $action=$_POST['action']??'';
     $id=filter_var($_POST['id']??null,FILTER_VALIDATE_INT);
@@ -36,26 +36,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $x=$pdo->prepare("SELECT id FROM subjects WHERE id=?");
         $x->execute([$id]);
         if(!$x->fetch()){http_response_code(404);exit('Vak niet gevonden.');}
-        $pdo->beginTransaction();
-        try{
-            $x=$pdo->prepare("SELECT id FROM topics WHERE subject_id=?");
-            $x->execute([$id]);
-            $topicIds=array_map('intval',$x->fetchAll(PDO::FETCH_COLUMN));
-            if($topicIds){
-                $ph=implode(',',array_fill(0,count($topicIds),'?'));
-                $x=$pdo->prepare("DELETE FROM tests WHERE topic_id IN ($ph)");
-                $x->execute($topicIds);
-                $x=$pdo->prepare("DELETE FROM topics WHERE id IN ($ph)");
-                $x->execute($topicIds);
-            }
-            $x=$pdo->prepare("DELETE FROM subjects WHERE id=?");
-            $x->execute([$id]);
-            $pdo->commit();
-            redirect('admin.php?deleted=subject');
-        }catch(Throwable $e){
-            if($pdo->inTransaction())$pdo->rollBack();
-            throw $e;
-        }
+        $pdo->prepare("UPDATE subjects SET deleted_at=NOW() WHERE id=? AND deleted_at IS NULL")->execute([$id]);
+        redirect('admin.php?deleted=subject');
     }
     if($action==='delete_test'){
         $owner=$pdo->prepare('SELECT tp.subject_id FROM tests t JOIN topics tp ON tp.id=t.topic_id WHERE t.id=?');
@@ -88,8 +70,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     http_response_code(400);exit('Ongeldige actie.');
 }
 $allowedSubjects=is_admin()?null:array_unique(array_merge([(int)($_SESSION['user']['id']??0)],managed_student_ids()));
-$subjectSql="SELECT s.id,s.name,s.image_mime,(SELECT COUNT(*) FROM topics tp WHERE tp.subject_id=s.id) AS overhoring_count,(SELECT COUNT(*) FROM tests t JOIN topics tp ON tp.id=t.topic_id WHERE tp.subject_id=s.id) AS test_count FROM subjects s";
-if($allowedSubjects!==null)$subjectSql.=" WHERE s.user_id IN (".implode(',',array_fill(0,count($allowedSubjects),'?')).")";
+$subjectSql="SELECT s.id,s.name,s.image_mime,(SELECT COUNT(*) FROM topics tp WHERE tp.subject_id=s.id) AS overhoring_count,(SELECT COUNT(*) FROM tests t JOIN topics tp ON tp.id=t.topic_id WHERE tp.subject_id=s.id) AS test_count FROM subjects s WHERE s.deleted_at IS NULL";
+if($allowedSubjects!==null)$subjectSql.=" AND s.user_id IN (".implode(',',array_fill(0,count($allowedSubjects),'?')).")";
 $subjectSql.=" ORDER BY s.name";
 $subjectStmt=$pdo->prepare($subjectSql);
 $subjectStmt->execute($allowedSubjects===null?[]:array_values($allowedSubjects));
