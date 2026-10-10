@@ -18,7 +18,7 @@ if($reviewMode){
     $reviewTestId=(int)($findReview->fetchColumn()?:0);
     if(!$reviewTestId){
         $createReview=$pdo->prepare("INSERT INTO tests(topic_id,title,description,test_type,is_active) VALUES(?,?,?,?,0)");
-        $createReview->execute([$topicId,$reviewTestName,'Gezamenlijke oefentoets met fouten uit de sub-testen.','mixed']);
+        $createReview->execute([$topicId,$reviewTestName,'Gezamenlijke oefentoets met fouten uit de testen.','mixed']);
         $reviewTestId=(int)$pdo->lastInsertId();
     }
     $testId=$reviewTestId;
@@ -28,7 +28,7 @@ if(!$testId)redirect('index.php');
 
 $s=$pdo->prepare("SELECT t.id,t.title,t.description,t.test_type,t.vocab_left_label,t.vocab_right_label,t.vocab_direction,s.id subject_id,s.name subject_name,tp.id topic_id,tp.name topic_name FROM tests t JOIN topics tp ON tp.id=t.topic_id JOIN subjects s ON s.id=tp.subject_id WHERE t.id=? AND (t.is_active=1 OR ?=1)");
 $s->execute([$testId,$reviewMode?1:0]);$test=$s->fetch();
-if(!$test){http_response_code(404);exit('Sub-Test niet gevonden.');}
+if(!$test){http_response_code(404);exit('Test niet gevonden.');}
 if($reviewMode && (int)$test['topic_id']!==$topicId){http_response_code(404);exit('Overhoring niet gevonden.');}
 
 if(!isset($_SESSION['learner_token']))$_SESSION['learner_token']=bin2hex(random_bytes(32));
