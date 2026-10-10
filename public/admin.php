@@ -77,7 +77,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }
     http_response_code(400);exit('Ongeldige actie.');
 }
-$subjects=$pdo->query("SELECT id,name,description,image_mime FROM subjects ORDER BY name")->fetchAll();
+$subjects=$pdo->query("SELECT s.id,s.name,s.image_mime,(SELECT COUNT(*) FROM topics tp WHERE tp.subject_id=s.id) AS overhoring_count,(SELECT COUNT(*) FROM tests t JOIN topics tp ON tp.id=t.topic_id WHERE tp.subject_id=s.id) AS test_count FROM subjects s ORDER BY s.name")->fetchAll();
 $sessions=$pdo->query("SELECT ss.id,ss.test_id,ss.attempt_id,ss.started_at,ss.ended_at,ss.active_seconds,t.title,a.score FROM study_sessions ss LEFT JOIN attempts a ON a.id=ss.attempt_id LEFT JOIN tests t ON t.id=ss.test_id ORDER BY ss.started_at DESC")->fetchAll();
 $answeredRows=$pdo->query("SELECT ss.test_id,aa.question_id FROM study_sessions ss JOIN attempt_answers aa ON aa.attempt_id=ss.attempt_id GROUP BY ss.test_id,aa.question_id")->fetchAll();
 $questionCounts=$pdo->query("SELECT test_id,COUNT(*) question_count FROM questions GROUP BY test_id")->fetchAll();
@@ -222,7 +222,7 @@ if(is_admin()){
 <a class="leren-list-item-main" href="subject_manage.php?id=<?=$subjectId?>">
 <div class="leren-list-item-content">
 <div class="leren-list-item-heading"><div class="leren-list-item-title"><?=e($subject['name'])?></div></div>
-<?php if($subject['description']):?><div class="leren-list-item-description"><?=e($subject['description'])?></div><?php endif;?>
+<div class="leren-list-item-description"><?=(int)$subject['overhoring_count']?> <?=((int)$subject['overhoring_count']===1?'overhoring':'overhoringen')?> &middot; <?=(int)$subject['test_count']?> <?=((int)$subject['test_count']===1?'test':'testen')?></div>
 </div>
 </a>
 <button type="button" class="leren-list-item-menu" data-list-menu data-list-modal="subjectOptionsModal" data-menu-title="<?=e($subject['name'])?>" data-list-actions="<?=e(json_encode($subjectActions,JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES))?>" aria-label="Opties voor <?=e($subject['name'])?>">
