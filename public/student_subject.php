@@ -45,8 +45,8 @@ $x=$pdo->prepare("
         ON ss.summary_id=ts.id
        AND ss.student_id=?
        AND ss.activity_type='summary'
-    GROUP BY ts.id,ts.name,ts.is_active,tp.name,s.name
     WHERE s.id=?
+    GROUP BY ts.id,ts.name,ts.is_active,tp.name,s.name
     ORDER BY s.name,tp.name,ts.name
 ");
 $x->execute([$studentId,$subjectId]);
