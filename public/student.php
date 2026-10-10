@@ -207,7 +207,9 @@ function mastery_label(?float $score):string{
 </div>
 
 <?php
-$subjectList=$pdo->query('SELECT id,name FROM subjects ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
+$subjectListQuery=$pdo->prepare('SELECT id,name FROM subjects WHERE user_id=? ORDER BY name');
+$subjectListQuery->execute([$studentId]);
+$subjectList=$subjectListQuery->fetchAll(PDO::FETCH_ASSOC);
 $gradeQuery=$pdo->prepare("
     SELECT tp.subject_id,
            SUM(g.grade*g.weight)/NULLIF(SUM(g.weight),0) AS average_grade
