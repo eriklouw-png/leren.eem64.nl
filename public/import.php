@@ -1,10 +1,25 @@
 <?php
 require __DIR__.'/../app/bootstrap.php';require_admin();
-$ownerId=(int)($_SESSION['user']['id']??0);
-$managed=managed_student_ids();
-if(count($managed)===1)$ownerId=$managed[0];
-if(isset($_POST['owner_id']))$ownerId=(int)$_POST['owner_id'];
-if(!is_admin() && $ownerId!==(int)($_SESSION['user']['id']??0) && !in_array($ownerId,$managed,true)){http_response_code(403);exit('Ongeldige eigenaar.');}
+// CSV-imports worden uitsluitend gekoppeld aan een expliciet gekozen leerling.
+if(is_admin()){
+    $owners=$pdo->query("SELECT id,name FROM users WHERE role='student' ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+}else{
+    $managed=managed_student_ids();
+    if($managed){
+        $ph=implode(',',array_fill(0,count($managed),'?'));
+        $stmt=$pdo->prepare("SELECT id,name FROM users WHERE role='student' AND id IN ($ph) ORDER BY name");
+        $stmt->execute($managed);
+        $owners=$stmt->fetchAll(PDO::FETCH_ASSOC);
+    }else{
+        $owners=[];
+    }
+}
+$allowedOwnerIds=array_map('intval',array_column($owners,'id'));
+$ownerId=(int)($_POST['owner_id']??0);
+if($_SERVER['REQUEST_METHOD']==='POST' && !in_array($ownerId,$allowedOwnerIds,true)){
+    http_response_code(403);
+    exit('Selecteer een geldige leerling als eigenaar.');
+}
 $errors=[];$success=null;$preview=[];$pastePath=null;
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['csv_text'])){
     $csvText=(string)$_POST['csv_text'];
@@ -112,13 +127,25 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }
 }
 ?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Importeren</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><main class="container py-4" style="max-width:1000px"><a href="admin.php">&larr; Beheer</a><div class="card shadow-sm mt-3"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-center"><h1 class="mb-0">Vragen importeren</h1><a class="btn btn-outline-primary" href="vocabulary_import.php">Woordenlijst importeren</a></div><p class="mt-3">CSV met <strong>puntkomma's</strong> als scheidingsteken. De import maakt vak, overhoring en test automatisch aan als ze nog niet bestaan.</p><div class="alert alert-secondary"><strong>Volledig formaat:</strong> <code>vak;overhoring;sub-test;type;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;afbeelding;actief</code><br><strong>Kort formaat:</strong> <code>vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;afbeelding</code><br><strong>type:</strong> <code>mc</code> of <code>open</code>. Bij een open vraag kun je meerdere goede antwoorden opgeven met <code>|</code>.</div><?php foreach($errors as $error):?><div class="alert alert-danger"><?=e($error)?></div><?php endforeach;?><?php if($success):?><div class="alert alert-success"><?=e($success)?></div><?php endif;?><form method="post" enctype="multipart/form-data">
+<div class="mb-3">
+<label class="form-label" for="owner_id"><strong>Leerling / eigenaar</strong></label>
+<select class="form-select" name="owner_id" id="owner_id" required>
+<option value="">Kies een leerling</option>
+<?php foreach($owners as $owner): ?>
+<option value="<?=(int)$owner['id']?>" <?=$ownerId===(int)$owner['id']?'selected':''?>><?=e($owner['name'])?></option>
+<?php endforeach; ?>
+</select>
+<div class="form-text">Alle geïmporteerde vakken en vragen worden aan deze leerling gekoppeld.</div>
+</div>
+<?php if(!$owners): ?><div class="alert alert-warning">Er zijn geen leerlingen beschikbaar voor import.</div><?php endif; ?>
+
 <label class="form-label"><strong>CSV-bestand</strong></label>
 <input class="form-control mb-3" type="file" name="csv" accept=".csv,text/csv">
 <div class="text-center text-secondary mb-3">of</div>
 <label class="form-label"><strong>CSV rechtstreeks plakken</strong></label>
 <textarea class="form-control font-monospace mb-3" name="csv_text" rows="12" placeholder="Plak hier de volledige CSV, inclusief de eerste regel met de kolomnamen..."></textarea>
 <div class="form-text mb-3">Gebruik hetzelfde CSV-formaat met puntkomma's als scheidingsteken. Maximaal 2 MB.</div>
-<button class="btn btn-primary">CSV importeren</button>
+<button class="btn btn-primary" <?=!$owners?'disabled':''?>>CSV importeren</button>
 </form><hr><h2 class="h5">Voorbeeld voor ChatGPT</h2><p class="text-secondary">Bij het korte formaat worden vak, overhoring, test en type automatisch ingevuld. Voor jouw klokvragen wordt dus automatisch een multiple-choice toets gemaakt.</p><pre class="bg-light p-3 border">vak;overhoring;sub-test;type;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg;actief
 Geschiedenis;De Republiek;Test 1;mc;Wie was Willem van Oranje?;De leider van de Opstand;Een Franse koning;Een Romeinse keizer;Een Engelse admiraal;;grieken/tempel.jpg;1
 Geschiedenis;De Republiek;Test 1;open;In welk jaar begon de Tachtigjarige Oorlog?;1568;;;;;;1
