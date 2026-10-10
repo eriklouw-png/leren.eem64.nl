@@ -58,6 +58,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         }
     }
     if($action==='delete_test'){
+        $owner=$pdo->prepare('SELECT tp.subject_id FROM tests t JOIN topics tp ON tp.id=t.topic_id WHERE t.id=?');
+        $owner->execute([$id]);
+        require_subject_management((int)$owner->fetchColumn());
         $x=$pdo->prepare("SELECT title FROM tests WHERE id=?");
         $x->execute([$id]);$item=$x->fetch();
         if(!$item){http_response_code(404);exit('Test niet gevonden.');}
@@ -65,12 +68,18 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         redirect('admin.php?deleted=test');
     }
     if($action==='delete_session'){
+        $owner=$pdo->prepare('SELECT student_id FROM study_sessions WHERE id=?');
+        $owner->execute([$id]);
+        require_manage_student((int)$owner->fetchColumn());
         $x=$pdo->prepare("SELECT id FROM study_sessions WHERE id=?");
         $x->execute([$id]);if(!$x->fetch()){http_response_code(404);exit('Oefensessie niet gevonden.');}
         $x=$pdo->prepare("DELETE FROM study_sessions WHERE id=?");$x->execute([$id]);
         redirect('admin.php?deleted=session');
     }
     if($action==='delete_attempt'){
+        $owner=$pdo->prepare('SELECT student_id FROM attempts WHERE id=?');
+        $owner->execute([$id]);
+        require_manage_student((int)$owner->fetchColumn());
         $x=$pdo->prepare("SELECT id FROM attempts WHERE id=? AND finished_at IS NOT NULL");
         $x->execute([$id]);if(!$x->fetch()){http_response_code(404);exit('Resultaat niet gevonden.');}
         $x=$pdo->prepare("DELETE FROM attempts WHERE id=?");$x->execute([$id]);
