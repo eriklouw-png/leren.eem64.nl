@@ -2,11 +2,12 @@
 require __DIR__.'/../app/bootstrap.php';require_admin();
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);$test=null;
 if($id){
- $s=$pdo->prepare("SELECT t.*,s.name subject_name,tp.name topic_name FROM tests t JOIN topics tp ON tp.id=t.topic_id JOIN subjects s ON s.id=tp.subject_id WHERE t.id=? AND t.is_active=1");
+ $s=$pdo->prepare("SELECT t.*,s.name subject_name,s.id subject_id,tp.name topic_name FROM tests t JOIN topics tp ON tp.id=t.topic_id JOIN subjects s ON s.id=tp.subject_id WHERE t.id=? AND t.is_active=1");
  $s->execute([$id]);$test=$s->fetch();if(!$test)exit('Test niet gevonden.');
+ require_subject_management((int)$test['subject_id']);
 }
-$subjects=$pdo->query("SELECT id,name FROM subjects ORDER BY name")->fetchAll();
-$topics=$pdo->query("SELECT id,subject_id,name,is_active FROM topics WHERE is_active=1 ORDER BY subject_id,name")->fetchAll();
+$subjects=array_values(array_filter($pdo->query("SELECT id,name FROM subjects ORDER BY name")->fetchAll(),fn($row)=>can_access_subject((int)$row['id'])));
+$topics=array_values(array_filter($pdo->query("SELECT id,subject_id,name,is_active FROM topics WHERE is_active=1 ORDER BY subject_id,name")->fetchAll(),fn($row)=>can_access_subject((int)$row['subject_id'])));
 $attempts=[];
 if($id){
  $a=$pdo->prepare("SELECT a.id,a.student_id,a.score,a.started_at,a.finished_at,a.status,a.mode,COALESCE(NULLIF(u.name,''),'Onbekende gebruiker') AS student_name FROM attempts a LEFT JOIN users u ON u.id=a.student_id WHERE a.test_id=? ORDER BY COALESCE(a.finished_at,a.started_at) DESC,a.id DESC");
