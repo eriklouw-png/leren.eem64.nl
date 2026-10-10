@@ -18,6 +18,7 @@ if($topicId){
     $x=$pdo->prepare("SELECT id,name FROM subjects WHERE id=?");
     $x->execute([$subjectId]);$subject=$x->fetch();
     if(!$subject){http_response_code(404);exit('Taal niet gevonden.');}
+    require_subject_management((int)$subjectId);
     $topicName='Algemeen';
 }
 
