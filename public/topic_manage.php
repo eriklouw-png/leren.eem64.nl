@@ -60,16 +60,16 @@ $menuActions=[
 </div>
 <?php endif;?>
 
-<div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap"><h2 class="h4 mb-0">Sub-testen</h2><div class="d-flex gap-2 flex-wrap"><a class="btn btn-primary" href="ai_test_generator.php?topic_id=<?=$id?>">AI-test maken</a><a class="btn btn-primary" href="test_new.php?topic_id=<?=$id?>">Nieuwe sub-test</a></div></div>
-<?php if(!$tests):?><div class="alert alert-info">Nog geen sub-testen binnen deze overhoring.</div><?php else:?>
+<div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap"><h2 class="h4 mb-0">Testen</h2><div class="d-flex gap-2 flex-wrap"><a class="btn btn-primary" href="ai_test_generator.php?topic_id=<?=$id?>">AI-test maken</a><a class="btn btn-primary" href="test_new.php?topic_id=<?=$id?>">Nieuwe test</a></div></div>
+<?php if(!$tests):?><div class="alert alert-info">Nog geen testen binnen deze overhoring.</div><?php else:?>
 <div class="leren-list">
 <?php foreach($tests as $t):?>
 <?php $questionCount=((in_array(($t['test_type']??'mixed'),['vocabulary','sentences'],true) && ($t['vocab_direction']??'both')==='both') ? (int)ceil(((int)$t['question_count'])/2) : (int)$t['question_count']); ?>
 <?php
 $menuActions=[
-    ['label'=>'Sub-test bewerken','href'=>'test_edit.php?id='.(int)$t['id'],'primary'=>true],
+    ['label'=>'Test bewerken','href'=>'test_edit.php?id='.(int)$t['id'],'primary'=>true],
     ['label'=>'Vragen beheren','href'=>'questions.php?test_id='.(int)$t['id']],
-    ['type'=>'form','label'=>'Verwijderen','danger'=>true,'action'=>'topic_manage.php?id='.$id,'fields'=>['action'=>'delete_test','item_id'=>(int)$t['id']],'confirm'=>'Weet u zeker dat u deze sub-test wilt verwijderen? De sub-test verdwijnt uit de website, maar blijft in de database bewaard.'],
+    ['type'=>'form','label'=>'Verwijderen','danger'=>true,'action'=>'topic_manage.php?id='.$id,'fields'=>['action'=>'delete_test','item_id'=>(int)$t['id']],'confirm'=>'Weet u zeker dat u deze test wilt verwijderen? De test verdwijnt uit de website, maar blijft in de database bewaard.'],
 ];
 ?>
 <div class="leren-list-item">
