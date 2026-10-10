@@ -94,6 +94,7 @@ foreach($rows as $row){
         $topics[$topicKey]=[
             'id'=>$topicKey,
             'name'=>$row['topic_name'],
+            'subject_id'=>(int)$row['subject_id'],
             'test_date'=>$row['test_date'],
             'subject_name'=>$row['subject_name'],
             'tests'=>[],
