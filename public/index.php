@@ -1,5 +1,17 @@
 <?php
 require __DIR__.'/../app/bootstrap.php';
+require __DIR__.'/../app/auth.php';
+$gradePrompt=null;
+if(is_logged_in()){
+    $gradeStudentId=(int)current_user()['id'];
+    if(empty($_SESSION['grade_csrf']))$_SESSION['grade_csrf']=bin2hex(random_bytes(24));
+    $pending=$pdo->prepare("SELECT tp.id,tp.name,tp.test_date,s.name subject_name FROM topics tp JOIN subjects s ON s.id=tp.subject_id LEFT JOIN topic_grades g ON g.topic_id=tp.id AND g.student_id=? WHERE tp.is_active=1 AND tp.test_date<CURDATE() AND g.id IS NULL ORDER BY tp.test_date ASC,tp.id ASC");
+    $pending->execute([$gradeStudentId]);
+    foreach($pending->fetchAll() as $candidate){
+        if(empty($_SESSION['grade_later'][(int)$candidate['id']])){$gradePrompt=$candidate;break;}
+    }
+}
+
 
 $subjects=$pdo->query("SELECT s.id,s.name,s.description,s.image_mime,COUNT(DISTINCT t.id) test_count FROM subjects s JOIN topics tp ON tp.subject_id=s.id JOIN tests t ON t.topic_id=tp.id AND t.is_active=1 GROUP BY s.id ORDER BY s.name");
 
@@ -71,6 +83,26 @@ $subjects=$subjects->fetchAll();
 <div class="alert alert-info mt-3">Er zijn nog geen vakken met actieve testen.</div>
 <?php endif;?>
 
+<?php if($gradePrompt):?>
+<div class="modal fade" id="gradePromptModal" tabindex="-1" aria-labelledby="gradePromptTitle" aria-hidden="true">
+<div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+<div class="modal-header"><h2 class="modal-title fs-5" id="gradePromptTitle">Welk cijfer heb je gehaald?</h2></div>
+<form method="post" action="topic_grade.php">
+<div class="modal-body">
+<p>De overhoring <strong><?=e($gradePrompt['name'])?></strong> voor <strong><?=e($gradePrompt['subject_name'])?></strong> was op <?=e(date('d-m-Y',strtotime($gradePrompt['test_date'])))?>.</p>
+<label class="form-label" for="gradePromptInput">Je cijfer (1,0 t/m 10,0)</label>
+<input class="form-control" id="gradePromptInput" name="grade" type="number" min="1" max="10" step="0.1" inputmode="decimal" required placeholder="Bijvoorbeeld 7,5">
+<input type="hidden" name="csrf" value="<?=e($_SESSION['grade_csrf'])?>">
+<input type="hidden" name="topic_id" value="<?=(int)$gradePrompt['id']?>">
+<input type="hidden" name="return_to" value="index.php">
+</div>
+<div class="modal-footer">
+<button class="btn btn-outline-secondary" type="submit" name="action" value="later" formnovalidate>Weet ik nog niet</button>
+<button class="btn btn-primary" type="submit" name="action" value="save">Cijfer opslaan</button>
+</div></form></div></div></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>document.addEventListener('DOMContentLoaded',function(){const el=document.getElementById('gradePromptModal');if(el && window.bootstrap)new bootstrap.Modal(el,{backdrop:'static',keyboard:false}).show();});</script>
+<?php endif;?>
 </main>
 </body>
 </html>
