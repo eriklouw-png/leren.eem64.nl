@@ -13,7 +13,7 @@ if(is_logged_in()){
 }
 
 
-$subjects=$pdo->query("SELECT s.id,s.name,s.description,s.image_mime,COUNT(DISTINCT t.id) test_count FROM subjects s JOIN topics tp ON tp.subject_id=s.id JOIN tests t ON t.topic_id=tp.id AND t.is_active=1 GROUP BY s.id ORDER BY s.name");
+$subjects=$pdo->query("SELECT s.id,s.name,s.image_mime,COUNT(DISTINCT t.id) test_count FROM subjects s JOIN topics tp ON tp.subject_id=s.id JOIN tests t ON t.topic_id=tp.id AND t.is_active=1 GROUP BY s.id ORDER BY s.name");
 
 function subject_visual(string $name):array{
     $n=mb_strtolower(trim($name),'UTF-8');
