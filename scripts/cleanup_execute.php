@@ -69,7 +69,8 @@ try {
         $pdo->rollBack();
         exit(0);
     }
-    throw new RuntimeException('Uitvoering geblokkeerd: host-side uitvoeringsprotocol nog niet geactiveerd.');
+    if (getenv('LEREN_HOST_BACKUP_VERIFIED') !== 'YES-20261011')
+        throw new RuntimeException('Uitvoering vereist host-back-upcontrole.');
     if(!is_dir($base)) throw new RuntimeException("Afbeeldingsmap ontbreekt: $base");
     foreach($images as $image) if(!is_file($base.'/'.$image))
         throw new RuntimeException("Afbeeldingsbestand ontbreekt: $image");
