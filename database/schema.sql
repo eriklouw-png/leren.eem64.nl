@@ -38,7 +38,6 @@ CREATE TABLE manager_students (
 CREATE TABLE subjects (
  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
  name VARCHAR(150) NOT NULL UNIQUE,
- description TEXT NULL,
  image_mime VARCHAR(50) NULL,
  image_data MEDIUMBLOB NULL,
  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -177,7 +176,7 @@ CREATE TABLE attempt_answers (
  CONSTRAINT fk_attempt_answers_option FOREIGN KEY(selected_option_id) REFERENCES question_options(id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO subjects(name,description) VALUES ('Geschiedenis','Voorbeeldvak');
+INSERT INTO subjects(name) VALUES ('Geschiedenis');
 INSERT INTO topics(subject_id,name) SELECT id,'Oefenen' FROM subjects WHERE name='Geschiedenis' LIMIT 1;
 INSERT INTO tests(topic_id,title,description) SELECT id,'Voorbeeldtoets','Eerste test om de installatie te controleren.' FROM topics WHERE name='Oefenen' LIMIT 1;
 INSERT INTO questions(test_id,question_text,question_type,sort_order) SELECT id,'Welke kleur heeft gras meestal?','multiple_choice',1 FROM tests WHERE title='Voorbeeldtoets' LIMIT 1;
