@@ -12,7 +12,7 @@ $topicId=filter_var($_POST['topic_id']??null,FILTER_VALIDATE_INT);
 $back=(string)($_POST['return_to']??'index.php');
 if(!preg_match('~^(index\.php|subject\.php\?id=[0-9]+)$~',$back))$back='index.php';
 if($action==='later' && $topicId){
-    $_SESSION['grade_later'][(int)$topicId]=true;
+    $_SESSION['grade_later'][(int)$topicId]=date('Y-m-d');
     redirect($back);
 }
 if($action==='save' && $topicId){
