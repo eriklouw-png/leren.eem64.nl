@@ -10,6 +10,7 @@ if(!$subjectId){redirect('admin.php');}
 $x=$pdo->prepare("SELECT id,name,user_id FROM subjects WHERE id=?");
 $x->execute([$subjectId]);$subject=$x->fetch();
 if(!$subject){http_response_code(404);exit('Vak niet gevonden.');}
+require_subject_management($subjectId);
 
 $gradeStudentId=(int)$subject['user_id'];
 $errors=[];
