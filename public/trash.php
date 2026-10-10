@@ -10,12 +10,56 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $kind=(string)($_POST['kind']??'');
     $action=(string)($_POST['action']??'');
     $id=filter_var($_POST['id']??null,FILTER_VALIDATE_INT);
-    if(!$id || !in_array($kind,['topic','test','summary'],true) || $action!=='restore'){
+    if(!$id || !in_array($kind,['topic','test','summary'],true) || !in_array($action,['restore','delete'],true)){
         http_response_code(400);exit('Ongeldige actie.');
     }
+    if($action==='delete' && (string)($_POST['confirm']??'')!=='DEFINITIEF VERWIJDEREN'){
+        http_response_code(400);exit('Bevestiging ontbreekt.');
+    }
+    $moved=[];$trashDir=null;
     $pdo->beginTransaction();
     try{
-        if($kind==='topic'){
+        if($action==='delete'){
+            if($kind==='topic'){
+                $st=$pdo->prepare('SELECT id FROM topics WHERE id=? AND is_active=0 FOR UPDATE');
+                $st->execute([$id]);if(!$st->fetchColumn())throw new RuntimeException('Overhoring niet meer in prullenbak.');
+                $st=$pdo->prepare('SELECT id FROM tests WHERE topic_id=?');$st->execute([$id]);$testIds=array_map('intval',$st->fetchAll(PDO::FETCH_COLUMN));
+            }elseif($kind==='test'){
+                $st=$pdo->prepare('SELECT id FROM tests WHERE id=? AND is_active=0 FOR UPDATE');
+                $st->execute([$id]);if(!$st->fetchColumn())throw new RuntimeException('Sub-test niet meer in prullenbak.');
+                $testIds=[$id];
+            }else{
+                $st=$pdo->prepare('SELECT id FROM topic_summaries WHERE id=? AND is_active=0 FOR UPDATE');
+                $st->execute([$id]);if(!$st->fetchColumn())throw new RuntimeException('Samenvatting niet meer in prullenbak.');
+                $pdo->prepare('DELETE FROM ai_source_links WHERE summary_id=?')->execute([$id]);
+                $pdo->prepare('DELETE FROM topic_summaries WHERE id=?')->execute([$id]);
+                $testIds=[];
+            }
+            if($testIds){
+                $ph=implode(',',array_fill(0,count($testIds),'?'));
+                $st=$pdo->prepare("SELECT DISTINCT image_path FROM questions WHERE test_id IN ($ph) AND image_path IS NOT NULL AND image_path<>''");
+                $st->execute($testIds);$images=$st->fetchAll(PDO::FETCH_COLUMN);
+                $shared=$pdo->prepare('SELECT COUNT(*) FROM questions WHERE image_path=? AND test_id NOT IN ('. $ph .')');
+                $base=__DIR__.'/uploads/questions';
+                $trashDir=__DIR__.'/../storage/trash-pending-'.bin2hex(random_bytes(10));
+                foreach($images as $img){
+                    if(!is_string($img)||basename($img)!==$img||$img==='.'||$img==='..')throw new RuntimeException('Onveilig afbeeldingspad.');
+                    $shared->execute(array_merge([$img],$testIds));
+                    if((int)$shared->fetchColumn()!==0)continue;
+                    $src=$base.'/'.$img;
+                    if(!is_file($src))continue;
+                    if(!is_dir($trashDir) && !mkdir($trashDir,0700,true))throw new RuntimeException('Kan tijdelijke opslag niet aanmaken.');
+                    if(!rename($src,$trashDir.'/'.$img))throw new RuntimeException('Afbeelding verplaatsen mislukt.');
+                    $moved[]=$img;
+                }
+                $pdo->prepare("DELETE FROM ai_source_links WHERE question_id IN (SELECT id FROM questions WHERE test_id IN ($ph))")->execute($testIds);
+                $pdo->prepare("DELETE FROM tests WHERE id IN ($ph)")->execute($testIds);
+            }
+            if($kind==='topic'){
+                $pdo->prepare('DELETE FROM ai_source_links WHERE summary_id IN (SELECT id FROM topic_summaries WHERE topic_id=?)')->execute([$id]);
+                $pdo->prepare('DELETE FROM topics WHERE id=?')->execute([$id]);
+            }
+        }elseif($kind==='topic'){
             $s=$pdo->prepare('SELECT id FROM topics WHERE id=? AND is_active=0 FOR UPDATE');
             $s->execute([$id]);
             if(!$s->fetchColumn())throw new RuntimeException('Overhoring niet meer in prullenbak.');
@@ -34,9 +78,18 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $pdo->prepare('UPDATE topic_summaries SET is_active=1,deleted_at=NULL WHERE id=?')->execute([$id]);
         }
         $pdo->commit();
-        redirect('trash.php?restored=1');
+        if($action==='delete'){
+            foreach($moved as $img){if(!@unlink($trashDir.'/'.$img))error_log('Trash cleanup: bestand nog in '.$trashDir.'/'.$img);}
+            if($trashDir && is_dir($trashDir))@rmdir($trashDir);
+        }
+        redirect('trash.php?'.($action==='delete'?'deleted':'restored').'=1');
     }catch(Throwable $e){
-        if($pdo->inTransaction())$pdo->rollBack();
+        if($pdo->inTransaction()){
+            $pdo->rollBack();
+            foreach(array_reverse($moved) as $img){
+                if(!@rename($trashDir.'/'.$img,__DIR__.'/uploads/questions/'.$img))error_log('KRITIEK: herstel afbeelding handmatig: '.$trashDir.'/'.$img);
+            }
+        }
         http_response_code(409);exit(e($e->getMessage()));
     }
 }
@@ -48,7 +101,8 @@ $summaries=$pdo->query('SELECT sm.id,sm.name,tp.name topic_name,tp.is_active par
 <a href="admin.php">&larr; Terug naar Beheer</a>
 <div class="d-flex justify-content-between align-items-center mt-3 mb-3"><h1>Prullenbak</h1><span class="badge text-bg-secondary">Alleen administrator</span></div>
 <?php if(isset($_GET['restored'])):?><div class="alert alert-success">Item hersteld.</div><?php endif;?>
-<p>Verwijderde overhoringen, sub-testen en oudere samenvattingen kunnen hier worden hersteld. Definitief verwijderen wordt pas beschikbaar nadat ook de bijbehorende bestanden en AI-koppelingen veilig kunnen worden gecontroleerd.</p>
+<?php if(isset($_GET['deleted'])):?><div class="alert alert-success">Item definitief verwijderd.</div><?php endif;?>
+<p>Verwijderde overhoringen, sub-testen en oudere samenvattingen kunnen hier worden hersteld. Definitief verwijderen wist het geselecteerde item en de bijbehorende gegevens. Originele AI-broncollecties en bestaande back-ups blijven bewaard.</p>
 <?php foreach([['Overhoringen','topic',$topics],['Sub-testen','test',$tests],['Samenvattingen (oud model)','summary',$summaries]] as [$heading,$kind,$items]):?>
 <section class="card mb-4"><div class="card-body"><h2 class="h5"><?=e($heading)?> <small class="text-secondary">(<?=count($items)?>)</small></h2>
 <?php if(!$items):?><p class="text-secondary mb-0">Geen verwijderde items.</p><?php else:?><div class="list-group">
@@ -57,6 +111,7 @@ $summaries=$pdo->query('SELECT sm.id,sm.name,tp.name topic_name,tp.is_active par
 <div><strong><?=e($item['name']??$item['title'])?></strong><div class="small text-secondary"><?=e($item['subject_name']??$item['topic_name']??'')?></div></div>
 <form method="post" class="m-0"><input type="hidden" name="csrf" value="<?=e($_SESSION['trash_csrf'])?>"><input type="hidden" name="kind" value="<?=e($kind)?>"><input type="hidden" name="id" value="<?=(int)$item['id']?>"><input type="hidden" name="action" value="restore">
 <button class="btn btn-outline-primary btn-sm" type="submit" <?=isset($item['parent_active']) && (int)$item['parent_active']!==1?'disabled title="Herstel eerst de overhoring"':''?>>Herstellen</button></form>
+<form method="post" class="m-0" data-confirm="Dit item en gekoppelde gegevens definitief verwijderen? Dit kan niet ongedaan worden gemaakt."><input type="hidden" name="csrf" value="<?=e($_SESSION['trash_csrf'])?>"><input type="hidden" name="kind" value="<?=e($kind)?>"><input type="hidden" name="id" value="<?=(int)$item['id']?>"><input type="hidden" name="action" value="delete"><input type="hidden" name="confirm" value="DEFINITIEF VERWIJDEREN"><button class="btn btn-outline-danger btn-sm" type="submit">Definitief verwijderen</button></form>
 </div>
 <?php endforeach;?></div><?php endif;?></div></section>
 <?php endforeach;?>
