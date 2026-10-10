@@ -12,6 +12,9 @@ $testId=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 
 if($reviewMode){
     if(!$topicId)redirect('index.php');
+    $reviewOwner=$pdo->prepare('SELECT subject_id FROM topics WHERE id=?');
+    $reviewOwner->execute([$topicId]);
+    require_subject_access((int)$reviewOwner->fetchColumn());
     $archivedCheck=$pdo->prepare('SELECT test_date FROM topics WHERE id=?');
     $archivedCheck->execute([$topicId]);
     $reviewDate=$archivedCheck->fetchColumn();
