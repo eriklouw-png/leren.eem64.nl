@@ -39,7 +39,7 @@ foreach($summaries as $summary){$topicId=(int)$summary['topic_id'];if(!isset($co
 <div class="d-flex justify-content-between align-items-center gap-2 mt-4 mb-3"><h2 class="h4 mb-0">Overhoringen</h2><a class="btn btn-primary" href="topic_new.php?subject_id=<?=$id?>">Nieuwe overhoring</a></div>
 <?php if(!$topics):?><div class="alert alert-info">Nog geen overhoringen voor dit vak.</div><?php else:?>
 <div class="leren-list">
-<?php foreach($topics as $topic):$topicId=(int)$topic['id'];$counts=$countsByTopic[$topicId]??['tests'=>0,'summaries'=>0];$archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d');$parts=[];$parts[]=$counts['tests'].' '.($counts['tests']===1?'sub-test':'sub-testen');$parts[]=$counts['summaries'].' '.($counts['summaries']===1?'samenvatting':'samenvattingen');$parts[]=$topic['test_date']?date('d-m-Y',strtotime($topic['test_date'])):'Geen overhoringsdatum';$parts[]=$archived?'Gearchiveerd':'Actief';?>
+<?php foreach($topics as $topic):$topicId=(int)$topic['id'];$counts=$countsByTopic[$topicId]??['tests'=>0,'summaries'=>0];$archived=!empty($topic['test_date']) && $topic['test_date'] < date('Y-m-d');$parts=[];$parts[]=$counts['tests'].' '.($counts['tests']===1?'test':'testen');$parts[]=$counts['summaries'].' '.($counts['summaries']===1?'samenvatting':'samenvattingen');$parts[]=$topic['test_date']?date('d-m-Y',strtotime($topic['test_date'])):'Geen overhoringsdatum';$parts[]=$archived?'Gearchiveerd':'Actief';?>
 <?php
 $menuActions=[
     ['label'=>'Overhoring openen','href'=>'topic_manage.php?id='.$topicId,'primary'=>true],
