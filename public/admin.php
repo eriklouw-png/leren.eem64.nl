@@ -126,6 +126,7 @@ function format_duration(int $seconds):string{$m=intdiv($seconds,60);$s=$seconds
 <a class="btn btn-outline-primary" href="user_permissions.php">Gebruikers &amp; rechten</a>
 <a class="btn btn-outline-primary" href="ai_usage.php">AI-verbruik &amp; kosten</a>
 <a class="btn btn-outline-primary" href="ai_rules.php">AI-instructies per vak</a>
+<a class="btn btn-outline-primary" href="trash.php">Prullenbak</a>
 <a class="btn btn-outline-primary" href="system_update.php">Website bijwerken</a>
 </div>
 </section>
