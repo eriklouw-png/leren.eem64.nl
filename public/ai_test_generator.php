@@ -179,12 +179,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         if(!is_array($saved)||($saved['subject_id']??null)!==$subjectId||($saved['topic_id']??null)!==$topicId){
             $errors[]='De eerdere AI-analyse is verlopen. Analyseer de pagina’s opnieuw.';
         }elseif(!$isPracticeList&&!$requestedSpecs){
-            $errors[]='Geef minimaal één sub-test op.';
+            $errors[]='Geef minimaal één test op.';
         }else{
             $capacity=max(0,(int)($saved['analysis']['max_unique_questions']??0));
             $requestedTotal=ai_requested_total($requestedSpecs);
             if(count($requestedSpecs)>10){
-                $errors[]='Je kunt maximaal tien sub-testen tegelijk genereren.';
+                $errors[]='Je kunt maximaal tien testen tegelijk genereren.';
             }
             if(!$errors){
                 $summaryAllowed=true;
@@ -271,7 +271,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     ];
                 }else{
                     $learningPoints=array_values(array_filter(array_map('trim',(array)($saved['analysis']['learning_points']??[]))));
-                    $prompt='KENNISDEKKING IS HET HOOFDDOEL. Controleer eerst alle leerdoelen uit de bronanalyse en verdeel de vragen zo dat ieder leerdoel minstens eenmaal inhoudelijk getoetst wordt. Bewuste herhaling van belangrijke kennis in meerdere vraagvormen is toegestaan. Als de gekozen aantallen onvoldoende zijn, geef prioriteit aan alle afzonderlijke leerdoelen en vermijd oppervlakkige vragen. Leerdoelen: '.json_encode($learningPoints,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'. Maak concrete oefentoetsvragen voor precies de gevraagde sub-tests. Voor Leerstofvakken: behoud de afzonderlijke open-vragensubtests per onderwerp, maar maak één overkoepelende multiplechoicesubtest die de belangrijkste leerdoelen uit alle onderwerpen samen oefent. Multiplechoicevragen moeten dezelfde leerstof behandelen, maar hoeven niet letterlijk dezelfde vragen of hetzelfde totale aantal als de open vragen te zijn. Gebruik uitsluitend de bron wanneer er boekpagina’s zijn aangeleverd; gebruik bij een query de gebruikersopdracht en algemene kennis. Pas de beheerde vak- en sub-testconfiguratie toe. Maak exact het gevraagde aantal sub-tests en vragen. Bij mc zijn er exact vier opties en één correct antwoord. Bij open zijn er inhoudelijk geldige accepted_answers. Bij combinatie een evenwichtige mix. Verzin geen informatie die niet uit de bron of opdracht volgt.'.$aiRulesPrompt.' De gewenste opdrachten zijn: '.json_encode($requested,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'.';
+                    $prompt='KENNISDEKKING IS HET HOOFDDOEL. Controleer eerst alle leerdoelen uit de bronanalyse en verdeel de vragen zo dat ieder leerdoel minstens eenmaal inhoudelijk getoetst wordt. Bewuste herhaling van belangrijke kennis in meerdere vraagvormen is toegestaan. Als de gekozen aantallen onvoldoende zijn, geef prioriteit aan alle afzonderlijke leerdoelen en vermijd oppervlakkige vragen. Leerdoelen: '.json_encode($learningPoints,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'. Maak concrete oefentoetsvragen voor precies de gevraagde tests. Voor Leerstofvakken: behoud de afzonderlijke open-vragensubtests per onderwerp, maar maak één overkoepelende multiplechoicesubtest die de belangrijkste leerdoelen uit alle onderwerpen samen oefent. Multiplechoicevragen moeten dezelfde leerstof behandelen, maar hoeven niet letterlijk dezelfde vragen of hetzelfde totale aantal als de open vragen te zijn. Gebruik uitsluitend de bron wanneer er boekpagina’s zijn aangeleverd; gebruik bij een query de gebruikersopdracht en algemene kennis. Pas de beheerde vak- en testconfiguratie toe. Maak exact het gevraagde aantal tests en vragen. Bij mc zijn er exact vier opties en één correct antwoord. Bij open zijn er inhoudelijk geldige accepted_answers. Bij combinatie een evenwichtige mix. Verzin geen informatie die niet uit de bron of opdracht volgt.'.$aiRulesPrompt.' De gewenste opdrachten zijn: '.json_encode($requested,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).'.';
                     $data=openai_generate_test_questions($prompt,(array)($saved['images']??[]),$query!=='' && empty($saved['images']));
                     if(isset($data['_leren_error']))$errors[]=$data['_leren_error'];
                     else{
@@ -279,7 +279,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         if(!$generated||!isset($generated['subtests'])||!is_array($generated['subtests'])||count($generated['subtests'])!==count($requested)){
                             $reason=(string)($data['incomplete_details']['reason']??'');
                             if(($data['status']??'')==='incomplete' && $reason!==''){
-                                $errors[]='De AI-generatie van de vragen werd niet volledig afgerond ('.$reason.'). Verminder eventueel het aantal vragen per sub-test en probeer het opnieuw.';
+                                $errors[]='De AI-generatie van de vragen werd niet volledig afgerond ('.$reason.'). Verminder eventueel het aantal vragen per test en probeer het opnieuw.';
                             }else{
                                 $errors[]='De AI gaf geen bruikbaar JSON-resultaat voor de vragen terug. Probeer dezelfde selectie opnieuw.';
                             }
@@ -328,8 +328,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $title=$prefixToUse!==''?$prefixToUse.' '.$rawTitle:$rawTitle;
                 $description=trim((string)($test['description']??''));
                 $questions=$generated[$si]['questions']??[];
-                if($title===''){ $errors[]='Elke sub-test moet een titel hebben.'; continue; }
-                if(!is_array($questions)||!$questions){$errors[]='Sub-test "'.$title.'" bevat geen vragen.';continue;}
+                if($title===''){ $errors[]='Elke test moet een titel hebben.'; continue; }
+                if(!is_array($questions)||!$questions){$errors[]='Test "'.$title.'" bevat geen vragen.';continue;}
                 $validQuestions=[];
                 foreach($questions as $qi=>$q){
                     if(!isset($generated[$si]['questions'][$qi])||!is_array($q))continue;
@@ -363,7 +363,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 }
                 if($validQuestions)$validTests[]=['title'=>$title,'description'=>$description,'questions'=>$validQuestions];
             }
-            if(!$errors&&!$validTests)$errors[]='Er is geen geldige sub-test om op te slaan.';
+            if(!$errors&&!$validTests)$errors[]='Er is geen geldige test om op te slaan.';
             // Generate one independent summary for each approved learning section.
             // Do this before the DB transaction to avoid long-running locks.
             $sectionSummaries=[];
@@ -842,9 +842,9 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 <div class="small text-secondary mt-1"><?=($query!==''?'Bij een query-toets wordt de samenvatting overgeslagen; er zijn geen boekpagina’s als bron.':(!$ruleSummaryAllowed?'Voor dit vak/type is in de AI-configuratie geen samenvatting toegestaan.':'De AI maakt een aparte leersamenvatting van deze pagina’s.'))?></div>
 </div>
 </div></div><?php endif;?>
-<?php if(!$detectedPracticeList):?><div class="alert alert-info mb-3"><strong>Voorgesteld toetsplan</strong><p class="mb-2">GPT bepaalt per boekpagina de leerdoelen en stelt toetsvormen en aantallen voor. Je kunt het plan hieronder aanpassen voordat je de vragen maakt.</p><?php if(!empty($analysis['learning_points'])):?><details><summary>Leerdoelen uit de bron (<?=count($analysis['learning_points'])?>)</summary><ul class="mt-2 mb-0"><?php foreach($analysis['learning_points'] as $point):?><li><?=e((string)$point)?></li><?php endforeach;?></ul></details><?php endif;?></div><?php endif;?>
-<?php if($detectedPracticeList):?><div class="alert alert-success mb-4"><strong><?= $detectedSentenceList?'Zinnenlijst':'Woordenlijst' ?> herkend</strong><br><?=count($analysis['vocabulary_pairs'])?> <?= $detectedSentenceList?'zinnen':'woordparen' ?> gevonden. Leren maakt automatisch één sub-test <strong><?= $detectedSentenceList?'Zinnen oefenen':'Woordjes oefenen' ?></strong> met beide richtingen.</div><?php else:?><div class="card mb-4"><div class="card-body">
-<div class="mb-3"><strong>Toetsplan</strong><div class="small text-secondary">Pas desgewenst de door GPT voorgestelde aantallen en toetsvormen aan. Verlaag aantallen alleen als de leerdoelen nog voldoende getoetst kunnen worden.</div></div>
+<?php if(!$detectedPracticeList):?><div class="alert alert-info mb-3"><strong>Voorgesteld toetsplan</strong><p class="mb-2">AI bepaalt per boekpagina de leerdoelen en stelt toetsvormen en aantallen voor. Je kunt het plan hieronder aanpassen voordat je de vragen maakt.</p><?php if(!empty($analysis['learning_points'])):?><details><summary>Leerdoelen uit de bron (<?=count($analysis['learning_points'])?>)</summary><ul class="mt-2 mb-0"><?php foreach($analysis['learning_points'] as $point):?><li><?=e((string)$point)?></li><?php endforeach;?></ul></details><?php endif;?></div><?php endif;?>
+<?php if($detectedPracticeList):?><div class="alert alert-success mb-4"><strong><?= $detectedSentenceList?'Zinnenlijst':'Woordenlijst' ?> herkend</strong><br><?=count($analysis['vocabulary_pairs'])?> <?= $detectedSentenceList?'zinnen':'woordparen' ?> gevonden. Leren maakt automatisch één test <strong><?= $detectedSentenceList?'Zinnen oefenen':'Woordjes oefenen' ?></strong> met beide richtingen.</div><?php else:?><div class="card mb-4"><div class="card-body">
+<div class="mb-3"><strong>Toetsplan</strong><div class="small text-secondary">Pas desgewenst de door AI voorgestelde aantallen en toetsvormen aan. Verlaag aantallen alleen als de leerdoelen nog voldoende getoetst kunnen worden.</div></div>
 <div id="specRowsAfter"></div>
 </div></div><?php endif;?>
 <div class="d-flex flex-column flex-sm-row-reverse gap-2">
@@ -859,14 +859,14 @@ $stage=$imageGenerationMode?3:($hasGenerated?3:($analysis?2:1));
 
 <?php else:?>
 <div class="mb-4">
-<h2 class="h4 mb-1">3. Vragen controleren</h2><p class="text-secondary mb-0">Controleer de gegenereerde sub-testen en sla ze daarna op.</p>
+<h2 class="h4 mb-1">3. Vragen controleren</h2><p class="text-secondary mb-0">Controleer de gegenereerde testen en sla ze daarna op.</p>
 </div>
 <form method="post" id="saveForm">
 <input type="hidden" name="action" value="save">
 <?php foreach($_SESSION['ai_test_analysis']['generated']['subtests'] as $si=>$generatedSub):?>
 <div class="generated-test-card mb-4">
 <div class="generated-test-header">
-<div class="small text-uppercase text-secondary fw-semibold mb-1">Sub-test <?=($si+1)?></div>
+<div class="small text-uppercase text-secondary fw-semibold mb-1">Test <?=($si+1)?></div>
 <input class="form-control form-control-lg fw-semibold mb-2" name="tests[<?=$si?>][title]" value="<?=e($generatedSub['title'])?>" required>
 <input class="form-control" name="tests[<?=$si?>][description]" value="<?=e($generatedSub['description']??'')?>" placeholder="Beschrijving (optioneel)">
 </div>
@@ -902,7 +902,7 @@ $grammarShort=implode(' · ',$grammarParts);
 </div><!-- /.generated-test-card -->
 <?php endforeach;?>
 <div class="ai-save-actions">
-<button class="btn btn-success btn-lg" type="submit">Opslaan als sub-test<?=count($_SESSION['ai_test_analysis']['generated']['subtests'])===1?'':'s'?></button>
+<button class="btn btn-success btn-lg" type="submit">Opslaan als test<?=count($_SESSION['ai_test_analysis']['generated']['subtests'])===1?'':'s'?></button>
 <button class="btn btn-outline-secondary btn-lg" type="submit" name="action" value="clear" formnovalidate>Annuleren</button>
 </div>
 </form>
@@ -1001,7 +1001,7 @@ document.getElementById('analyzeForm')?.addEventListener('submit',()=>showAiLoad
 
       if(data.method==='web')text.textContent='Geschikte afbeelding gevonden op internet.';
       else if(data.method==='svg')text.textContent='Eenvoudige SVG-afbeelding gemaakt.';
-      else if(data.method==='generate')text.textContent='Geen geschikte afbeelding gevonden — GPT maakt een afbeelding.';
+      else if(data.method==='generate')text.textContent='Geen geschikte afbeelding gevonden — AI maakt een afbeelding.';
 
       if(data.done){
         text.textContent='Alle afbeeldingen zijn klaar. De toets wordt geopend...';
