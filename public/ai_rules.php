@@ -122,7 +122,7 @@ $rules=$pdo->query("SELECT * FROM ai_test_rules ORDER BY subject_id,sort_order,l
 $bySubject=[];foreach($rules as $r)$bySubject[(int)$r['subject_id']][]=$r;
 ?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI-instructies per vak</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head><body><main class="container py-4">
-<div class="d-flex justify-content-between align-items-center mb-4"><div><h1 class="mb-1">AI-instructies per vak</h1><div class="text-secondary">Beheer per vak en type sub-test de AI-herkenning, opties en instructies.</div></div><a class="btn btn-outline-light" href="admin.php">← Beheer</a></div>
+<div class="d-flex justify-content-between align-items-center mb-4"><div><h1 class="mb-1">AI-instructies per vak</h1><div class="text-secondary">Beheer per vak en type test de AI-herkenning, opties en instructies.</div></div><a class="btn btn-outline-light" href="admin.php">← Beheer</a></div>
 <?php if(isset($_GET['saved'])):?><div class="alert alert-success">De AI-instructies zijn opgeslagen.</div><?php endif;?>
 <nav class="d-flex gap-2 flex-wrap mb-4" aria-label="AI-instructies navigatie">
 <a class="btn btn-outline-primary" href="#algemeen">Algemeen</a>
