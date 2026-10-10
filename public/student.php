@@ -195,124 +195,30 @@ function mastery_label(?float $score):string{
 </div>
 
 <h2 class="h4 mb-3">Actieve overhoringen</h2>
-<?php if(!$topics):?>
-<div class="alert alert-secondary">Er zijn geen actieve overhoringen.</div>
-<?php else:
-$subjects=[];
+<?php
+$studentSubjects=[];
 foreach($topics as $topic){
-    $subjectKey=array_search($topic['subject_name'],array_column($subjects,'name'),true);
-    if($subjectKey===false){
-        $subjects[]=['name'=>$topic['subject_name'],'topics'=>[]];
-        $subjectKey=count($subjects)-1;
-    }
-    $subjects[$subjectKey]['topics'][]=$topic;
+    $sid=(int)$topic['subject_id'];
+    if(!isset($studentSubjects[$sid]))$studentSubjects[$sid]=['name'=>$topic['subject_name'],'topics'=>0,'completed'=>0,'total'=>0];
+    $studentSubjects[$sid]['topics']++;
+    $studentSubjects[$sid]['completed']+=$topic['completed'];
+    $studentSubjects[$sid]['total']+=$topic['total'];
 }
+uasort($studentSubjects,static fn($a,$b)=>strnatcasecmp($a['name'],$b['name']));
 ?>
-<div class="accordion shadow-sm mb-4" id="studentSubjects">
-<?php foreach($subjects as $subjectIndex=>$subject):?>
-<div class="accordion-item">
-<h2 class="accordion-header" id="subjectHeading<?=$subjectIndex?>">
-<button class="accordion-button <?=$subjectIndex===0?'':'collapsed'?>" type="button" data-bs-toggle="collapse" data-bs-target="#subjectCollapse<?=$subjectIndex?>" aria-expanded="<?=$subjectIndex===0?'true':'false'?>" aria-controls="subjectCollapse<?=$subjectIndex?>">
-<strong><?=e($subject['name'])?></strong>
-<span class="small text-secondary ms-2"><?=count($subject['topics'])?> <?=count($subject['topics'])===1?'overhoring':'overhoringen'?></span>
-</button>
-</h2>
-<div id="subjectCollapse<?=$subjectIndex?>" class="accordion-collapse collapse <?=$subjectIndex===0?'show':''?>" aria-labelledby="subjectHeading<?=$subjectIndex?>" data-bs-parent="#studentSubjects">
-<div class="accordion-body p-2 p-md-3">
-<div class="accordion" id="subjectTopics<?=$subjectIndex?>">
-<?php foreach($subject['topics'] as $topicIndex=>$topic):
-    $mastery=$topic['score_count']>0 ? round($topic['score_total']/$topic['total'],1) : null;
-    $barClass=mastery_class($mastery);
-    $label=mastery_label($mastery);
-    $completed=$topic['completed'];
-    $total=$topic['total'];
-    $topicPanelId='topicCollapse'.$subjectIndex.'_'.$topicIndex;
-    $topicHeadingId='topicHeading'.$subjectIndex.'_'.$topicIndex;
-?>
-<div class="accordion-item">
-<h3 class="accordion-header" id="<?=$topicHeadingId?>">
-<button class="accordion-button <?=$topicIndex===0?'':'collapsed'?>" type="button" data-bs-toggle="collapse" data-bs-target="#<?=$topicPanelId?>" aria-expanded="<?=$topicIndex===0?'true':'false'?>" aria-controls="<?=$topicPanelId?>">
-<div class="w-100 d-flex justify-content-between align-items-center gap-3 pe-2">
-<div>
-<strong><?=e($topic['name'])?></strong>
-<?php if($topic['test_date']):?><div class="small text-secondary">Overhoring: <?=e(date('d-m-Y',strtotime($topic['test_date'])))?></div><?php endif;?>
-</div>
-<div class="text-end">
-<?php if($mastery===null):?>
-<div class="fw-semibold text-secondary">—</div>
+<?php if(!$studentSubjects):?>
+<div class="alert alert-secondary">Er zijn geen actieve overhoringen.</div>
 <?php else:?>
-<div class="fw-semibold text-<?=$barClass?>"><?=e(rtrim(rtrim(number_format($mastery,1,',','.'),'0'),','))?>%</div>
-<?php endif;?>
-<div class="small text-secondary"><?=$completed?>/<?=$total?></div>
+<div class="leren-list mb-4">
+<?php foreach($studentSubjects as $subjectId=>$subject):?>
+<div class="leren-list-item">
+<a class="leren-list-item-main" href="student_subject.php?id=<?=$studentId?>&amp;subject_id=<?=$subjectId?>">
+<div class="leren-list-item-content">
+<div class="leren-list-item-heading"><strong class="leren-list-item-title"><?=e($subject['name'])?></strong></div>
+<div class="leren-list-item-description"><?=$subject['topics']?> <?=$subject['topics']===1?'overhoring':'overhoringen'?> &middot; <?=$subject['completed']?> van <?=$subject['total']?> testen afgerond</div>
 </div>
-</div>
-</button>
-</h3>
-<div id="<?=$topicPanelId?>" class="accordion-collapse collapse <?=$topicIndex===0?'show':''?>" aria-labelledby="<?=$topicHeadingId?>" data-bs-parent="#subjectTopics<?=$subjectIndex?>">
-<div class="accordion-body">
-<div class="mastery-card mb-4">
-<div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-2">
-<div>
-<div class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em">Kennisniveau</div>
-<div class="small text-secondary"><?=$completed?> van <?=$total?> testen afgerond · <?=e($label)?></div>
-</div>
-<?php if($mastery===null):?>
-<div class="mastery-score text-secondary">—</div>
-<?php else:?>
-<div class="mastery-score text-<?=$barClass?>"><?=e(rtrim(rtrim(number_format($mastery,1,',','.'),'0'),','))?>%</div>
-<?php endif;?>
-</div>
-<div class="progress student-progress" role="progressbar" aria-label="Kennisniveau" aria-valuenow="<?=e((string)($mastery??0))?>" aria-valuemin="0" aria-valuemax="100">
-<div class="progress-bar bg-<?=$barClass?>" style="width:<?=e((string)($mastery??0))?>%"></div>
-</div>
-</div>
-
-<?php $topicSummaries=$summaryByTopic[(int)$topic['id']]??[]; ?>
-<?php if($topicSummaries):?>
-<div class="mb-3">
-<div class="small fw-semibold text-secondary mb-2">Samenvattingen</div>
-<div class="list-group">
-<?php foreach($topicSummaries as $summary):?>
-<div class="list-group-item">
-<div class="d-flex justify-content-between align-items-center gap-3">
-<div>
-<strong><?=e($summary['name'])?></strong>
-<?php if(!(int)$summary['is_active']):?><span class="badge text-bg-secondary ms-2">Inactief</span><?php endif;?>
-</div>
-<div class="text-end fw-semibold"><?=e(format_duration_student((int)$summary['active_seconds']))?></div>
-</div>
-</div>
-<?php endforeach;?>
-</div>
-</div>
-<?php endif;?>
-
-<div class="small fw-semibold text-secondary mb-2">Testen</div>
-<div class="list-group">
-<?php foreach($topic['tests'] as $test):?>
-<div class="list-group-item">
-<div class="d-flex justify-content-between align-items-center gap-3">
-<div>
-<strong><?=e($test['title'])?></strong>
-<div class="small text-secondary"><?=e($test['test_type']??'mixed')?> · <?=((int)$test['question_count'])?> vragen</div>
-</div>
-<div class="text-end">
-<?php if($test['score']!==null):?>
-<strong class="text-<?=mastery_class((float)$test['score'])?>"><?=e(rtrim(rtrim(number_format((float)$test['score'],1,',','.'),'0'),','))?>%</strong>
-<?php else:?>
-<span class="small text-secondary">Nog niet gedaan</span>
-<?php endif;?>
-</div>
-</div>
-</div>
-<?php endforeach;?>
-</div>
-</div>
-</div>
-</div>
-<?php endforeach;?>
-</div>
-</div>
+</a>
+<a class="leren-list-item-menu d-flex align-items-center justify-content-center text-decoration-none" href="student_subject.php?id=<?=$studentId?>&amp;subject_id=<?=$subjectId?>" aria-label="<?=e($subject['name'])?> bekijken"><span aria-hidden="true" style="font-size:1.5rem;line-height:1">›</span></a>
 </div>
 <?php endforeach;?>
 </div>
