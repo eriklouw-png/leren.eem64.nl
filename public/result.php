@@ -1,5 +1,6 @@
 <?php
 require __DIR__.'/../app/bootstrap.php';
+require_login();
 
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if(!$id)redirect('index.php');
@@ -7,6 +8,10 @@ if(!$id)redirect('index.php');
 $s=$pdo->prepare("SELECT a.id,a.score,a.mode,a.source_attempt_id,a.test_id,t.title,t.test_type,t.topic_id,tp.name topic_name,tp.subject_id FROM attempts a JOIN tests t ON t.id=a.test_id JOIN topics tp ON tp.id=t.topic_id WHERE a.id=?");
 $s->execute([$id]);$r=$s->fetch();
 if(!$r){http_response_code(404);exit('Resultaat niet gevonden.');}
+require_subject_access((int)$r['subject_id']);
+$attemptOwner=$pdo->prepare('SELECT student_id FROM attempts WHERE id=?');
+$attemptOwner->execute([$id]);
+if(!can('manage_students') && (int)$attemptOwner->fetchColumn()!==(int)($_SESSION['user']['id']??0)){http_response_code(403);exit('Geen toegang tot resultaat.');}
 
 $answeredCheck=$pdo->prepare("
     SELECT COUNT(*)
