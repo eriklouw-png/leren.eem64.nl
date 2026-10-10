@@ -85,7 +85,7 @@ usort($tests,function(array $a,array $b):int{
     return strnatcasecmp((string)$a['title'],(string)$b['title']);
 });
 
-/* Zodra alle gewone sub-testen minimaal één keer zijn afgerond, kan de leerling
+/* Zodra alle gewone testen minimaal één keer zijn afgerond, kan de leerling
  * alle resterende fouten uit de laatste pogingen gezamenlijk oefenen. */
 $reviewAvailable=false;
 $reviewWrongCount=0;
@@ -238,7 +238,7 @@ $browserToken=$_SESSION['learner_token'];
 </div>
 </div>
 
-<h2 class="h3 mt-4 mb-3">Sub-Testen</h2>
+<h2 class="h3 mt-4 mb-3">Testen</h2>
 <?php if($reviewAvailable):?>
 <div class="card border-success shadow-sm mb-4">
 <div class="card-body p-3 p-md-4">
@@ -246,7 +246,7 @@ $browserToken=$_SESSION['learner_token'];
 <div class="min-w-0">
 <h2 class="h4 mb-1">Fouten oefenen</h2>
 <?php if($reviewInProgressId):?>
-<p class="text-secondary mb-2">Ga verder met de fouten uit de sub-testen.</p>
+<p class="text-secondary mb-2">Ga verder met de fouten uit de testen.</p>
 <?php if($reviewProgressTotal>0):?><div class="small text-secondary">Voortgang: <?=$reviewProgressAnswered?> van <?=$reviewProgressTotal?> vragen</div><?php endif;?>
 <?php else:?>
 <p class="text-secondary mb-0">Alle <?=e((string)$reviewWrongCount)?> vragen die je in de laatste pogingen fout had, verzameld in één oefentoets.</p>
@@ -258,7 +258,7 @@ $browserToken=$_SESSION['learner_token'];
 </div>
 <?php endif;?>
 <?php if(!$tests):?>
-<div class="alert alert-info">Er zijn nog geen sub-testen voor deze overhoring.</div>
+<div class="alert alert-info">Er zijn nog geen testen voor deze overhoring.</div>
 <?php else:?>
 <div class="leren-list">
 <?php foreach($tests as $t):?>
@@ -314,7 +314,7 @@ if($t['in_progress_attempt_id']){
 }
 ?>
 <div class="d-flex justify-content-between small text-secondary mb-1"><span><?=$latestScore!==null?'Resultaat':'Voortgang'?></span><strong><?=$latestScore!==null?(int)round($latestScore):$subProgressPercent?>%</strong></div>
-<div class="progress" role="progressbar" aria-label="<?=$latestScore!==null?'Resultaat van sub-test':'Voortgang van sub-test'?>" aria-valuenow="<?=$latestScore!==null?(int)round($latestScore):$subProgressPercent?>" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar <?= $latestScore!==null ? 'leren-result-bar leren-result-bar-'.(((int)round($latestScore)<=24)?'red':(((int)round($latestScore)<=74)?'orange':'green')) : '' ?>" style="width:<?=$latestScore!==null?(int)round($latestScore):$subProgressPercent?>%"></div></div>
+<div class="progress" role="progressbar" aria-label="<?=$latestScore!==null?'Resultaat van test':'Voortgang van test'?>" aria-valuenow="<?=$latestScore!==null?(int)round($latestScore):$subProgressPercent?>" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar <?= $latestScore!==null ? 'leren-result-bar leren-result-bar-'.(((int)round($latestScore)<=24)?'red':(((int)round($latestScore)<=74)?'orange':'green')) : '' ?>" style="width:<?=$latestScore!==null?(int)round($latestScore):$subProgressPercent?>%"></div></div>
 </div>
 </a>
 <button type="button" class="leren-list-item-menu" data-list-menu data-list-modal="subtestOptionsModal"
@@ -353,7 +353,7 @@ if($t['in_progress_attempt_id']){
 <div class="leren-modal-backdrop" data-list-modal-close></div>
 <div class="leren-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="subtestOptionsTitle">
 <button type="button" class="leren-modal-close" data-list-modal-close aria-label="Sluiten">&times;</button>
-<h2 id="subtestOptionsTitle" data-list-modal-title>Sub-test</h2>
+<h2 id="subtestOptionsTitle" data-list-modal-title>Test</h2>
 <div class="leren-modal-actions" data-list-modal-actions></div>
 </div>
 </div>
