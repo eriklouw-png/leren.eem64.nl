@@ -3,7 +3,7 @@ require __DIR__.'/../app/bootstrap.php';require_admin();
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);$test=null;
 if($id){
  $s=$pdo->prepare("SELECT t.*,s.name subject_name,tp.name topic_name FROM tests t JOIN topics tp ON tp.id=t.topic_id JOIN subjects s ON s.id=tp.subject_id WHERE t.id=? AND t.is_active=1");
- $s->execute([$id]);$test=$s->fetch();if(!$test)exit('Sub-Test niet gevonden.');
+ $s->execute([$id]);$test=$s->fetch();if(!$test)exit('Test niet gevonden.');
 }
 $subjects=$pdo->query("SELECT id,name FROM subjects ORDER BY name")->fetchAll();
 $topics=$pdo->query("SELECT id,subject_id,name,is_active FROM topics WHERE is_active=1 ORDER BY subject_id,name")->fetchAll();
@@ -14,7 +14,7 @@ if($id){
 }
 if($_SERVER['REQUEST_METHOD']==='POST'){
  $action=$_POST['action']??'save';
- if(!$id){http_response_code(400);exit('Ongeldig Sub-Test.');}
+ if(!$id){http_response_code(400);exit('Ongeldig Test.');}
  if($action==='delete_attempt'){
    $attemptId=filter_input(INPUT_POST,'attempt_id',FILTER_VALIDATE_INT);
    if(!$attemptId){$error='Ongeldige oefensessie.';}
@@ -73,7 +73,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
      $wrongLabel=$testType==='multiple_choice'?'open':'meerkeuze';
      $x=$pdo->prepare("SELECT COUNT(*) FROM questions WHERE test_id=? AND question_type<>?");
      $x->execute([$id,$requiredType]);
-     if((int)$x->fetchColumn()>0)$error='Deze sub-test bevat vragen van het verkeerde type. Een sub-test van dit type mag alleen '.$wrongLabel.'vragen bevatten.';
+     if((int)$x->fetchColumn()>0)$error='Deze test bevat vragen van het verkeerde type. Een test van dit type mag alleen '.$wrongLabel.'vragen bevatten.';
  }
  if(empty($error)){
    try{
@@ -89,7 +89,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
    }
  }
 }
-?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sub-Test</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><main class="container py-4"><a href="subject_manage.php?id=<?=isset($test['subject_id'])?(int)$test['subject_id']:''?>">&larr; Terug naar vak</a><div class="card shadow-sm mt-3"><div class="card-body p-4"><h1 class="h3"><?= $id?'Sub-Test bewerken':'Nieuwe sub-test'?></h1><?php if(!empty($error)):?><div class="alert alert-danger"><?=e($error)?></div><?php endif;?><form method="post"><input type="hidden" name="action" value="save"><label class="form-label">Titel</label><input class="form-control mb-3" name="title" value="<?=e($test['title']??'')?>" required><label class="form-label">Beschrijving</label><textarea class="form-control mb-3" name="description" rows="3"><?=e($test['description']??'')?></textarea><label class="form-label">Type sub-test</label><select class="form-select mb-3" name="test_type"><option value="vocabulary" <?=($test['test_type']??'mixed')==='vocabulary'?'selected':''?>>Woordjes oefenen</option><option value="sentences" <?=($test['test_type']??'mixed')==='sentences'?'selected':''?>>Zinnen oefenen</option><option value="multiple_choice" <?=($test['test_type']??'mixed')==='multiple_choice'?'selected':''?>>Alleen multiple choice</option><option value="open" <?=($test['test_type']??'mixed')==='open'?'selected':''?>>Alleen open vragen</option><option value="mixed" <?=($test['test_type']??'mixed')==='mixed'?'selected':''?>>Combinatie van multiple choice en open vragen</option></select><div class="form-text mb-3">Bij Woordjes oefenen kun je een woordenlijst importeren en beide richtingen oefenen.</div>
+?><!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Test</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><main class="container py-4"><a href="subject_manage.php?id=<?=isset($test['subject_id'])?(int)$test['subject_id']:''?>">&larr; Terug naar vak</a><div class="card shadow-sm mt-3"><div class="card-body p-4"><h1 class="h3"><?= $id?'Test bewerken':'Nieuwe test'?></h1><?php if(!empty($error)):?><div class="alert alert-danger"><?=e($error)?></div><?php endif;?><form method="post"><input type="hidden" name="action" value="save"><label class="form-label">Titel</label><input class="form-control mb-3" name="title" value="<?=e($test['title']??'')?>" required><label class="form-label">Beschrijving</label><textarea class="form-control mb-3" name="description" rows="3"><?=e($test['description']??'')?></textarea><label class="form-label">Type test</label><select class="form-select mb-3" name="test_type"><option value="vocabulary" <?=($test['test_type']??'mixed')==='vocabulary'?'selected':''?>>Woordjes oefenen</option><option value="sentences" <?=($test['test_type']??'mixed')==='sentences'?'selected':''?>>Zinnen oefenen</option><option value="multiple_choice" <?=($test['test_type']??'mixed')==='multiple_choice'?'selected':''?>>Alleen multiple choice</option><option value="open" <?=($test['test_type']??'mixed')==='open'?'selected':''?>>Alleen open vragen</option><option value="mixed" <?=($test['test_type']??'mixed')==='mixed'?'selected':''?>>Combinatie van multiple choice en open vragen</option></select><div class="form-text mb-3">Bij Woordjes oefenen kun je een woordenlijst importeren en beide richtingen oefenen.</div>
 <div id="vocab-settings" class="border rounded p-3 mb-3 <?=in_array(($test['test_type']??'mixed'),['vocabulary','sentences'],true)?'':'d-none'?>">
 <div class="alert alert-secondary py-2">Taal: <strong><?=e($test['subject_name']??'')?> → Nederlands</strong></div>
 <label class="form-label">Oefenrichting</label><select class="form-select" name="vocab_direction"><option value="both" <?=($test['vocab_direction']??'both')==='both'?'selected':''?>>Beide richtingen</option><option value="left_to_right" <?=($test['vocab_direction']??'both')==='left_to_right'?'selected':''?>>Alleen eerste → tweede</option><option value="right_to_left" <?=($test['vocab_direction']??'both')==='right_to_left'?'selected':''?>>Alleen tweede → eerste</option></select>
@@ -98,7 +98,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <label class="form-label">Overhoring</label><select class="form-select mb-3" name="topic_id" required><option value="">Kies een overhoring...</option><?php foreach($topics as $topic):?><option value="<?=$topic['id']?>" <?=isset($test['topic_id'])&&(int)$test['topic_id']===(int)$topic['id']?'selected':''?>><?php $subjectName='';foreach($subjects as $subject)if((int)$subject['id']===(int)$topic['subject_id']){$subjectName=$subject['name'];break;}?><?=e($subjectName.' — '.$topic['name'])?></option><?php endforeach;?></select>
 <div class="border rounded p-3 mt-4 mb-3">
 <label class="form-label"><strong>Oefensessies</strong></label>
-<?php if(!$attempts):?><div class="text-secondary">Er zijn nog geen oefensessies voor deze sub-test.</div><?php else:?>
+<?php if(!$attempts):?><div class="text-secondary">Er zijn nog geen oefensessies voor deze test.</div><?php else:?>
 <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Persoon</th><th>Datum</th><th>Tijd</th><th>Resultaat</th><th></th></tr></thead><tbody>
 <?php foreach($attempts as $attempt):?>
 <tr>
@@ -113,7 +113,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <?php endif;?>
 </div>
 <?php if($id):?><p><a class="btn btn-outline-primary" href="test_source_import.php?id=<?=$id?>">Tijdelijk: bronfoto’s toevoegen</a></p><?php endif;?><div class="border rounded p-3 mt-4 mb-3"><label class="form-label"><strong>Gegevens importeren</strong></label><div id="vocabHelp" class="small text-secondary mb-2">Woordjes: één woordpaar per regel met <code>=</code>.</div><div id="mcHelp" class="small text-secondary mb-2 d-none">Multiple choice: <code>vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg</code></div><div id="mixedHelp" class="small text-secondary mb-2 d-none">Combinatie: <code>mc;vraag;juiste_antwoord;antwoord_b;antwoord_c;antwoord_d;uitleg</code> of <code>open;vraag;juiste_antwoord;;; ;uitleg</code>.</div><textarea class="form-control font-monospace mb-2" name="import_text" rows="8" placeholder=""></textarea><button class="btn btn-outline-primary" type="submit" name="action" value="import">Importeren</button></div>
-<div class="d-flex justify-content-between align-items-center gap-2 mt-4"><button class="btn btn-primary" type="submit" name="action" value="save">Opslaan</button><?php if($id):?><button class="btn btn-danger" type="submit" name="action" value="delete" data-confirm="Weet u zeker dat u deze Sub-Test wilt verwijderen? De Sub-Test verdwijnt uit de website, maar blijft in de database bewaard.">Verwijderen</button><?php endif;?></div>
+<div class="d-flex justify-content-between align-items-center gap-2 mt-4"><button class="btn btn-primary" type="submit" name="action" value="save">Opslaan</button><?php if($id):?><button class="btn btn-danger" type="submit" name="action" value="delete" data-confirm="Weet u zeker dat u deze Test wilt verwijderen? De Test verdwijnt uit de website, maar blijft in de database bewaard.">Verwijderen</button><?php endif;?></div>
 
 </form></div></div></main><script>
 const typeSelect=document.querySelector('[name="test_type"]'),vocabSettings=document.getElementById('vocab-settings');const vocabHelp=document.getElementById('vocabHelp'),mcHelp=document.getElementById('mcHelp'),mixedHelp=document.getElementById('mixedHelp');
