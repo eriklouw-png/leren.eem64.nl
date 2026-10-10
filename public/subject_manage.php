@@ -11,7 +11,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='delete_topic
     redirect('subject_manage.php?id='.$id);
 }
 
-$s=$pdo->prepare("SELECT id,name,description,image_mime FROM subjects WHERE id=?");$s->execute([$id]);$subject=$s->fetch();
+$s=$pdo->prepare("SELECT id,name,image_mime FROM subjects WHERE id=?");$s->execute([$id]);$subject=$s->fetch();
 if(!$subject){http_response_code(404);exit('Vak niet gevonden.');}
 
 $tx=$pdo->prepare("SELECT id,name,test_date,is_active,created_at FROM topics WHERE subject_id=? AND is_active=1 ORDER BY test_date DESC, created_at DESC, name");
@@ -34,7 +34,7 @@ foreach($summaries as $summary){$topicId=(int)$summary['topic_id'];if(!isset($co
 <div class="leren-actions mb-3"><a href="admin.php">&larr; Beheer</a></div>
 <div class="card shadow-sm overflow-hidden">
 <?php if($subject['image_mime']):?><img src="subject_image.php?id=<?=$id?>" style="height:180px;object-fit:cover" alt="<?=e($subject['name'])?>"><?php endif;?>
-<div class="card-body p-4"><div class="d-flex justify-content-between align-items-start gap-3"><div class="min-w-0"><h1 class="h3 mb-1"><?=e($subject['name'])?></h1><?php if($subject['description']):?><p class="text-secondary mb-0"><?=e($subject['description'])?></p><?php endif;?></div><a class="btn btn-outline-secondary flex-shrink-0" href="subject_edit.php?id=<?=$id?>">Vak bewerken</a></div></div>
+<div class="card-body p-4"><div class="d-flex justify-content-between align-items-start gap-3"><div class="min-w-0"><h1 class="h3 mb-1"><?=e($subject['name'])?></h1></div><a class="btn btn-outline-secondary flex-shrink-0" href="subject_edit.php?id=<?=$id?>">Vak bewerken</a></div></div>
 </div>
 <div class="d-flex justify-content-between align-items-center gap-2 mt-4 mb-3"><h2 class="h4 mb-0">Overhoringen</h2><a class="btn btn-primary" href="topic_new.php?subject_id=<?=$id?>">Nieuwe overhoring</a></div>
 <?php if(!$topics):?><div class="alert alert-info">Nog geen overhoringen voor dit vak.</div><?php else:?>
