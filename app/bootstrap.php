@@ -263,6 +263,28 @@ function require_manage_student(int $studentId):void{
         exit('Geen toegang.');
     }
 }
+function can_access_subject(int $subjectId):bool{
+    global $pdo;
+    if($subjectId<=0 || leren_user_role()==='')return false;
+    $stmt=$pdo->prepare('SELECT user_id FROM subjects WHERE id=?');
+    $stmt->execute([$subjectId]);
+    $owner=$stmt->fetchColumn();
+    if($owner===false)return false;
+    $owner=(int)$owner;
+    if(is_admin())return true;
+    if(leren_user_role()==='beheerder'){
+        return $owner===(int)($_SESSION['user']['id']??0) || can_manage_student($owner);
+    }
+    return $owner===(int)($_SESSION['user']['id']??0);
+}
+function require_subject_access(int $subjectId):void{
+    if(!can_access_subject($subjectId)){http_response_code(403);exit('Geen toegang tot dit vak.');}
+}
+function require_subject_management(int $subjectId):void{
+    if(!can('manage_subjects') || !can_access_subject($subjectId)){
+        http_response_code(403);exit('Geen toegang tot vakbeheer.');
+    }
+}
 function require_manager():void{if(!can('access_admin'))redirect('index.php');}
 function require_admin():void{
     if(!can('access_admin'))redirect('index.php');

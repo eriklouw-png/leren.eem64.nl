@@ -24,6 +24,7 @@ $errors=[];$analysis=null;
 $aiRules=ai_test_rules_for_subject($subjectId);
 $aiRulesPrompt=trim(ai_subject_group_prompt($subjectId)."\n\n".ai_test_rules_prompt($aiRules));
 $imageGenerationMode=false;
+require_subject_management((int)$subjectId);
 if(isset($_SESSION['ai_image_jobs'])&&is_array($_SESSION['ai_image_jobs'])&&($_SESSION['ai_image_jobs']['topic_id']??null)===$topicId){$imageGenerationMode=true;}
 $prefix=trim((string)($_POST['prefix']??''));
 $query=trim((string)($_POST['query']??''));

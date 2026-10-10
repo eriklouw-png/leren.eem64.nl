@@ -3,6 +3,9 @@ require __DIR__.'/../app/bootstrap.php';require_once __DIR__.'/../app/ai_source_
 ai_source_archive_tables($pdo);
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if(!$id)redirect('admin.php');
+$ownerCheck=$pdo->prepare('SELECT subject_id FROM topics WHERE id=?');
+$ownerCheck->execute([$id]);
+require_subject_management((int)$ownerCheck->fetchColumn());
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
     $action=$_POST['action']??'';

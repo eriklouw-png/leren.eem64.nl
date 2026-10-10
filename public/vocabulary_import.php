@@ -1,7 +1,7 @@
 <?php
 require __DIR__.'/../app/bootstrap.php';require_admin();
 
-$tests=$pdo->query("SELECT t.id,t.title,t.vocab_left_label,t.vocab_right_label,t.vocab_direction,s.name subject_name,tp.name topic_name FROM tests t JOIN topics tp ON tp.id=t.topic_id JOIN subjects s ON s.id=tp.subject_id WHERE t.test_type='vocabulary' ORDER BY s.name,tp.name,t.title")->fetchAll();
+$tests=array_values(array_filter($pdo->query("SELECT t.id,t.title,t.vocab_left_label,t.vocab_right_label,t.vocab_direction,s.name subject_name,s.id subject_id,tp.name topic_name FROM tests t JOIN topics tp ON tp.id=t.topic_id JOIN subjects s ON s.id=tp.subject_id WHERE t.test_type='vocabulary' ORDER BY s.name,tp.name,t.title")->fetchAll(),fn($row)=>can_access_subject((int)$row['subject_id'])));
 
 $errors=[];$success=null;$preview=[];
 if($_SERVER['REQUEST_METHOD']==='POST'){

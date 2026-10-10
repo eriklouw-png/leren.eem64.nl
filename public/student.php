@@ -79,7 +79,7 @@ $x=$pdo->prepare("
                 )
           )
     ) la ON la.test_id=t.id
-    WHERE tp.is_active=1
+    WHERE tp.is_active=1 AND s.user_id=$studentId
       AND (tp.test_date IS NULL OR tp.test_date>=CURDATE())
     GROUP BY tp.id,tp.name,tp.test_date,s.id,s.name,t.id,t.title,t.test_type,la.score,la.finished_at
     ORDER BY s.name,tp.name,t.title
@@ -207,7 +207,9 @@ function mastery_label(?float $score):string{
 </div>
 
 <?php
-$subjectList=$pdo->query('SELECT id,name FROM subjects ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
+$subjectListQuery=$pdo->prepare('SELECT id,name FROM subjects WHERE user_id=? ORDER BY name');
+$subjectListQuery->execute([$studentId]);
+$subjectList=$subjectListQuery->fetchAll(PDO::FETCH_ASSOC);
 $gradeQuery=$pdo->prepare("
     SELECT tp.subject_id,
            SUM(g.grade*g.weight)/NULLIF(SUM(g.weight),0) AS average_grade

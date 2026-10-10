@@ -7,13 +7,12 @@ if(!$subjectId && $_SERVER['REQUEST_METHOD']==='POST'){
 }
 if(!$subjectId){redirect('admin.php');}
 
-$x=$pdo->prepare("SELECT id,name FROM subjects WHERE id=?");
+$x=$pdo->prepare("SELECT id,name,user_id FROM subjects WHERE id=?");
 $x->execute([$subjectId]);$subject=$x->fetch();
 if(!$subject){http_response_code(404);exit('Vak niet gevonden.');}
+require_subject_management($subjectId);
 
-$students=$pdo->query("SELECT id,name FROM users WHERE role='student' ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
-$studentIds=array_map('intval',array_column($students,'id'));
-$gradeStudentId=(int)($_POST['grade_student_id']??0);
+$gradeStudentId=(int)$subject['user_id'];
 $errors=[];
 $name=trim((string)($_POST['name']??''));
 $testDate=trim((string)($_POST['test_date']??''));
@@ -33,7 +32,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }
     if($archived && ($testDate==='' || $testDate>=date('Y-m-d')))$errors[]='Een gearchiveerde overhoring heeft een datum in het verleden nodig.';
     if(!$archived && $testDate!=='' && $testDate<date('Y-m-d'))$errors[]='Een datum in het verleden betekent Gearchiveerd. Vink dit aan of kies een andere datum.';
-    if($gradeValue!==null && !in_array($gradeStudentId,$studentIds,true))$errors[]='Selecteer de leerling voor dit cijfer.';
     if($gradeValue!==null && !$archived)$errors[]='Vink Gearchiveerd aan om een cijfer vast te leggen.';
     if(!$errors){
         $check=$pdo->prepare("SELECT id FROM topics WHERE subject_id=? AND name=? LIMIT 1");
@@ -71,8 +69,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <label class="form-check-label" for="archived"><strong>Gearchiveerd</strong></label>
 <div class="form-text">Gebruik een overhoringsdatum in het verleden. Deze overhoring is dan niet meer toegankelijk voor leerlingen.</div>
 </div>
-<div class="mb-3"><label class="form-label" for="grade_student_id">Leerling voor het cijfer</label><select class="form-select" id="grade_student_id" name="grade_student_id"><option value="">Selecteer leerling</option><?php foreach($students as $gradeStudent):?><option value="<?=(int)$gradeStudent['id']?>" <?=$gradeStudentId===(int)$gradeStudent['id']?'selected':''?>><?=e($gradeStudent['name'])?></option><?php endforeach;?></select></div>
-<div class="mb-3"><label class="form-label" for="grade">Cijfer (optioneel)</label><input class="form-control" id="grade" name="grade" type="number" min="1" max="10" step="0.1" inputmode="decimal" value="<?=e($gradeText)?>" placeholder="Bijvoorbeeld 8,0"><div class="form-text">Het cijfer wordt gekoppeld aan de geselecteerde leerling.</div></div>
+
+<div class="mb-3"><label class="form-label" for="grade">Cijfer (optioneel)</label><input class="form-control" id="grade" name="grade" type="number" min="1" max="10" step="0.1" inputmode="decimal" value="<?=e($gradeText)?>" placeholder="Bijvoorbeeld 8,0"><div class="form-text">Het cijfer wordt gekoppeld aan de eigenaar van dit vak.</div></div>
 <div class="mb-3"><label class="form-label" for="grade_weight">Weging van het cijfer</label><select class="form-select" name="grade_weight" id="grade_weight"><?php foreach([1,2,3] as $w):?><option value="<?=$w?>" <?=$gradeWeight===$w?'selected':''?>><?=$w?>x</option><?php endforeach;?></select></div>
 <div class="form-check mb-4">
 <input class="form-check-input" type="checkbox" name="use_summary" value="1" id="useSummary" <?=$useSummary?'checked':''?>>

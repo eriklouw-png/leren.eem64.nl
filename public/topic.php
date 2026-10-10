@@ -8,10 +8,11 @@ $studentId=(int)$currentUser['id'];
 $topicId=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if(!$topicId)redirect('index.php');
 
-$x=$pdo->prepare("SELECT tp.id,tp.name,tp.test_date,tp.is_active,tp.use_summary,s.id subject_id,s.name subject_name,s.description subject_description,s.image_mime FROM topics tp JOIN subjects s ON s.id=tp.subject_id WHERE tp.id=?");
+$x=$pdo->prepare("SELECT tp.id,tp.name,tp.test_date,tp.is_active,tp.use_summary,s.id subject_id,s.name subject_name,s.image_mime,s.user_id FROM topics tp JOIN subjects s ON s.id=tp.subject_id WHERE tp.id=?");
 $x->execute([$topicId]);
 $topic=$x->fetch();
 if(!$topic || !(int)$topic['is_active']){http_response_code(404);exit('Overhoring niet gevonden.');}
+require_subject_access((int)$topic['subject_id']);
 if(!empty($topic['test_date']) && $topic['test_date']<date('Y-m-d')){http_response_code(403);exit('Deze overhoring is gearchiveerd en niet meer toegankelijk.');}
 
 require_once __DIR__.'/../app/ai_source_archive.php';

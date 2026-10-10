@@ -28,6 +28,13 @@ if(!$summary){http_response_code(404);exit('Samenvatting niet gevonden.');}
 
 }
 if(!$summary){http_response_code(404);exit('Samenvatting niet gevonden.');}
+if(empty($summary['subject_id']) && !empty($summary['topic_id'])){
+    $ownerTopic=$pdo->prepare('SELECT subject_id FROM topics WHERE id=?');
+    $ownerTopic->execute([(int)$summary['topic_id']]);
+    $summary['subject_id']=$ownerTopic->fetchColumn();
+}
+if(empty($summary['subject_id'])){http_response_code(403);exit('Samenvatting zonder verifieerbare eigenaar.');}
+require_subject_access((int)$summary['subject_id']);
 ?>
 <!doctype html>
 <html lang="nl">

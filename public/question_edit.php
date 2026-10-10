@@ -3,6 +3,9 @@ require __DIR__.'/../app/bootstrap.php';require_admin();
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);$testId=filter_input(INPUT_GET,'test_id',FILTER_VALIDATE_INT);
 if($id){$s=$pdo->prepare("SELECT * FROM questions WHERE id=?");$s->execute([$id]);$q=$s->fetch();if(!$q)exit('Vraag niet gevonden.');$testId=(int)$q['test_id'];$s=$pdo->prepare("SELECT * FROM question_options WHERE question_id=? ORDER BY sort_order,id");$s->execute([$id]);$options=$s->fetchAll();$s=$pdo->prepare("SELECT * FROM open_question_answers WHERE question_id=? ORDER BY sort_order,id");$s->execute([$id]);$openAnswers=$s->fetchAll();}else{$q=null;$options=[['option_text'=>'','is_correct'=>0],['option_text'=>'','is_correct'=>0],['option_text'=>'','is_correct'=>0],['option_text'=>'','is_correct'=>0]];$openAnswers=[['answer_text'=>''],['answer_text'=>'']];}
 if(!$testId)redirect('admin.php');
+$ownerCheck=$pdo->prepare('SELECT tp.subject_id FROM tests t JOIN topics tp ON tp.id=t.topic_id WHERE t.id=?');
+$ownerCheck->execute([$testId]);
+require_subject_management((int)$ownerCheck->fetchColumn());
 $ts=$pdo->prepare("SELECT test_type,title FROM tests WHERE id=?");$ts->execute([$testId]);$test=$ts->fetch();if(!$test)exit('Toets niet gevonden.');
 $testType=$test['test_type']??'mixed';
 if($_SERVER['REQUEST_METHOD']==='POST'){

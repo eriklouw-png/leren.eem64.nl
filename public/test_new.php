@@ -6,17 +6,19 @@ $subjectId=filter_input(INPUT_GET,'subject_id',FILTER_VALIDATE_INT);
 if(!$topicId && !$subjectId){redirect('admin.php');}
 
 if($topicId){
-    $x=$pdo->prepare("SELECT tp.id topic_id,tp.name topic_name,s.id subject_id,s.name,s.description FROM topics tp JOIN subjects s ON s.id=tp.subject_id WHERE tp.id=?");
+    $x=$pdo->prepare("SELECT tp.id topic_id,tp.name topic_name,s.id subject_id,s.name FROM topics tp JOIN subjects s ON s.id=tp.subject_id WHERE tp.id=?");
     $x->execute([$topicId]);$context=$x->fetch();
     if(!$context){http_response_code(404);exit('Overhoring niet gevonden.');}
+    require_subject_management((int)$context['subject_id']);
     $topicId=(int)$context['topic_id'];
     $subjectId=(int)$context['subject_id'];
     $topicName=$context['topic_name'];
     $subject=$context;
 }else{
-    $x=$pdo->prepare("SELECT id,name,description FROM subjects WHERE id=?");
+    $x=$pdo->prepare("SELECT id,name FROM subjects WHERE id=?");
     $x->execute([$subjectId]);$subject=$x->fetch();
     if(!$subject){http_response_code(404);exit('Taal niet gevonden.');}
+    require_subject_management((int)$subjectId);
     $topicName='Algemeen';
 }
 

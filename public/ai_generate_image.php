@@ -36,6 +36,11 @@ $searchQuery=trim((string)($job['search_query']??''));
 $svgCode=trim((string)($job['svg_code']??''));
 $prompt=trim((string)($job['prompt']??''));
 
+if($questionId>0){
+    $ownerCheck=$pdo->prepare('SELECT tp.subject_id FROM questions q JOIN tests t ON t.id=q.test_id JOIN topics tp ON tp.id=t.topic_id WHERE q.id=?');
+    $ownerCheck->execute([$questionId]);
+    require_subject_management((int)$ownerCheck->fetchColumn());
+}
 if($questionId<1||!in_array($method,['web','svg','generate'],true)){
     $_SESSION['ai_image_jobs']['jobs']=$jobs;
     echo json_encode([

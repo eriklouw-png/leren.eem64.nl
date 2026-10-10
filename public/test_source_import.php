@@ -6,6 +6,7 @@ $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT)?:filter_input(INPUT_POST,'i
 $q=$pdo->prepare("SELECT t.id,t.title,t.topic_id,tp.subject_id FROM tests t JOIN topics tp ON tp.id=t.topic_id WHERE t.id=? AND t.is_active=1");
 $q->execute([$id]);$test=$q->fetch(PDO::FETCH_ASSOC);
 if(!$test){http_response_code(404);exit('Test niet gevonden');}
+require_subject_management((int)$test['subject_id']);
 $q=$pdo->prepare("SELECT id,question_text FROM questions WHERE test_id=? ORDER BY sort_order,id");
 $q->execute([$id]);$questions=$q->fetchAll(PDO::FETCH_ASSOC);
 $sessionKey='source_import_'.$id;$stage=$_SESSION[$sessionKey]??null;$error='';$notice='';

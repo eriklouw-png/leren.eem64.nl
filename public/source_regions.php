@@ -10,6 +10,9 @@ if(!$id){http_response_code(400);exit('Ongeldige broncollectie.');}
 $stmt=$pdo->prepare("SELECT c.id,c.title,c.topic_id FROM ai_source_collections c JOIN topics t ON t.id=c.topic_id WHERE c.id=? AND t.is_active=1");
 $stmt->execute([$id]);$collection=$stmt->fetch(PDO::FETCH_ASSOC);
 if(!$collection){http_response_code(404);exit('Broncollectie niet gevonden.');}
+$subjectCheck=$pdo->prepare('SELECT subject_id FROM topics WHERE id=?');
+$subjectCheck->execute([(int)$collection['topic_id']]);
+require_subject_management((int)$subjectCheck->fetchColumn());
 $stmt=$pdo->prepare("SELECT id,title FROM ai_source_sections WHERE collection_id=? ORDER BY sort_order,id");
 $stmt->execute([$id]);$sections=$stmt->fetchAll(PDO::FETCH_ASSOC);
 $stmt=$pdo->prepare("SELECT id,page_number,image_path FROM ai_source_pages WHERE collection_id=? ORDER BY page_number");

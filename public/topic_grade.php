@@ -11,6 +11,11 @@ $action=(string)($_POST['action']??'');
 $topicId=filter_var($_POST['topic_id']??null,FILTER_VALIDATE_INT);
 $back=(string)($_POST['return_to']??'index.php');
 if(!preg_match('~^(index\.php|subject\.php\?id=[0-9]+)$~',$back))$back='index.php';
+if($topicId){
+    $ownerCheck=$pdo->prepare('SELECT s.user_id FROM topics tp JOIN subjects s ON s.id=tp.subject_id WHERE tp.id=?');
+    $ownerCheck->execute([$topicId]);
+    if((int)$ownerCheck->fetchColumn()!==$studentId){http_response_code(403);exit('Geen toegang.');}
+}
 if($action==='later' && $topicId){
     $_SESSION['grade_later'][(int)$topicId]=date('Y-m-d');
     redirect($back);
@@ -36,7 +41,7 @@ if($action==='historical'){
     if(!$subjectId || $name==='' || mb_strlen($name)>150 || !preg_match('/^\d{4}-\d{2}-\d{2}$/',$date) || !checkdate((int)substr($date,5,2),(int)substr($date,8,2),(int)substr($date,0,4)) || $date>=date('Y-m-d') || !preg_match('/^(?:[1-9](?:\.[0-9])?|10(?:\.0)?|[0](?:\.[0-9])?)$/',$gradeText)){
         http_response_code(422);exit('Controleer titel, datum in het verleden en cijfer (0,0 t/m 10,0).');
     }
-    $check=$pdo->prepare('SELECT id FROM subjects WHERE id=?');$check->execute([$subjectId]);
+    $check=$pdo->prepare('SELECT id FROM subjects WHERE id=? AND user_id=?');$check->execute([$subjectId,$studentId]);
     if(!$check->fetchColumn()){http_response_code(404);exit('Vak niet gevonden.');}
     $pdo->beginTransaction();
     try{

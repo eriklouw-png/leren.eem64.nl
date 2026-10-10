@@ -5,15 +5,16 @@ $gradePrompt=null;
 if(is_logged_in()){
     $gradeStudentId=(int)current_user()['id'];
     if(empty($_SESSION['grade_csrf']))$_SESSION['grade_csrf']=bin2hex(random_bytes(24));
-    $pending=$pdo->prepare("SELECT tp.id,tp.name,tp.test_date,s.name subject_name FROM topics tp JOIN subjects s ON s.id=tp.subject_id LEFT JOIN topic_grades g ON g.topic_id=tp.id AND g.student_id=? WHERE tp.is_active=1 AND tp.test_date<CURDATE() AND g.id IS NULL ORDER BY tp.test_date ASC,tp.id ASC");
-    $pending->execute([$gradeStudentId]);
+    $pending=$pdo->prepare("SELECT tp.id,tp.name,tp.test_date,s.name subject_name FROM topics tp JOIN subjects s ON s.id=tp.subject_id LEFT JOIN topic_grades g ON g.topic_id=tp.id AND g.student_id=? WHERE s.user_id=? AND tp.is_active=1 AND tp.test_date<CURDATE() AND g.id IS NULL ORDER BY tp.test_date ASC,tp.id ASC");
+    $pending->execute([$gradeStudentId,$gradeStudentId]);
     foreach($pending->fetchAll() as $candidate){
         if(($_SESSION['grade_later'][(int)$candidate['id']]??'')!==date('Y-m-d')){$gradePrompt=$candidate;break;}
     }
 }
 
 
-$subjects=$pdo->query("SELECT s.id,s.name,s.image_mime,COUNT(DISTINCT t.id) test_count FROM subjects s JOIN topics tp ON tp.subject_id=s.id JOIN tests t ON t.topic_id=tp.id AND t.is_active=1 GROUP BY s.id ORDER BY s.name");
+$subjects=$pdo->prepare("SELECT s.id,s.name,s.image_mime,COUNT(DISTINCT t.id) test_count FROM subjects s LEFT JOIN topics tp ON tp.subject_id=s.id LEFT JOIN tests t ON t.topic_id=tp.id AND t.is_active=1 WHERE s.user_id=? GROUP BY s.id ORDER BY s.name");
+$subjects->execute([(int)(current_user()['id']??0)]);
 
 function subject_visual(string $name):array{
     $n=mb_strtolower(trim($name),'UTF-8');
