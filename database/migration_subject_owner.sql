@@ -12,7 +12,8 @@ BEGIN
  ALTER TABLE subjects ADD COLUMN user_id INT UNSIGNED NULL AFTER id;
  UPDATE subjects SET user_id=teun_id WHERE user_id IS NULL;
  ALTER TABLE subjects MODIFY user_id INT UNSIGNED NOT NULL;
- ALTER TABLE subjects ADD INDEX idx_subjects_user_id(user_id);
+ ALTER TABLE subjects DROP INDEX name;
+ ALTER TABLE subjects ADD UNIQUE KEY uq_subjects_owner_name(user_id,name);
  ALTER TABLE subjects ADD CONSTRAINT fk_subjects_owner FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE;
 END//
 DELIMITER ;
