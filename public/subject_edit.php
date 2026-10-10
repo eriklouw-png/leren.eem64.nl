@@ -4,8 +4,12 @@ require_manager();
 
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT)?:0;
 $subject=null;
+$owners=$pdo->query("SELECT id,name FROM users WHERE role='student' ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+if(!$owners)$owners=$pdo->query("SELECT id,name FROM users WHERE role IN ('admin','beheerder') ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+$ownerIds=array_map('intval',array_column($owners,'id'));
+$ownerId=(int)($_POST['user_id']??($owners[0]['id']??0));
 if($id){
-    $x=$pdo->prepare("SELECT id,name,image_mime FROM subjects WHERE id=?");
+    $x=$pdo->prepare("SELECT id,name,image_mime,user_id FROM subjects WHERE id=?");
     $x->execute([$id]);
     $subject=$x->fetch();
     if(!$subject){http_response_code(404);exit('Vak niet gevonden.');}
@@ -44,19 +48,23 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }
 
     $name=trim((string)($_POST['name']??''));
-    if($name===''){
+    $ownerId=(int)($_POST['user_id']??0);
+    if(!in_array($ownerId,$ownerIds,true)){
+        $error='Selecteer een geldige eigenaar.';
+        $errorField='user_id';
+    }elseif($name===''){
         $error='Vul een naam voor het vak in.';
         $errorField='name';
     }else{
         try{
             $createdNewSubject=false;
             if($postId){
-                $x=$pdo->prepare("UPDATE subjects SET name=? WHERE id=?");
-                $x->execute([$name,$postId]);
+                $x=$pdo->prepare("UPDATE subjects SET name=?,user_id=? WHERE id=?");
+                $x->execute([$name,$ownerId,$postId]);
                 $id=$postId;
             }else{
-                $x=$pdo->prepare("INSERT INTO subjects(name) VALUES(?)");
-                $x->execute([$name]);
+                $x=$pdo->prepare("INSERT INTO subjects(name,user_id) VALUES(?,?)");
+                $x->execute([$name,$ownerId]);
                 $id=(int)$pdo->lastInsertId();
                 $createdNewSubject=true;
             }
@@ -129,6 +137,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 </div>
 
 
+<?php if(count($owners)>1):?>
+<div class="mb-3"><label class="form-label" for="user_id">Leerling / eigenaar</label><select class="form-select<?=$errorField==='user_id'?' is-invalid':''?>" name="user_id" id="user_id" required><?php foreach($owners as $owner):?><option value="<?=(int)$owner['id']?>" <?=(int)($_POST['user_id']??$subject['user_id']??$ownerId)===(int)$owner['id']?'selected':''?>><?=e($owner['name'])?></option><?php endforeach;?></select></div>
+<?php else:?>
+<input type="hidden" name="user_id" value="<?=(int)($subject['user_id']??$ownerId)?>">
+<?php endif;?>
 <div class="mb-3">
 <label class="form-label">Afbeelding</label>
 <?php if(!empty($subject['image_mime'])):?>
