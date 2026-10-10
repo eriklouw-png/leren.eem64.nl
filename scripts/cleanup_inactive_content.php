@@ -113,4 +113,41 @@ report($pdo, 'AI-bronbestanden: alle bestaande paden (nog niet verwijderen)', "
        OR (r.crop_path IS NOT NULL AND r.crop_path<>'')
     ORDER BY c.id,p.id,r.id
 ");
+report($pdo, 'AI-koppelingen naar te verwijderen vragen', "
+    SELECT l.collection_id, COUNT(*) AS koppelingen,
+        COUNT(DISTINCT l.question_id) AS vragen
+    FROM ai_source_links l
+    JOIN questions q ON q.id=l.question_id
+    JOIN tests t ON t.id=q.test_id
+    LEFT JOIN topics tp ON tp.id=t.topic_id
+    WHERE t.is_active=0 OR tp.is_active=0
+    GROUP BY l.collection_id ORDER BY l.collection_id
+");
+report($pdo, 'AI-koppelingen naar inactieve samenvattingen', "
+    SELECT l.collection_id, COUNT(*) AS koppelingen,
+        COUNT(DISTINCT l.summary_id) AS samenvattingen
+    FROM ai_source_links l
+    JOIN topic_summaries s ON s.id=l.summary_id
+    WHERE s.is_active=0
+    GROUP BY l.collection_id ORDER BY l.collection_id
+");
+report($pdo, 'Studievoortgang bij inactieve overhoringen', "
+    SELECT tp.id AS topic_id, tp.name,
+        (SELECT COUNT(*) FROM topic_grades g WHERE g.topic_id=tp.id) AS cijfers,
+        (SELECT COUNT(*) FROM topic_summaries s WHERE s.topic_id=tp.id) AS samenvattingen
+    FROM topics tp WHERE tp.is_active=0 ORDER BY tp.id
+");
+report($pdo, 'Foreign keys voor verwijderplanning', "
+    SELECT k.TABLE_NAME, k.COLUMN_NAME, k.REFERENCED_TABLE_NAME,
+           r.DELETE_RULE
+    FROM information_schema.KEY_COLUMN_USAGE k
+    JOIN information_schema.REFERENTIAL_CONSTRAINTS r
+      ON r.CONSTRAINT_SCHEMA=k.CONSTRAINT_SCHEMA
+     AND r.CONSTRAINT_NAME=k.CONSTRAINT_NAME
+     AND r.TABLE_NAME=k.TABLE_NAME
+    WHERE k.TABLE_SCHEMA=DATABASE()
+      AND k.REFERENCED_TABLE_NAME IS NOT NULL
+    ORDER BY k.TABLE_NAME,k.COLUMN_NAME
+");
+echo "\nLET OP: ai_source_links heeft geen foreign keys; een verwijdermodus moet eerst deze koppelingen verwijderen.\n";
 echo "\nKLAAR: niets gewijzigd. Geen SQL-verwijdering, geen bestandsverwijdering.\n";
