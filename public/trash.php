@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require __DIR__.'/../app/bootstrap.php';
 require_admin();
+require_once __DIR__.'/../app/trash_schema.php';trash_schema($pdo);
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
     if(!hash_equals((string)($_SESSION['trash_csrf']??''),(string)($_POST['csrf']??''))){
@@ -10,7 +11,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $kind=(string)($_POST['kind']??'');
     $action=(string)($_POST['action']??'');
     $id=filter_var($_POST['id']??null,FILTER_VALIDATE_INT);
-    if(!$id || !in_array($kind,['topic','test','summary'],true) || !in_array($action,['restore','delete'],true)){
+    if(!$id || !in_array($kind,['subject','ai_summary','topic','test','summary'],true) || !in_array($action,['restore','delete'],true)){
         http_response_code(400);exit('Ongeldige actie.');
     }
     if($action==='delete' && (string)($_POST['confirm']??'')!=='DEFINITIEF VERWIJDEREN'){
@@ -19,6 +20,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $moved=[];$trashDir=null;
     $pdo->beginTransaction();
     try{
+        if($action==='delete' && in_array($kind,['subject','ai_summary'],true))throw new RuntimeException('Definitief verwijderen nog niet beschikbaar.');
         if($action==='delete'){
             if($kind==='topic'){
                 $st=$pdo->prepare('SELECT id FROM topics WHERE id=? AND is_active=0 FOR UPDATE');
@@ -59,6 +61,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $pdo->prepare('DELETE FROM ai_source_links WHERE summary_id IN (SELECT id FROM topic_summaries WHERE topic_id=?)')->execute([$id]);
                 $pdo->prepare('DELETE FROM topics WHERE id=?')->execute([$id]);
             }
+        }elseif($kind==='subject'){
+            $s=$pdo->prepare('SELECT id FROM subjects WHERE id=? AND deleted_at IS NOT NULL FOR UPDATE');$s->execute([$id]);if(!$s->fetchColumn())throw new RuntimeException('Vak niet in prullenbak.');
+            $pdo->prepare('UPDATE subjects SET deleted_at=NULL WHERE id=?')->execute([$id]);
+        }elseif($kind==='ai_summary'){
+            $s=$pdo->prepare('SELECT id FROM ai_source_collections WHERE id=? AND deleted_at IS NOT NULL FOR UPDATE');$s->execute([$id]);if(!$s->fetchColumn())throw new RuntimeException('Samenvatting niet in prullenbak.');
+            $pdo->prepare('UPDATE ai_source_collections SET deleted_at=NULL WHERE id=?')->execute([$id]);
         }elseif($kind==='topic'){
             $s=$pdo->prepare('SELECT id FROM topics WHERE id=? AND is_active=0 FOR UPDATE');
             $s->execute([$id]);
@@ -94,6 +102,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }
 }
 $_SESSION['trash_csrf']??=bin2hex(random_bytes(32));
+$subjects=$pdo->query("SELECT id,name FROM subjects WHERE deleted_at IS NOT NULL ORDER BY id DESC")->fetchAll();
+$aiSummaries=$pdo->query("SELECT c.id,c.title name,COALESCE(tp.name,'Onbekend') topic_name FROM ai_source_collections c LEFT JOIN topics tp ON tp.id=c.topic_id WHERE c.deleted_at IS NOT NULL ORDER BY c.id DESC")->fetchAll();
 $topics=$pdo->query('SELECT tp.id,tp.name,s.name subject_name FROM topics tp JOIN subjects s ON s.id=tp.subject_id WHERE tp.is_active=0 ORDER BY tp.id DESC')->fetchAll();
 $tests=$pdo->query('SELECT t.id,t.title,tp.name topic_name,COALESCE(tp.is_active,0) parent_active FROM tests t LEFT JOIN topics tp ON tp.id=t.topic_id WHERE t.is_active=0 ORDER BY t.id DESC')->fetchAll();
 $summaries=$pdo->query('SELECT sm.id,sm.name,tp.name topic_name,tp.is_active parent_active FROM topic_summaries sm JOIN topics tp ON tp.id=sm.topic_id WHERE sm.is_active=0 ORDER BY sm.id DESC')->fetchAll();
@@ -103,7 +113,7 @@ $summaries=$pdo->query('SELECT sm.id,sm.name,tp.name topic_name,tp.is_active par
 <?php if(isset($_GET['restored'])):?><div class="alert alert-success">Item hersteld.</div><?php endif;?>
 <?php if(isset($_GET['deleted'])):?><div class="alert alert-success">Item definitief verwijderd.</div><?php endif;?>
 <p>Verwijderde overhoringen, sub-testen en oudere samenvattingen kunnen hier worden hersteld. Definitief verwijderen wist het geselecteerde item en de bijbehorende gegevens. Originele AI-broncollecties en bestaande back-ups blijven bewaard.</p>
-<?php foreach([['Overhoringen','topic',$topics],['Sub-testen','test',$tests],['Samenvattingen (oud model)','summary',$summaries]] as [$heading,$kind,$items]):?>
+<?php foreach([['Vakken','subject',$subjects],['Samenvattingen','ai_summary',$aiSummaries],['Overhoringen','topic',$topics],['Sub-testen','test',$tests],['Samenvattingen (oud model)','summary',$summaries]] as [$heading,$kind,$items]):?>
 <section class="card mb-4"><div class="card-body"><h2 class="h5"><?=e($heading)?> <small class="text-secondary">(<?=count($items)?>)</small></h2>
 <?php if(!$items):?><p class="text-secondary mb-0">Geen verwijderde items.</p><?php else:?><div class="list-group">
 <?php foreach($items as $item):?>
@@ -111,7 +121,7 @@ $summaries=$pdo->query('SELECT sm.id,sm.name,tp.name topic_name,tp.is_active par
 <div><strong><?=e($item['name']??$item['title'])?></strong><div class="small text-secondary"><?=e($item['subject_name']??$item['topic_name']??'')?></div></div>
 <form method="post" class="m-0"><input type="hidden" name="csrf" value="<?=e($_SESSION['trash_csrf'])?>"><input type="hidden" name="kind" value="<?=e($kind)?>"><input type="hidden" name="id" value="<?=(int)$item['id']?>"><input type="hidden" name="action" value="restore">
 <button class="btn btn-outline-primary btn-sm" type="submit" <?=isset($item['parent_active']) && (int)$item['parent_active']!==1?'disabled title="Herstel eerst de overhoring"':''?>>Herstellen</button></form>
-<form method="post" class="m-0" data-confirm="Dit item en gekoppelde gegevens definitief verwijderen? Dit kan niet ongedaan worden gemaakt."><input type="hidden" name="csrf" value="<?=e($_SESSION['trash_csrf'])?>"><input type="hidden" name="kind" value="<?=e($kind)?>"><input type="hidden" name="id" value="<?=(int)$item['id']?>"><input type="hidden" name="action" value="delete"><input type="hidden" name="confirm" value="DEFINITIEF VERWIJDEREN"><button class="btn btn-outline-danger btn-sm" type="submit">Definitief verwijderen</button></form>
+<?php if(!in_array($kind,['subject','ai_summary'],true)):?><form method="post" class="m-0" data-confirm="Dit item en gekoppelde gegevens definitief verwijderen? Dit kan niet ongedaan worden gemaakt."><input type="hidden" name="csrf" value="<?=e($_SESSION['trash_csrf'])?>"><input type="hidden" name="kind" value="<?=e($kind)?>"><input type="hidden" name="id" value="<?=(int)$item['id']?>"><input type="hidden" name="action" value="delete"><input type="hidden" name="confirm" value="DEFINITIEF VERWIJDEREN"><button class="btn btn-outline-danger btn-sm" type="submit">Definitief verwijderen</button></form><?php endif;?>
 </div>
 <?php endforeach;?></div><?php endif;?></div></section>
 <?php endforeach;?>
