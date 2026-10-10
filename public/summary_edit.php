@@ -19,6 +19,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $stmt->execute([$topicId]);$subjectId=(int)$stmt->fetchColumn();
         if(!$subjectId){http_response_code(404);exit('Overhoring niet gevonden.');}
     }
+    require_subject_management($subjectId);
     if($action==='delete' && $id){
         $pdo->prepare("DELETE FROM ai_source_sections WHERE collection_id=?")->execute([$id]);
         // Keep provenance, images and question links intact.
@@ -71,6 +72,7 @@ if($id){
     if(!$summary){http_response_code(404);exit('Overhoring niet gevonden.');}
     $summary['id']=0;$summary['name']='';$sections=[['id'=>0,'title'=>'','summary'=>'']];
 }
+require_subject_management((int)$summary['subject_id']);
 ?>
 <!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Samenvatting bewerken</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head>
 <body class="bg-light"><main class="container py-4" style="max-width:900px">
