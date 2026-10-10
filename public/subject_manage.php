@@ -2,6 +2,7 @@
 require __DIR__.'/../app/bootstrap.php';require_manager();
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if(!$id)redirect('admin.php');
+require_subject_management($id);
 
 if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='delete_topic'){
     $topicId=filter_var($_POST['topic_id']??null,FILTER_VALIDATE_INT);
