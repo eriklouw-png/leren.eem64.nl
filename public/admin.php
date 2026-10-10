@@ -4,6 +4,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $action=$_POST['action']??'';
     $id=filter_var($_POST['id']??null,FILTER_VALIDATE_INT);
     if(!$id){http_response_code(400);exit('Ongeldig ID.');}
+    if(in_array($action,['upload_subject_image','delete_subject_image','delete_subject'],true))require_subject_management((int)$id);
     if($action==='upload_subject_image'){
         if(!isset($_FILES['image']) || $_FILES['image']['error']!==UPLOAD_ERR_OK){
             redirect('admin.php?image_error=upload');
@@ -77,7 +78,13 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }
     http_response_code(400);exit('Ongeldige actie.');
 }
-$subjects=$pdo->query("SELECT s.id,s.name,s.image_mime,(SELECT COUNT(*) FROM topics tp WHERE tp.subject_id=s.id) AS overhoring_count,(SELECT COUNT(*) FROM tests t JOIN topics tp ON tp.id=t.topic_id WHERE tp.subject_id=s.id) AS test_count FROM subjects s ORDER BY s.name")->fetchAll();
+$allowedSubjects=is_admin()?null:array_unique(array_merge([(int)($_SESSION['user']['id']??0)],managed_student_ids()));
+$subjectSql="SELECT s.id,s.name,s.image_mime,(SELECT COUNT(*) FROM topics tp WHERE tp.subject_id=s.id) AS overhoring_count,(SELECT COUNT(*) FROM tests t JOIN topics tp ON tp.id=t.topic_id WHERE tp.subject_id=s.id) AS test_count FROM subjects s";
+if($allowedSubjects!==null)$subjectSql.=" WHERE s.user_id IN (".implode(',',array_fill(0,count($allowedSubjects),'?')).")";
+$subjectSql.=" ORDER BY s.name";
+$subjectStmt=$pdo->prepare($subjectSql);
+$subjectStmt->execute($allowedSubjects===null?[]:array_values($allowedSubjects));
+$subjects=$subjectStmt->fetchAll();
 $sessions=$pdo->query("SELECT ss.id,ss.test_id,ss.attempt_id,ss.started_at,ss.ended_at,ss.active_seconds,t.title,a.score FROM study_sessions ss LEFT JOIN attempts a ON a.id=ss.attempt_id LEFT JOIN tests t ON t.id=ss.test_id ORDER BY ss.started_at DESC")->fetchAll();
 $answeredRows=$pdo->query("SELECT ss.test_id,aa.question_id FROM study_sessions ss JOIN attempt_answers aa ON aa.attempt_id=ss.attempt_id GROUP BY ss.test_id,aa.question_id")->fetchAll();
 $questionCounts=$pdo->query("SELECT test_id,COUNT(*) question_count FROM questions GROUP BY test_id")->fetchAll();
