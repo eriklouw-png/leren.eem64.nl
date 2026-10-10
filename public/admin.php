@@ -175,8 +175,8 @@ if(is_admin()){
 <a class="leren-list-item-main" href="student.php?id=<?=$studentId?>">
 <div class="leren-list-item-content">
 <div class="leren-list-item-heading"><div class="leren-list-item-title"><?=e($student['name'])?></div></div>
-<div class="leren-list-item-subtitle"><?=e($student['email'])?></div>
-<div class="leren-list-item-description"><?=e((string)$student['completed_tests'])?> toetsen &middot; <?=e(rtrim(rtrim(number_format((float)$student['average_score'],0,',','.'),'0'),','))?>% gemiddeld &middot; <?=e((string)intdiv((int)$student['active_seconds'],60))?> min. actief</div>
+<div class="leren-list-item-description"><?=e(number_format((float)$student['average_score'],0,',','.'))?>% gemiddeld</div>
+<div class="leren-list-item-description"><?=e((string)intdiv((int)$student['active_seconds'],60))?> min. actief</div>
 </div>
 </a>
 <button type="button" class="leren-list-item-menu" data-list-menu data-list-modal="studentOptionsModal" data-menu-title="<?=e($student['name'])?>" data-list-actions="<?=e(json_encode($studentActions,JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES))?>" aria-label="Opties voor <?=e($student['name'])?>">
