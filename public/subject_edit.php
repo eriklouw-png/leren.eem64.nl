@@ -5,7 +5,7 @@ require_manager();
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT)?:0;
 $subject=null;
 if($id){
-    $x=$pdo->prepare("SELECT id,name,description,image_mime FROM subjects WHERE id=?");
+    $x=$pdo->prepare("SELECT id,name,image_mime FROM subjects WHERE id=?");
     $x->execute([$id]);
     $subject=$x->fetch();
     if(!$subject){http_response_code(404);exit('Vak niet gevonden.');}
@@ -44,7 +44,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }
 
     $name=trim((string)($_POST['name']??''));
-    $description=trim((string)($_POST['description']??''));
     if($name===''){
         $error='Vul een naam voor het vak in.';
         $errorField='name';
@@ -52,12 +51,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         try{
             $createdNewSubject=false;
             if($postId){
-                $x=$pdo->prepare("UPDATE subjects SET name=?,description=? WHERE id=?");
-                $x->execute([$name,$description!==''?$description:null,$postId]);
+                $x=$pdo->prepare("UPDATE subjects SET name=? WHERE id=?");
+                $x->execute([$name,$postId]);
                 $id=$postId;
             }else{
-                $x=$pdo->prepare("INSERT INTO subjects(name,description) VALUES(?,?)");
-                $x->execute([$name,$description!==''?$description:null]);
+                $x=$pdo->prepare("INSERT INTO subjects(name) VALUES(?)");
+                $x->execute([$name]);
                 $id=(int)$pdo->lastInsertId();
                 $createdNewSubject=true;
             }
@@ -92,7 +91,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $query='';
                 redirect('admin.php?saved=subject'.$query);
             }
-            $x=$pdo->prepare("SELECT id,name,description,image_mime FROM subjects WHERE id=?");
+            $x=$pdo->prepare("SELECT id,name,image_mime FROM subjects WHERE id=?");
             $x->execute([$id]);$subject=$x->fetch();
         }catch(PDOException $e){
             if((int)$e->errorInfo[1]===1062){$error='Er bestaat al een vak met deze naam.';$errorField='name';}
@@ -129,10 +128,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <input class="form-control<?=$errorField==='name'?' is-invalid':''?>" name="name" value="<?=e($subject['name']??'')?>" required maxlength="150" placeholder="Bijvoorbeeld Engels">
 </div>
 
-<div class="mb-3">
-<label class="form-label">Beschrijving</label>
-<textarea class="form-control" name="description" rows="3" placeholder="Korte omschrijving"><?=e($subject['description']??'')?></textarea>
-</div>
 
 <div class="mb-3">
 <label class="form-label">Afbeelding</label>
