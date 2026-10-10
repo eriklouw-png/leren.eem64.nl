@@ -15,19 +15,34 @@ $errors=[];
 $name=trim((string)($_POST['name']??''));
 $testDate=trim((string)($_POST['test_date']??''));
 $useSummary=!empty($_POST['use_summary']);
+$archived=!empty($_POST['archived']);
+$gradeText=str_replace(',','.',trim((string)($_POST['grade']??'')));
+$gradeValue=null;
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
     if($name==='')$errors[]='Naam is verplicht.';
     if($testDate!=='' && !preg_match('/^\d{4}-\d{2}-\d{2}$/',$testDate))$errors[]='Ongeldige datum.';
+    if($gradeText!==''){
+        if(!preg_match('/^(?:[1-9](?:\\.[0-9])?|10(?:\\.0)?)$/',$gradeText))$errors[]='Vul een cijfer van 1,0 tot en met 10,0 in.';
+        else $gradeValue=(float)$gradeText;
+    }
+    if($archived && ($testDate==='' || $testDate>=date('Y-m-d')))$errors[]='Een gearchiveerde overhoring heeft een datum in het verleden nodig.';
+    if($gradeValue!==null && !$archived)$errors[]='Vink Gearchiveerd aan om een cijfer vast te leggen.';
     if(!$errors){
         $check=$pdo->prepare("SELECT id FROM topics WHERE subject_id=? AND name=? LIMIT 1");
         $check->execute([$subjectId,$name]);
         if($check->fetchColumn()){
             $errors[]='Er bestaat al een overhoring met deze naam voor dit vak.';
         }else{
+            $pdo->beginTransaction();
             $ins=$pdo->prepare("INSERT INTO topics(subject_id,name,test_date,is_active,use_summary) VALUES(?,?,?,1,?)");
             $ins->execute([$subjectId,$name,$testDate!==''?$testDate:null,$useSummary?1:0]);
             $topicId=(int)$pdo->lastInsertId();
+            if($gradeValue!==null){
+                $g=$pdo->prepare('INSERT INTO topic_grades(topic_id,student_id,grade) VALUES(?,?,?)');
+                $g->execute([$topicId,(int)$_SESSION['user']['id'],$gradeValue]);
+            }
+            $pdo->commit();
             redirect('subject_manage.php?id='.$subjectId);
         }
     }
@@ -44,6 +59,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <input type="hidden" name="subject_id" value="<?=$subjectId?>">
 <div class="mb-3"><label class="form-label">Naam van de overhoring</label><input class="form-control" name="name" value="<?=e($name)?>" placeholder="Bijvoorbeeld: Hoofdstuk 3 – Cellen" required autofocus></div>
 <div class="mb-3"><label class="form-label">Overhoringsdatum</label><input class="form-control" type="date" name="test_date" value="<?=e($testDate)?>"><div class="form-text">Na deze datum wordt de overhoring automatisch gearchiveerd. Laat leeg als er geen vaste datum is.</div></div>
+<div class="form-check mb-3">
+<input class="form-check-input" type="checkbox" id="archived" name="archived" value="1" <?=$archived?'checked':''?>>
+<label class="form-check-label" for="archived"><strong>Gearchiveerd</strong></label>
+<div class="form-text">Gebruik een overhoringsdatum in het verleden. Deze overhoring is dan niet meer toegankelijk voor leerlingen.</div>
+</div>
+<div class="mb-3"><label class="form-label" for="grade">Cijfer (optioneel)</label><input class="form-control" id="grade" name="grade" type="number" min="1" max="10" step="0.1" inputmode="decimal" value="<?=e($gradeText)?>" placeholder="Bijvoorbeeld 8,0"><div class="form-text">Het cijfer wordt gekoppeld aan de overhoring en je eigen gebruikersaccount.</div></div>
 <div class="form-check mb-4">
 <input class="form-check-input" type="checkbox" name="use_summary" value="1" id="useSummary" <?=$useSummary?'checked':''?>>
 <label class="form-check-label" for="useSummary"><strong>Samenvatting gebruiken</strong><br><span class="text-secondary">Je kunt voor deze overhoring meerdere afzonderlijke samenvattingen maken. Elke samenvatting kan bijvoorbeeld de naam 1.3 Samenvatting krijgen en wordt op de overhoringpagina getoond.</span></label>
