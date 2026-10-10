@@ -186,11 +186,11 @@ function ai_pct(?float $n):string{return $n===null?'—':(($n>0?'+':'').number_f
 
 <div class="card mb-4"><div class="card-body">
 <h2 class="h5">Afbeeldingen per methode</h2>
-<p class="text-secondary">Afzonderlijk zichtbaar hoeveel afbeeldingen als internetafbeelding, SVG of door GPT zijn gemaakt.</p>
+<p class="text-secondary">Afzonderlijk zichtbaar hoeveel afbeeldingen als internetafbeelding, SVG of door AI zijn gemaakt.</p>
 <div class="row g-3">
 <div class="col-6 col-lg-3"><div class="p-3 rounded" style="background:#252e28"><div class="text-secondary">Internet</div><div class="fs-3 fw-bold"><?=$imageStats['web']?></div></div></div>
 <div class="col-6 col-lg-3"><div class="p-3 rounded" style="background:#252e28"><div class="text-secondary">SVG</div><div class="fs-3 fw-bold"><?=$imageStats['svg']?></div></div></div>
-<div class="col-6 col-lg-3"><div class="p-3 rounded" style="background:#252e28"><div class="text-secondary">GPT gegenereerd</div><div class="fs-3 fw-bold"><?=$imageStats['generate']?></div></div></div>
+<div class="col-6 col-lg-3"><div class="p-3 rounded" style="background:#252e28"><div class="text-secondary">AI gegenereerd</div><div class="fs-3 fw-bold"><?=$imageStats['generate']?></div></div></div>
 <div class="col-6 col-lg-3"><div class="p-3 rounded" style="background:#252e28"><div class="text-secondary">Geen afbeelding</div><div class="fs-3 fw-bold"><?=$imageStats['none']?></div></div></div>
 </div>
 </div></div>
