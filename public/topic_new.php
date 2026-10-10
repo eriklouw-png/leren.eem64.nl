@@ -27,6 +27,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         else $gradeValue=(float)$gradeText;
     }
     if($archived && ($testDate==='' || $testDate>=date('Y-m-d')))$errors[]='Een gearchiveerde overhoring heeft een datum in het verleden nodig.';
+    if(!$archived && $testDate!=='' && $testDate<date('Y-m-d'))$errors[]='Een datum in het verleden betekent Gearchiveerd. Vink dit aan of kies een andere datum.';
     if($gradeValue!==null && !$archived)$errors[]='Vink Gearchiveerd aan om een cijfer vast te leggen.';
     if(!$errors){
         $check=$pdo->prepare("SELECT id FROM topics WHERE subject_id=? AND name=? LIMIT 1");
