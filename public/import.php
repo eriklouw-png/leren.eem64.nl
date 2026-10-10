@@ -1,10 +1,11 @@
 <?php
 require __DIR__.'/../app/bootstrap.php';require_admin();
-$ownerId=(int)($_SESSION['user']['id']??0);
-$managed=managed_student_ids();
-if(count($managed)===1)$ownerId=$managed[0];
-if(isset($_POST['owner_id']))$ownerId=(int)$_POST['owner_id'];
-if(!is_admin() && $ownerId!==(int)($_SESSION['user']['id']??0) && !in_array($ownerId,$managed,true)){http_response_code(403);exit('Ongeldige eigenaar.');}
+// De oude algemene CSV-import kan vakken aanmaken zonder een vastgestelde leerling.
+// Vragen worden uitsluitend binnen een bestaande test geïmporteerd via test_edit.php.
+http_response_code(410);
+header('Content-Type: text/html; charset=utf-8');
+echo '<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Import verplaatst</title></head><body><main><h1>CSV-import verplaatst</h1><p>Open eerst het juiste vak en de juiste test. Importeer de vragen vervolgens via de bewerkpagina van die test. De leerling wordt automatisch bepaald door het vak.</p><p><a href="admin.php">Terug naar beheer</a></p></main></body></html>';
+exit;
 $errors=[];$success=null;$preview=[];$pastePath=null;
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['csv_text'])){
     $csvText=(string)$_POST['csv_text'];
